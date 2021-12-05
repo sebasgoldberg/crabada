@@ -24,7 +24,8 @@ const abi = {
 
 const contractAddress = {
   IdleGame: '0x82a85407BD612f52577909F4A58bfC6873f14DA8',
-  tusToken: '0xf693248F96Fe03422FEa95aC0aFbBBc4a8FdD172'
+  tusToken: '0xf693248F96Fe03422FEa95aC0aFbBBc4a8FdD172',
+  craToken: '0xa32608e873f9ddef944b24798db69d80bbb4d1ed',
 }
 
 const crabada = [
@@ -63,6 +64,12 @@ describe('Crabada', function () {
       ethers.provider
     )
 
+    this.craToken = new Contract(
+      contractAddress.craToken,
+      abi.ERC20,
+      ethers.provider
+    )
+
     await ethers.provider.send('hardhat_impersonateAccount', [accounts.owner] );
     this.owner = await ethers.provider.getSigner(accounts.owner)
 
@@ -96,16 +103,7 @@ describe('Crabada', function () {
     expect(ethers.utils.formatEther(baseTusReward)).to.eq('303.75')
   });
 
-  // it('could be possible to deposit my Crabada into IdleGame', async function () {
-  //   const crabadaInMarcketPlace = crabada[2]
-  //   await this.IdleGame.connect(this.owner).deposit([crabadaInMarcketPlace])
-  // });
 
-  // it('could be possible to create a team into IdleGame', async function () {
-  //   await this.IdleGame.connect(this.owner).createTeam(crabada[0], crabada[0], crabada[0])
-  // });
-
-  
   it('could be possible to get team info', async function () {
     const teamInfo = await this.IdleGame.getTeamInfo(this.teamId)
   });
@@ -223,6 +221,7 @@ describe('Crabada', function () {
   it('could receive the reward after successfully finish and close a mining game.', async function () {
 
     const tusInitialBalance: BigNumber = await this.tusToken.balanceOf(accounts.withTeam)
+    const craInitialBalance: BigNumber = await this.craToken.balanceOf(accounts.withTeam)
     
     await this.IdleGame.connect(this.withTeam).startGame(this.teamId)
 
@@ -233,24 +232,26 @@ describe('Crabada', function () {
 
     await this.IdleGame.connect(this.withTeam).closeGame(currentGameId)
     
-    //this.IdleGame.connect(this.withTeam).settleGame(currentGameId)
-    
     const tusFinalBalance: BigNumber = await this.tusToken.balanceOf(accounts.withTeam)
+    const craFinalBalance: BigNumber = await this.craToken.balanceOf(accounts.withTeam)
 
     expect(formatEther(tusInitialBalance
-        .add(parseEther('303.75').mul(11).div(10)) // Has Prime Crabada team member
-        ))
-      .to.eq(formatEther(tusFinalBalance))
+      .add(parseEther('303.75').mul(11).div(10)) // Has Prime Crabada team member
+      ))
+    .to.eq(formatEther(tusFinalBalance))
 
-    //expect(ethers.utils.formatEther(baseCraReward)).to.eq('3.75')
-    
+    expect(formatEther(craInitialBalance
+        .add(parseEther('3.75').mul(11).div(10)) // Has Prime Crabada team member
+        ))
+      .to.eq(formatEther(craFinalBalance))
 
   });
 
   it('could receive the rewards after successfully finish and close 3 mining games.', async function () {
 
     const tusInitialBalance: BigNumber = await this.tusToken.balanceOf(accounts.withTeam)
-    
+    const craInitialBalance: BigNumber = await this.craToken.balanceOf(accounts.withTeam)
+
     for (let i = 0; i<3; i++){
 
       await this.IdleGame.connect(this.withTeam).startGame(this.teamId)
@@ -262,19 +263,20 @@ describe('Crabada', function () {
   
       await this.IdleGame.connect(this.withTeam).closeGame(currentGameId)
       
-      // this.IdleGame.connect(this.withTeam).settleGame(currentGameId)
-      
     }
 
     const tusFinalBalance: BigNumber = await this.tusToken.balanceOf(accounts.withTeam)
-    
+    const craFinalBalance: BigNumber = await this.craToken.balanceOf(accounts.withTeam)
+
     expect(formatEther(tusInitialBalance
         .add(parseEther('303.75').mul(3).mul(11).div(10))
         ))
       .to.eq(formatEther(tusFinalBalance))
 
-    //expect(ethers.utils.formatEther(baseCraReward)).to.eq('3.75')
-    
+    expect(formatEther(craInitialBalance
+        .add(parseEther('3.75').mul(3).mul(11).div(10)) // Has Prime Crabada team member
+        ))
+      .to.eq(formatEther(craFinalBalance))
 
   });
 
