@@ -280,4 +280,25 @@ describe('Crabada', function () {
 
   });
 
+
+  it.only('should change team info current game ID to zero after closing a game.', async function () {
+
+    await this.IdleGame.connect(this.withTeam).startGame(this.teamId)
+
+    const teamInfo1 = await this.IdleGame.getTeamInfo(this.teamId)
+    const { currentGameId: gameId1 } = teamInfo1
+
+    expect(gameId1.toString()).to.not.eq('0')
+
+    evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+
+    await this.IdleGame.connect(this.withTeam).closeGame(gameId1)
+
+    const teamInfo2 = await this.IdleGame.getTeamInfo(this.teamId)
+    const { currentGameId: gameId2 } = teamInfo2
+
+    expect(gameId2.toString()).to.eq('0')
+
+  });
+
 });
