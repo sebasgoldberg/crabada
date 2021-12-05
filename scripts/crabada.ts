@@ -43,24 +43,16 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
             console.error(`INFO: Maybe it is too early to close the game`)
             return
         }
-        try {
-            console.log(`closeGame(gameId: ${currentGameId})`);
-            const transactionResponse: TransactionResponse = await idleGame.closeGame(currentGameId, {gasPrice: gasprice*ONE_GWEI})
-            console.log(`transaction: ${transactionResponse.hash}.`);        
-            await transactionResponse.wait(wait)
-        } catch (error) {
-            console.error(`ERROR: ${error.toString()}`)
-            return
-        }
+
+        console.log(`closeGame(gameId: ${currentGameId})`);
+        const transactionResponse: TransactionResponse = await idleGame.closeGame(currentGameId, {gasPrice: gasprice*ONE_GWEI})
+        console.log(`transaction: ${transactionResponse.hash}.`);        
+        await transactionResponse.wait(wait)
     }
 
-    try {
-        console.log(`startGame(teamId: ${teamId})`);
-        const transactionResponse: TransactionResponse = await idleGame.startGame(teamId, {gasPrice: gasprice*ONE_GWEI})
-        console.log(`transaction ${transactionResponse.hash}.`);
-        await transactionResponse.wait(wait)            
-    } catch (error) {
-        console.error(`ERROR: ${error.toString()}`)
-    }
+    console.log(`startGame(teamId: ${teamId})`);
+    const transactionResponse: TransactionResponse = await idleGame.startGame(teamId, {gasPrice: gasprice*ONE_GWEI})
+    console.log(`transaction ${transactionResponse.hash}.`);
+    await transactionResponse.wait(wait)            
 
 }

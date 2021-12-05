@@ -23,10 +23,52 @@ task(
             signer = await hre.ethers.provider.getSigner(testaccount)
         }
 
-        await mineStep(hre, teamid, gasprice, wait, signer)
+        try {
+            await mineStep(hre, teamid, gasprice, wait, signer)
+        } catch (error) {
+            console.error(`ERROR: ${error.toString()}`)
+        }
 
     })
     .addParam("teamid", "The team ID to use for mining.")
+    .addOptionalParam("gasprice", "Gas price in gwei.", 25, types.int)
+    .addOptionalParam("wait", "Number of confirmation before continue execution.", 10, types.int)
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
+    "mineloop",
+    "Mine loop: Executes indefinetly the mine step, but stops in case of transaction rejection.",
+    async ({ teamid, interval, gasprice, wait, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        let signer = undefined
+
+        if (testaccount){
+            await hre.ethers.provider.send('hardhat_impersonateAccount', [testaccount] );
+            signer = await hre.ethers.provider.getSigner(testaccount)
+        }
+
+        return new Promise((resolve) => {
+
+            const msInterval = interval*1000
+
+            setTimeout(async function mineStepAndSchedule(){
+
+                try {
+                    await mineStep(hre, teamid, gasprice, wait, signer)
+                    setTimeout(mineStepAndSchedule, msInterval)
+                } catch (error) {
+                    console.error(`ERROR: ${error.toString()}`)
+                    resolve(undefined)
+                }
+        
+            }, msInterval)
+    
+        })
+
+
+    })
+    .addParam("teamid", "The team ID to use for mining.")
+    .addOptionalParam("interval", "Interval between mining steps in seconds.", 5, types.int)
     .addOptionalParam("gasprice", "Gas price in gwei.", 25, types.int)
     .addOptionalParam("wait", "Number of confirmation before continue execution.", 10, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
