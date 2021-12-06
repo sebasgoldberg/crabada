@@ -5,6 +5,14 @@ import "@nomiclabs/hardhat-waffle"
 
 const MAINNET_AVAX_MAIN_ACCOUNT_PK = process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK']
 
+// For testing with mainet account when forking
+const USE_MAINNET_ACCOUNT=true
+
+const mainnetAccount = {
+  privateKey: MAINNET_AVAX_MAIN_ACCOUNT_PK,
+  balance: '10000000000000000000000'
+}
+
 // When using the hardhat network, you may choose to fork Fuji or Avalanche Mainnet
 // This will allow you to debug contracts using the hardhat network while keeping the current network state
 // To enable forking, turn one of these booleans on, and then run your tasks/scripts using ``--network hardhat``
@@ -63,7 +71,8 @@ export default {
     hardhat: {
       gasPrice: 225000000000,
       chainId: !forkingData ? 43112 : undefined, //Only specify a chainId if we are not forking
-      forking: forkingData
+      forking: forkingData,
+      accounts: USE_MAINNET_ACCOUNT ? [ mainnetAccount ] : undefined
     },
     local: {
       url: 'http://localhost:9650/ext/bc/C/rpc',
@@ -90,11 +99,10 @@ export default {
     },
     mainnet: {
       url: 'https://api.avax.network/ext/bc/C/rpc',
-      gasPrice: 225000000000,
+      gasPrice: 25000000000,
+      gas: 1000000,
       chainId: 43114,
-      accounts: [
-        //MAINNET_AVAX_MAIN_ACCOUNT_PK,
-      ]
+      accounts: USE_MAINNET_ACCOUNT ? [ MAINNET_AVAX_MAIN_ACCOUNT_PK, ] : [ ]
     }
   }
 }

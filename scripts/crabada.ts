@@ -8,6 +8,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { formatEther, formatUnits } from "ethers/lib/utils";
 
 const ONE_GWEI = 1000000000
+const GAS_LIMIT = 500000
 
 const abi = {
     IdleGame: IdleGameAbi,
@@ -37,9 +38,10 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
     )
 
     if (!signer)
-        signer = hre.ethers.getSigners()[0]
+        signer = (await hre.ethers.getSigners())[0]
     
-    idleGame = idleGame.connect(signer)
+    if (signer)
+        idleGame = idleGame.connect(signer)
 
     const tusToken = new Contract(
         contractAddress.tusToken,
@@ -53,41 +55,58 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
         hre.ethers.provider
     )
   
-    const signerAddress = await signer.getAddress()
+    const signerAddress = signer.address
+
+    console.log('signerAddress', signerAddress);
+    
 
     const teamInfo = await idleGame.getTeamInfo(teamId)
     const { currentGameId } = teamInfo
 
+    const override = {gasPrice: gasprice*ONE_GWEI, gasLimit: GAS_LIMIT}
+
+    await logBalance(hre, signerAddress)
+
+    // CLOSE GAME
+
     if (!(currentGameId as BigNumber).isZero()){
         try {
             console.log(`callStatic.closeGame(gameId: ${currentGameId})`);        
-            await idleGame.callStatic.closeGame(currentGameId)
+            await idleGame.callStatic.closeGame(currentGameId, override)
         } catch (error) {
             console.error(`ERROR: ${error.toString()}`)
             console.error(`INFO: Maybe it is too early to close the game`)
             return
         }
 
-        await logBalance(hre, signerAddress)
-
         await logTokenBalance(tusToken, 'TUS', signerAddress)
         await logTokenBalance(craToken, 'CRA', signerAddress)
 
         console.log(`closeGame(gameId: ${currentGameId})`);
-        const transactionResponse: TransactionResponse = await idleGame.closeGame(currentGameId, {gasPrice: gasprice*ONE_GWEI})
+        const transactionResponse: TransactionResponse = await idleGame.closeGame(currentGameId, override)
         console.log(`transaction: ${transactionResponse.hash}`);        
-        await transactionResponse.wait(wait)
-
+        await logBalance(hre, signerAddress)
         await logTokenBalance(tusToken, 'TUS', signerAddress)
         await logTokenBalance(craToken, 'CRA', signerAddress)
 
+        await transactionResponse.wait(wait)
     }
 
-    await logBalance(hre, signerAddress)
+    // START GAME
+
+    try {
+        console.log(`callStatic.startGame(teamId: ${teamId})`);
+        await idleGame.callStatic.startGame(teamId, override)
+    } catch (error) {
+        console.error(`ERROR: ${error.toString()}`)
+        console.error(`ERROR: Npt possible to start the game.`)
+        return
+    }
+
     console.log(`startGame(teamId: ${teamId})`);
-    const transactionResponse: TransactionResponse = await idleGame.startGame(teamId, {gasPrice: gasprice*ONE_GWEI})
+    const transactionResponse: TransactionResponse = await idleGame.startGame(teamId, override)
     console.log(`transaction ${transactionResponse.hash}.`);
-    await transactionResponse.wait(wait)            
+    await transactionResponse.wait(wait)
     await logBalance(hre, signerAddress)
 
 }

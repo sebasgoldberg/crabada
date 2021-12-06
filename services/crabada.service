@@ -1,0 +1,15 @@
+[Unit]
+Description=Crabada service for mine loop.
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=no
+User=cerebro
+ExecStart=/home/cerebro/crabada/services/crabada.start.sh
+WorkingDirectory=/home/cerebro/crabada
+
+
+[Install]
+WantedBy=multi-user.target
