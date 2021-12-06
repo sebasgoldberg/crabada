@@ -54,7 +54,11 @@ task(
             setTimeout(async function mineStepAndSchedule(){
 
                 try {
-                    await mineStep(hre, teamid, gasprice, wait, signer)
+                    try {
+                        await mineStep(hre, teamid, gasprice, wait, signer)
+                    } catch (error) {
+                        console.error(`ERROR: mineStep: ${error.toString()}`);
+                    }
                     setTimeout(mineStepAndSchedule, msInterval)
                 } catch (error) {
                     console.error(`ERROR: ${error.toString()}`)
