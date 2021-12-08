@@ -5,7 +5,8 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-Restart=no
+Restart=always
+RestartSec=30
 User=cerebro
 ExecStart=/home/cerebro/crabada/services/crabada.start.sh
 WorkingDirectory=/home/cerebro/crabada

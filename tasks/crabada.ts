@@ -76,3 +76,111 @@ task(
     .addOptionalParam("gasprice", "Gas price in gwei.", 25, types.int)
     .addOptionalParam("wait", "Number of confirmation before continue execution.", 10, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
+    "teamanalisys",
+    "Analyse the best combinations of teams using Crabadas that are pure.",
+    async ({ }, hre: HardhatRuntimeEnvironment) => {
+        
+        const PRIME_INDEX = 2
+
+        const descriptions = [
+            'Surge',
+            'Bulk',
+            'Prime',
+            'Gem',
+            'Sunken',
+            'Craboid',
+            'Ruined',
+            'Organic',            
+        ]
+
+        const price_breed3_in_tus = [
+            10000000,
+            48000,
+            36000,
+            40000,
+            89000,
+            32000,
+            42000,
+            10000000,
+        ]
+
+        const battlePoints = [
+            239,
+            238,
+            221,
+            236,
+            224,
+            221,
+            224,
+            227,
+        ]
+
+        const miningPoints = [
+            239,
+            238,
+            221,
+            236,
+            224,
+            221,
+            224,
+            227,
+        ]
+
+        const teams_by_id = {}
+
+        for (let i=0; i<descriptions.length; i++){
+            for (let j=0; j<descriptions.length; j++){
+                const team = [0,0,1,0,0,0,0,0]
+                team[i] = team[i]+1
+                team[j] = team[j]+1
+                const teamID = team.map(x=>x.toString()).join('')
+
+                const mp = miningPoints[i]+miningPoints[j]+miningPoints[PRIME_INDEX]
+
+                if (mp<230)
+                    continue
+
+                teams_by_id[teamID] = {
+                    battlePoints: battlePoints[i]+battlePoints[j]+battlePoints[PRIME_INDEX],
+                    miningPoints: mp,
+                }
+            }
+        }
+
+        const teams = []
+        for (const id in teams_by_id){
+            const participants = []
+            let teamPrice = 0
+            for (let class_index = 0; class_index<id.length; class_index++){
+                for (let q=0; q<Number(id[class_index]); q++){
+                    participants.push(descriptions[class_index])
+                    teamPrice+=price_breed3_in_tus[class_index]
+                }
+            }
+            teams.push({
+                participants,
+                ...teams_by_id[id],
+                teamPrice,
+            })
+        }
+
+        function compare( a, b ) {
+            if ( a.battlePoints < b.battlePoints ){
+                return 1;
+            }
+            if ( a.battlePoints > b.battlePoints ){
+                return -1;
+            }
+            return 0;
+        }
+          
+        teams.sort( compare );
+
+        console.log(`Member1;Member2;Member3;BattlePoints;MiningPoints;TeamPrice`);
+        teams.forEach(team => {
+            console.log(`${team.participants[0]};${team.participants[1]};${team.participants[2]};${team.battlePoints};${team.miningPoints};${team.teamPrice}`);
+        })
+
+    })
