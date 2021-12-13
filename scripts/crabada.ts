@@ -19,7 +19,7 @@ export const gasPrice = async (hre: HardhatRuntimeEnvironment): Promise<BigNumbe
         const base = await baseFee(hre)
         if (base.gt(MAX_FEE))
             return MAX_FEE
-        return base
+        return base.add(ONE_GWEI)
     } catch (error) {
         return BigNumber.from(25*ONE_GWEI)
     }
