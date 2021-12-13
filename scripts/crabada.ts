@@ -1,13 +1,29 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import * as IdleGameAbi from "../abis/IdleGame.json"
 import * as ERC20Abi from "../abis/ERC20.json"
-import { Contract } from "ethers";
+import { BigNumber, Contract } from "ethers";
 import { TransactionResponse } from "@ethersproject/abstract-provider";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { formatEther, formatUnits } from "ethers/lib/utils";
 
 const ONE_GWEI = 1000000000
 const GAS_LIMIT = 500000
+const MAX_FEE = BigNumber.from(ONE_GWEI*50)
+
+export const baseFee = async (hre: HardhatRuntimeEnvironment): Promise<BigNumber> => {
+    return BigNumber.from(await hre.ethers.provider.send('eth_baseFee', []))
+}
+
+export const gasPrice = async (hre: HardhatRuntimeEnvironment): Promise<BigNumber> => {
+    try {
+        const base = await baseFee(hre)
+        if (base.gt(MAX_FEE))
+            return MAX_FEE
+        return base
+    } catch (error) {
+        return BigNumber.from(25*ONE_GWEI)
+    }
+}
 
 const abi = {
     IdleGame: IdleGameAbi,
@@ -65,7 +81,7 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
     
     const { currentGameId } = teamInfo
 
-    const override = {gasPrice: gasprice*ONE_GWEI, gasLimit: GAS_LIMIT}
+    const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT}
 
     await logBalance(hre, signerAddress)
 

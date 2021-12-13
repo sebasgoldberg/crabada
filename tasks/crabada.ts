@@ -7,10 +7,18 @@ import { BigNumber } from "ethers";
 import { formatUnits } from "ethers/lib/utils";
 import { monitorEventLoopDelay } from "perf_hooks";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { mineStep } from "../scripts/crabada";
+import { baseFee, gasPrice, mineStep } from "../scripts/crabada";
 import { string } from "hardhat/internal/core/params/argumentTypes";
 import { types } from "hardhat/config"
 
+task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
+    console.log(formatUnits(await baseFee(hre), 9))
+})
+  
+task("gasprice", "Get the base fee", async (args, hre): Promise<void> => {
+    console.log(formatUnits(await gasPrice(hre), 9))
+})
+  
 task(
     "minestep",
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
