@@ -48,7 +48,7 @@ describe('Crabada', function () {
       ],
     );
 
-    evm_increaseTime(7 * 24 * 60 * 60)
+    await evm_increaseTime(7 * 24 * 60 * 60)
 
     this.Crabada = new Contract(
       contractAddress.crabada,
@@ -82,7 +82,7 @@ describe('Crabada', function () {
 
   });
 
-  it.only('Breeding Crabada of different owners.', async function () {
+  it('Breeding Crabada of different owners.', async function () {
 
     await expect(
       this.Crabada.connect(this.owner).breed(crabada[0], crabada[1])

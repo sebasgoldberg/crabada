@@ -10,6 +10,12 @@ const ONE_GWEI = 1000000000
 const GAS_LIMIT = 500000
 const MAX_FEE = BigNumber.from(ONE_GWEI*50)
 
+export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
+    const blockNumber = await hre.ethers.provider.getBlockNumber()
+    const timestamp = (await hre.ethers.provider.getBlock(blockNumber)).timestamp;
+    return timestamp
+}
+
 export const baseFee = async (hre: HardhatRuntimeEnvironment): Promise<BigNumber> => {
     return BigNumber.from(await hre.ethers.provider.send('eth_baseFee', []))
 }

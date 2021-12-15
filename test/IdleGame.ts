@@ -7,6 +7,7 @@ import * as ERC20Abi from "../abis/ERC20.json"
 import { Contract } from "ethers";
 import { formatEther, parseEther } from "ethers/lib/utils";
 import { evm_increaseTime } from "./utils";
+import { currentBlockTimeStamp } from "../scripts/crabada";
 
 const AVALANCHE_NODE_URL: string = process.env.AVALANCHE_MAINNET_URL as string || "https://api.avax.network/ext/bc/C/rpc";
 const FORK_BLOCKNUMBER: number = Number(process.env.AVALANCHE_FORK_BLOCKNUMBER || "7804714") //7650718
@@ -50,7 +51,7 @@ describe('IdleGame', function () {
       ],
     );
 
-    evm_increaseTime(7 * 24 * 60 * 60)
+    await evm_increaseTime(7 * 24 * 60 * 60)
 
     this.IdleGame = new Contract(
       contractAddress.IdleGame,
@@ -86,16 +87,6 @@ describe('IdleGame', function () {
   });
 
 
-  it('Fork balance test', async function () {
-    // If another contract calls balanceOf on the mock contract, return AMT
-    const balance = await ethers.provider.getBalance(accounts.owner);
-    const expectedBalance = ethers.utils.parseEther('0.676038653905205704')
-    
-    expect(balance.eq(expectedBalance)).to.be.true;
-
-  });
-
-
   it('IdleGame participants rewards', async function () {
     const baseCraReward: BigNumber = await this.IdleGame.baseCraReward()
     const baseTusReward: BigNumber = await this.IdleGame.baseTusReward()
@@ -124,7 +115,7 @@ describe('IdleGame', function () {
     
     await this.IdleGame.connect(this.withTeam).startGame(this.teamId)
 
-    evm_increaseTime(4 * 60 * 60) // 4 hours
+    await evm_increaseTime(4 * 60 * 60) // 4 hours
 
     const teamInfo1 = await this.IdleGame.getTeamInfo(this.teamId)
     const { currentGameId: firstGame } = teamInfo1
@@ -142,7 +133,7 @@ describe('IdleGame', function () {
 
     await this.IdleGame.connect(this.withTeam).startGame(this.teamId)
 
-    evm_increaseTime(4 * 60 * 60) // 4 hours
+    await evm_increaseTime(4 * 60 * 60) // 4 hours
 
     const teamInfo1 = await this.IdleGame.getTeamInfo(this.teamId)
     const { currentGameId: firstGame } = teamInfo1
@@ -188,7 +179,7 @@ describe('IdleGame', function () {
     const teamInfo = await this.IdleGame.getTeamInfo(this.teamId)
     const { currentGameId } = teamInfo
 
-    evm_increaseTime(91 * 60) // 1:31 hours
+    await evm_increaseTime(91 * 60) // 1:31 hours
 
     await expect(
       this.IdleGame.connect(this.withTeam).closeGame(currentGameId)
@@ -203,7 +194,7 @@ describe('IdleGame', function () {
     const teamInfo1 = await this.IdleGame.getTeamInfo(this.teamId)
     const { currentGameId: gameId1 } = teamInfo1
 
-    evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
 
     await this.IdleGame.connect(this.withTeam).closeGame(gameId1)
 
@@ -228,7 +219,7 @@ describe('IdleGame', function () {
     const teamInfo = await this.IdleGame.getTeamInfo(this.teamId)
     const { currentGameId } = teamInfo
 
-    evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
 
     await this.IdleGame.connect(this.withTeam).closeGame(currentGameId)
     
@@ -259,7 +250,7 @@ describe('IdleGame', function () {
       const teamInfo = await this.IdleGame.getTeamInfo(this.teamId)
       const { currentGameId } = teamInfo
   
-      evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+      await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
   
       await this.IdleGame.connect(this.withTeam).closeGame(currentGameId)
       
@@ -290,7 +281,7 @@ describe('IdleGame', function () {
 
     expect(gameId1.toString()).to.not.eq('0')
 
-    evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
 
     await this.IdleGame.connect(this.withTeam).closeGame(gameId1)
 
@@ -298,6 +289,60 @@ describe('IdleGame', function () {
     const { currentGameId: gameId2 } = teamInfo2
 
     expect(gameId2.toString()).to.eq('0')
+
+  });
+
+  it('lockTo from getTeamInfo should be the block number after 4 hours.', async function () {
+
+    await this.IdleGame.connect(this.withTeam).startGame(this.teamId)
+
+    const teamInfo1 = await this.IdleGame.getTeamInfo(this.teamId)
+    const { currentGameId: gameId1, lockTo: lockTo1  } = teamInfo1
+
+    expect(gameId1.toString()).to.not.eq('0')
+
+    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+
+    await this.IdleGame.connect(this.withTeam).closeGame(gameId1)
+
+
+    await this.IdleGame.connect(this.withTeam).startGame(this.teamId)
+    
+    const teamInfo2 = await this.IdleGame.getTeamInfo(this.teamId)
+    const { currentGameId: gameId2, lockTo: lockTo2 } = teamInfo2
+    
+    const timestamp0 = await currentBlockTimeStamp(hre)
+
+    expect(timestamp0+4*60*60).to.eq(lockTo2)
+
+    await evm_increaseTime(4 * 60 * 60) // 4 hours
+
+    const timestamp1 = await currentBlockTimeStamp(hre)
+
+
+    expect(timestamp1).to.eq(timestamp0+4 * 60 * 60)
+
+    expect(timestamp1).to.eq(lockTo2)
+
+  });
+
+  it.only('lockTo from getTeamInfo should the same after closing the game.', async function () {
+
+    await this.IdleGame.connect(this.withTeam).startGame(this.teamId)
+
+    const teamInfo1 = await this.IdleGame.getTeamInfo(this.teamId)
+    const { currentGameId: gameId1, lockTo: lockTo1  } = teamInfo1
+
+    expect(gameId1.toString()).to.not.eq('0')
+
+    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+
+    await this.IdleGame.connect(this.withTeam).closeGame(gameId1)
+
+    const teamInfo2 = await this.IdleGame.getTeamInfo(this.teamId)
+    const { currentGameId: gameId2, lockTo: lockTo2 } = teamInfo2
+    
+    expect(lockTo2).to.eq(lockTo1)
 
   });
 
