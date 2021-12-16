@@ -126,14 +126,14 @@ task(
         ]
 
         const miningPoints = [
-            239,
-            238,
-            221,
-            236,
-            224,
-            221,
-            224,
-            227,
+            65,
+            66,
+            82,
+            67,
+            80,
+            82,
+            80,
+            77,
         ]
 
         const teams_by_id = {}
@@ -147,7 +147,7 @@ task(
 
                 const mp = miningPoints[i]+miningPoints[j]+miningPoints[PRIME_INDEX]
 
-                if (mp<230)
+                if (mp<231)
                     continue
 
                 teams_by_id[teamID] = {
