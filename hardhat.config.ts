@@ -6,7 +6,7 @@ import "@nomiclabs/hardhat-waffle"
 const MAINNET_AVAX_MAIN_ACCOUNT_PK = process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK']
 
 // For testing with mainet account when forking
-const USE_MAINNET_ACCOUNT=true
+const USE_MAINNET_ACCOUNT= MAINNET_AVAX_MAIN_ACCOUNT_PK ? true : false
 
 const mainnetAccount = {
   privateKey: MAINNET_AVAX_MAIN_ACCOUNT_PK,
@@ -69,7 +69,7 @@ export default {
   },
   networks: {
     hardhat: {
-      gasPrice: 225000000000,
+      gasPrice: 51000000000,
       chainId: !forkingData ? 43112 : undefined, //Only specify a chainId if we are not forking
       forking: forkingData,
       accounts: USE_MAINNET_ACCOUNT ? [ mainnetAccount ] : undefined
