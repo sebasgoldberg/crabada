@@ -29,6 +29,8 @@ task(
         if (testaccount){
             await hre.ethers.provider.send('hardhat_impersonateAccount', [testaccount] );
             signer = await hre.ethers.provider.getSigner(testaccount)
+            if(!signer.address)
+                signer.address = signer._address
         }
 
         try {

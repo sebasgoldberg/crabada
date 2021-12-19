@@ -21,13 +21,29 @@ export const baseFee = async (hre: HardhatRuntimeEnvironment): Promise<BigNumber
 }
 
 export const gasPrice = async (hre: HardhatRuntimeEnvironment): Promise<BigNumber> => {
+
     try {
+
         const base = await baseFee(hre)
         if (base.gt(MAX_FEE))
             return MAX_FEE
         return base.add(ONE_GWEI)
+
     } catch (error) {
-        return BigNumber.from(25*ONE_GWEI)
+
+        try {
+
+            const gasPrice = await hre.ethers.provider.getGasPrice()
+            if (gasPrice.gt(MAX_FEE))
+                return MAX_FEE
+            return gasPrice
+
+        } catch (error) {
+
+            return BigNumber.from(25*ONE_GWEI)
+
+        }
+        
     }
 }
 
@@ -84,10 +100,19 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
     let teamInfo
 
     teamInfo = await idleGame.getTeamInfo(teamId)
+
+    const { lockTo } = teamInfo
+
+    const timestamp = await currentBlockTimeStamp(hre)
+    const difference = (lockTo as BigNumber).sub(timestamp)
+    if (difference.lt(0))
+        console.log(`TEAM ${teamId} UNLOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
+    else{
+        console.log(`TEAM ${teamId} LOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
+        return
+    }
     
     const { currentGameId } = teamInfo
-
-    const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT}
 
     await logBalance(hre, signerAddress)
 
@@ -95,6 +120,8 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
     // CLOSE GAME
     
     const closeGame = async () =>{
+
+        const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT}
 
         try {
             console.log(`callStatic.closeGame(gameId: ${currentGameId})`);        
@@ -124,6 +151,8 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
     // START GAME
 
     const startGame = async () =>{
+
+        const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT}
 
         try {
             console.log(`callStatic.startGame(teamId: ${teamId})`);
