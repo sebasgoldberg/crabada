@@ -7,7 +7,7 @@ StartLimitIntervalSec=0
 Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<your private key>"
 Type=simple
 Restart=always
-RestartSec=30
+RestartSec=15
 User=cerebro
 ExecStart=/home/cerebro/crabada/services/crabada.start.sh
 WorkingDirectory=/home/cerebro/crabada
