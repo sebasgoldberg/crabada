@@ -173,7 +173,8 @@ describe.only('IdleGame: Attack', function () {
 
   });
 
-  it('getTeamInfo.lockTo should be the time the attacker team it is locked to attack another team. .', async function () {
+
+  it('getTeamInfo.lockTo should be the time the attacker team it is locked to attack another team.', async function () {
 
     await this.IdleGame.connect(this.owner).startGame(this.teamId1)
 
@@ -191,6 +192,23 @@ describe.only('IdleGame: Attack', function () {
     const {lockTo: lockToAfterAttackTeam1} = await this.IdleGame.getTeamInfo(this.attackerTeam)
     const timestampAfterAttackTeam1 = await currentBlockTimeStamp(hre)
     expect(lockToAfterAttackTeam1).eq(timestampAfterAttackTeam1+60*60)
+
+  });
+
+
+  it.only('getTeamInfo.lockTo should be the time the miner team it is locked to mine again.', async function () {
+
+    const {lockTo: lockToBeforeMine} = await this.IdleGame.getTeamInfo(this.teamId1)
+    const timestampBeforeMine = await currentBlockTimeStamp(hre)
+    expect(lockToBeforeMine).lt(timestampBeforeMine)
+
+    await this.IdleGame.connect(this.owner).startGame(this.teamId1)
+
+    const teamInfo = await this.IdleGame.getTeamInfo(this.teamId1)
+    
+    const {lockTo: lockToAfterMine} = await this.IdleGame.getTeamInfo(this.teamId1)
+    const timestampAfterMine = await currentBlockTimeStamp(hre)
+    expect(lockToAfterMine).eq(timestampAfterMine+4*60*60)
 
   });
 
@@ -261,6 +279,40 @@ describe.only('IdleGame: Attack', function () {
     const craInitialBalance: BigNumber = await this.craToken.balanceOf(this.other.address)
 
     await this.IdleGame.connect(this.other).settleGame(gameId)
+
+    const tusFinalBalance: BigNumber = await this.tusToken.balanceOf(this.other.address)
+    const craFinalBalance: BigNumber = await this.craToken.balanceOf(this.other.address)
+
+    expect(formatEther(tusInitialBalance
+      .add(parseEther('221.7375'))
+      ))
+    .to.eq(formatEther(tusFinalBalance))
+
+    expect(formatEther(craInitialBalance
+        .add(parseEther('2.7375')) // Has Prime Crabada team member
+        ))
+      .to.eq(formatEther(craFinalBalance))
+
+  });
+
+
+  it.only('should anyone can settle a game.', async function () {
+
+    await this.IdleGame.connect(this.owner).startGame(this.teamId1)
+
+    const teamInfo = await this.IdleGame.getTeamInfo(this.teamId1)
+    const { currentGameId: gameId } = teamInfo
+
+    await this.IdleGame.connect(this.other).attack(gameId, this.attackerTeam)
+
+    await evm_increaseTime(60*60)
+
+    const tusInitialBalance: BigNumber = await this.tusToken.balanceOf(this.other.address)
+    const craInitialBalance: BigNumber = await this.craToken.balanceOf(this.other.address)
+
+    const other3 = (await hre.ethers.getSigners())[2]
+
+    await this.IdleGame.connect(other3).settleGame(gameId)
 
     const tusFinalBalance: BigNumber = await this.tusToken.balanceOf(this.other.address)
     const craFinalBalance: BigNumber = await this.craToken.balanceOf(this.other.address)
