@@ -39,7 +39,7 @@ const teams = [
 ]
 
 // Start test block
-describe.only('IdleGame: Attack', function () {
+describe('IdleGame: Attack', function () {
 
   beforeEach(async function () {
     await ethers.provider.send(
@@ -94,6 +94,8 @@ describe.only('IdleGame: Attack', function () {
     await ethers.provider.send('hardhat_impersonateAccount', [attackerAddress] );
     this.attacker = await ethers.provider.getSigner(attackerAddress)
 
+    const ProxyAttack = (await ethers.getContractFactory("ProxyAttack"));
+    this.proxyAttack = await ProxyAttack.deploy(contractAddress.IdleGame, contractAddress.crabada)
 
     this.teamId = 3286
     this.teamId1 = this.teamId
@@ -196,7 +198,7 @@ describe.only('IdleGame: Attack', function () {
   });
 
 
-  it.only('getTeamInfo.lockTo should be the time the miner team it is locked to mine again.', async function () {
+  it('getTeamInfo.lockTo should be the time the miner team it is locked to mine again.', async function () {
 
     const {lockTo: lockToBeforeMine} = await this.IdleGame.getTeamInfo(this.teamId1)
     const timestampBeforeMine = await currentBlockTimeStamp(hre)
@@ -296,7 +298,7 @@ describe.only('IdleGame: Attack', function () {
   });
 
 
-  it.only('should anyone can settle a game.', async function () {
+  it('should anyone can settle a game.', async function () {
 
     await this.IdleGame.connect(this.owner).startGame(this.teamId1)
 
@@ -428,6 +430,25 @@ describe.only('IdleGame: Attack', function () {
         .add(parseEther('2.7375').mul(2))
         ))
       .to.eq(formatEther(craOtherFinalBalance))
+
+  });
+
+
+  it('should not be possible to attack using ProxyAttack.', async function () {
+
+    // ProxyAttack does not work because delegating to iddleGame.attack, sets
+    // the msg.sender to the msg.sender proxy caller, but executes the call
+    // using ProxyAttack's storage.
+
+    await this.IdleGame.connect(this.owner).startGame(this.teamId2)
+
+    const proxyAttack = this.proxyAttack as Contract
+
+    await proxyAttack.connect(this.other).attack(this.teamId2, this.attackerTeam)
+
+    const {lockTo: lockToAfterAttackTeam1} = await this.IdleGame.getTeamInfo(this.attackerTeam)
+    const timestampAfterAttackTeam1 = await currentBlockTimeStamp(hre)
+    expect(lockToAfterAttackTeam1).lte(timestampAfterAttackTeam1)
 
   });
 
