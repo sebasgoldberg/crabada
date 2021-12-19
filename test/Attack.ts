@@ -2,13 +2,10 @@ import * as hre from "hardhat"
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { BigNumber } from "@ethersproject/bignumber";
-import * as IdleGameAbi from "../abis/IdleGame.json"
-import * as ERC20Abi from "../abis/ERC20.json"
-import * as CrabadaAbi from "../abis/Crabada.json"
 import { Contract } from "ethers";
 import { formatEther, parseEther } from "ethers/lib/utils";
-import { evm_increaseTime } from "./utils";
-import { currentBlockTimeStamp } from "../scripts/crabada";
+import { evm_increaseTime, transferCrabadasFromTeam } from "./utils";
+import { currentBlockTimeStamp, getCrabadaContracts } from "../scripts/crabada";
 import { TransactionResponse } from "@ethersproject/abstract-provider";
 
 const AVALANCHE_NODE_URL: string = process.env.AVALANCHE_MAINNET_URL as string || "https://api.avax.network/ext/bc/C/rpc";
@@ -18,19 +15,6 @@ const OWNER = ""
 const accounts = {
   owner: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
   withTeam: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-}
-
-const abi = {
-  IdleGame: IdleGameAbi,
-  ERC20: ERC20Abi,
-  Crabada: CrabadaAbi,
-}
-
-const contractAddress = {
-  IdleGame: '0x82a85407BD612f52577909F4A58bfC6873f14DA8',
-  tusToken: '0xf693248F96Fe03422FEa95aC0aFbBBc4a8FdD172',
-  craToken: '0xa32608e873f9ddef944b24798db69d80bbb4d1ed',
-  crabada: '0x1b7966315ef0259de890f38f1bdb95acc03cacdd',
 }
 
 const teams = [
@@ -54,32 +38,17 @@ describe('IdleGame: Attack', function () {
       ],
     );
 
-    await evm_increaseTime(7 * 24 * 60 * 60)
+    await evm_increaseTime(hre, 7 * 24 * 60 * 60)
 
-    this.IdleGame = new Contract(
-      contractAddress.IdleGame,
-      abi.IdleGame,
-      ethers.provider
-    )
+    const crabadaContracts = getCrabadaContracts(hre)
 
-    this.tusToken = new Contract(
-      contractAddress.tusToken,
-      abi.ERC20,
-      ethers.provider
-    )
+    this.IdleGame = crabadaContracts.idleGame
 
-    this.craToken = new Contract(
-      contractAddress.craToken,
-      abi.ERC20,
-      ethers.provider
-    )
+    this.tusToken = crabadaContracts.tusToken
 
-    this.Crabada = new Contract(
-      contractAddress.crabada,
-      abi.Crabada,
-      ethers.provider
-    )
+    this.craToken = crabadaContracts.craToken
 
+    this.Crabada = crabadaContracts.crabada
 
     await ethers.provider.send('hardhat_impersonateAccount', [accounts.owner] );
     this.owner = await ethers.provider.getSigner(accounts.owner)
@@ -95,12 +64,11 @@ describe('IdleGame: Attack', function () {
     this.attacker = await ethers.provider.getSigner(attackerAddress)
 
     const ProxyAttack = (await ethers.getContractFactory("ProxyAttack"));
-    this.proxyAttack = await ProxyAttack.deploy(contractAddress.IdleGame, contractAddress.crabada)
+    this.proxyAttack = await ProxyAttack.deploy(crabadaContracts.idleGame.address, crabadaContracts.crabada.address)
 
     this.teamId = 3286
     this.teamId1 = this.teamId
     this.teamId2 = 3759
-    const teamId3 = 3156 // other owner
 
     const teamInfo = await this.IdleGame.getTeamInfo(this.teamId)
     const { currentGameId } = teamInfo
@@ -114,52 +82,19 @@ describe('IdleGame: Attack', function () {
     await this.IdleGame.connect(this.owner).closeGame(gameId2)
 
 
-
-    const teamInfo3 = await this.IdleGame.getTeamInfo(teamId3)
-    const { owner: otherOwnerAddress, currentGameId: gameId3, crabadaId1: c1t1, crabadaId2: c2t1, crabadaId3: v3t1 } = teamInfo3
-    await ethers.provider.send('hardhat_impersonateAccount', [otherOwnerAddress] );
-    this.otherOwner = await ethers.provider.getSigner(otherOwnerAddress)
-
-    // await this.IdleGame.connect(this.owner).closeGame(gameId1)
-    await this.IdleGame.connect(this.otherOwner).closeGame(gameId3)
-
-
-    // const teamAttackerInfo = await this.IdleGame.getTeamInfo(this.teamId)
-    // const { currentGameId: gameAttackerId } = teamAttackerInfo
-    // console.log('gameAttackerId', gameAttackerId);
-    
-    // await this.IdleGame.connect(this.attacker).closeGame(gameAttackerId)
-
-    // Get team members
-
-    // Remove members from team
-    await Promise.all(
-      [0, 1, 2].map(
-        index => this.IdleGame.connect(this.otherOwner).removeCrabadaFromTeam(teamId3, index)
-      )
-    );
-
-    // Withdraw crabadas from game
-    const idleGame = this.IdleGame as Contract
-    const crabadaOtherTeam = [c1t1, c2t1, v3t1]
-    await idleGame.connect(this.otherOwner).withdraw(otherOwnerAddress, crabadaOtherTeam)
+    const teamId3 = 3156 // other owner
 
     const [other, ] = await hre.ethers.getSigners();
     this.other = other
 
-    // Transfer crabadas to other
-    await Promise.all(
-      crabadaOtherTeam.map( 
-        c => (this.Crabada as Contract).connect(this.otherOwner)["safeTransferFrom(address,address,uint256)"](otherOwnerAddress, other.address, c)
-      )
-    );
+    const crabadaTeamMembers = await transferCrabadasFromTeam(hre, teamId3, other.address, this.IdleGame, this.Crabada)
 
     // Deposit crabadas from other account
-    await (this.Crabada as Contract).connect(other).setApprovalForAll(idleGame.address, true)
-    await this.IdleGame.connect(other).deposit(crabadaOtherTeam)
+    await (this.Crabada as Contract).connect(other).setApprovalForAll(this.IdleGame.address, true)
+    await this.IdleGame.connect(other).deposit(crabadaTeamMembers)
 
-    const tx: TransactionResponse = await idleGame.connect(other).createTeam(c1t1, c2t1, v3t1)
-    const events = await idleGame.queryFilter(idleGame.filters.CreateTeam(), tx.blockNumber, tx.blockNumber);
+    const tx: TransactionResponse = await this.IdleGame.connect(other).createTeam(...crabadaTeamMembers)
+    const events = await this.IdleGame.queryFilter(this.IdleGame.filters.CreateTeam(), tx.blockNumber, tx.blockNumber);
     this.attackerTeam = events.filter(x => x.args.owner == other.address).map(x => x.args.teamId)[0]
 
   });
@@ -225,7 +160,7 @@ describe('IdleGame: Attack', function () {
     await this.IdleGame.connect(this.other).attack(gameId, this.attackerTeam)
 
 
-    await evm_increaseTime(60*60)
+    await evm_increaseTime(hre, 60*60)
 
     await this.IdleGame.connect(this.other).settleGame(gameId)
 
@@ -249,7 +184,7 @@ describe('IdleGame: Attack', function () {
     await this.IdleGame.connect(this.other).attack(gameId, this.attackerTeam)
 
 
-    await evm_increaseTime(59*60)
+    await evm_increaseTime(hre, 59*60)
 
     await this.IdleGame.connect(this.other).settleGame(gameId)
 
@@ -275,7 +210,7 @@ describe('IdleGame: Attack', function () {
 
     await this.IdleGame.connect(this.other).attack(gameId, this.attackerTeam)
 
-    await evm_increaseTime(60*60)
+    await evm_increaseTime(hre, 60*60)
 
     const tusInitialBalance: BigNumber = await this.tusToken.balanceOf(this.other.address)
     const craInitialBalance: BigNumber = await this.craToken.balanceOf(this.other.address)
@@ -307,7 +242,7 @@ describe('IdleGame: Attack', function () {
 
     await this.IdleGame.connect(this.other).attack(gameId, this.attackerTeam)
 
-    await evm_increaseTime(60*60)
+    await evm_increaseTime(hre, 60*60)
 
     const tusInitialBalance: BigNumber = await this.tusToken.balanceOf(this.other.address)
     const craInitialBalance: BigNumber = await this.craToken.balanceOf(this.other.address)
@@ -341,7 +276,7 @@ describe('IdleGame: Attack', function () {
 
     await this.IdleGame.connect(this.other).attack(gameId, this.attackerTeam)
 
-    await evm_increaseTime(60*60)
+    await evm_increaseTime(hre, 60*60)
 
     const tusInitialBalance: BigNumber = await this.tusToken.balanceOf(accounts.owner)
     const craInitialBalance: BigNumber = await this.craToken.balanceOf(accounts.owner)
@@ -377,7 +312,7 @@ describe('IdleGame: Attack', function () {
 
 
     // Hour 1
-    await evm_increaseTime(60*60)
+    await evm_increaseTime(hre, 60*60)
 
     await this.IdleGame.connect(this.other).settleGame(gameId)
     
@@ -390,19 +325,19 @@ describe('IdleGame: Attack', function () {
 
 
     // Hour 2
-    await evm_increaseTime(60*60)
+    await evm_increaseTime(hre, 60*60)
 
     await this.IdleGame.connect(this.other).settleGame(gameId2)
 
 
     // Hour 4
-    await evm_increaseTime(2*60*60)
+    await evm_increaseTime(hre, 2*60*60)
     
     await this.IdleGame.connect(this.owner).closeGame(gameId)
 
 
     // Hour 5
-    await evm_increaseTime(1*60*60)
+    await evm_increaseTime(hre, 1*60*60)
     
     await this.IdleGame.connect(this.owner).closeGame(gameId2)
 

@@ -55,7 +55,7 @@ describe('Win-Win Strategy', function () {
       ],
     );
 
-    await evm_increaseTime(7 * 24 * 60 * 60)
+    await evm_increaseTime(hre, 7 * 24 * 60 * 60)
 
     await ethers.provider.send('hardhat_impersonateAccount', [accounts.owner] );
     this.owner = await ethers.provider.getSigner(accounts.owner)
@@ -182,9 +182,9 @@ describe('Win-Win Strategy', function () {
   
   
       // Hour 1
-      await evm_increaseTime(60*60)
+      await evm_increaseTime(hre, 60*60)
 
-      const teamInfo = await this.IdleGame.getTeamInfo(this.team1p1)
+      const teamInfo = await this.IdleGame.getTeamInfo(this.team1p2)
       const { currentGameId: gameId } = teamInfo
 
       await this.IdleGame.connect(this.owner).settleGame(gameId)
@@ -204,7 +204,7 @@ describe('Win-Win Strategy', function () {
 
   
       // Hour 4
-      await evm_increaseTime(3*60*60)
+      await evm_increaseTime(hre, 3*60*60)
       
       await this.IdleGame.connect(this.owner).closeGame(gameId)
   
@@ -288,7 +288,7 @@ describe('Win-Win Strategy', function () {
   
   
       // Hour 1
-      await evm_increaseTime(60*60)
+      await evm_increaseTime(hre, 60*60)
 
       const teamInfo = await this.IdleGame.getTeamInfo(this.team1p1)
       const { currentGameId: gameId } = teamInfo
@@ -297,7 +297,7 @@ describe('Win-Win Strategy', function () {
 
 
       // Hour 4
-      await evm_increaseTime(3*60*60)
+      await evm_increaseTime(hre, 3*60*60)
       
       await this.IdleGame.connect(this.owner).closeGame(gameId)
   

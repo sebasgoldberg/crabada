@@ -54,7 +54,7 @@ describe('Win-Win Strategy', function () {
       ],
     );
 
-    await evm_increaseTime(7 * 24 * 60 * 60)
+    await evm_increaseTime(hre, 7 * 24 * 60 * 60)
 
     await ethers.provider.send('hardhat_impersonateAccount', [accounts.owner] );
     this.owner = await ethers.provider.getSigner(accounts.owner)
@@ -227,7 +227,7 @@ describe('Win-Win Strategy', function () {
   
       await player1.connect(this.owner).startGame(team1)
   
-      await evm_increaseTime(4 * 60 * 60 + 1)
+      await evm_increaseTime(hre, 4 * 60 * 60 + 1)
   
       const tusInitialBalance: BigNumber = await this.tusToken.balanceOf(player1.address)
       const craInitialBalance: BigNumber = await this.craToken.balanceOf(player1.address)
@@ -303,7 +303,7 @@ describe('Win-Win Strategy', function () {
   
       await player2.connect(this.owner).attack(currentGameId, team2)
   
-      await evm_increaseTime(4 * 60 * 60 + 1)
+      await evm_increaseTime(hre, 4 * 60 * 60 + 1)
   
       const tusInitialBalance1: BigNumber = await this.tusToken.balanceOf(player1.address)
       const craInitialBalance1: BigNumber = await this.craToken.balanceOf(player1.address)
@@ -369,7 +369,7 @@ describe('Win-Win Strategy', function () {
     
         await player2.connect(this.owner).attack(currentGameId, team2)
     
-        await evm_increaseTime(4 * 60 * 60 + 1)
+        await evm_increaseTime(hre, 4 * 60 * 60 + 1)
     
         const tusInitialBalance1: BigNumber = await this.tusToken.balanceOf(player1.address)
         const craInitialBalance1: BigNumber = await this.craToken.balanceOf(player1.address)

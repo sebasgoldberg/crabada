@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import * as IdleGameAbi from "../abis/IdleGame.json"
 import * as ERC20Abi from "../abis/ERC20.json"
+import * as CrabadaAbi from "../abis/Crabada.json"
 import { BigNumber, Contract } from "ethers";
 import { TransactionResponse } from "@ethersproject/abstract-provider";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -49,37 +50,68 @@ export const gasPrice = async (hre: HardhatRuntimeEnvironment): Promise<BigNumbe
 
 const abi = {
     IdleGame: IdleGameAbi,
-    ERC20: ERC20Abi
+    ERC20: ERC20Abi,
+    Crabada: CrabadaAbi,
 }
   
 const contractAddress = {
     IdleGame: '0x82a85407BD612f52577909F4A58bfC6873f14DA8',
     tusToken: '0xf693248F96Fe03422FEa95aC0aFbBBc4a8FdD172',
     craToken: '0xa32608e873f9ddef944b24798db69d80bbb4d1ed',
+    crabada: '0x1b7966315ef0259de890f38f1bdb95acc03cacdd',
+}
+
+export const getCrabadaContracts = (hre: HardhatRuntimeEnvironment) => {
+    const idleGame = new Contract(
+        contractAddress.IdleGame,
+        abi.IdleGame,
+        hre.ethers.provider
+    )
+  
+    const tusToken = new Contract(
+        contractAddress.tusToken,
+        abi.ERC20,
+        hre.ethers.provider
+    )
+  
+    const craToken = new Contract(
+        contractAddress.craToken,
+        abi.ERC20,
+        hre.ethers.provider
+    )
+  
+    const crabada = new Contract(
+        contractAddress.crabada,
+        abi.Crabada,
+        hre.ethers.provider
+    )
+
+    return {idleGame, tusToken, craToken, crabada}
+  
 }
 
 const logBalance = async (hre: HardhatRuntimeEnvironment, signerAddress: string) => {
     console.log(`AVAX Balance: ${ formatEther(await hre.ethers.provider.getBalance(signerAddress)) }`);
 }
 
-const logTokenBalance = async (token: Contract, symbol: string, signerAddress: string, decimals: number = 18) => {
-    console.log(`${symbol} Balance: ${ formatUnits(await token.balanceOf(signerAddress), decimals) }`);
+const logTokenBalance = async (token: Contract, symbol: string, address: string, decimals: number = 18) => {
+    console.log(`${symbol} balanceOf(${address}): ${ formatUnits(await token.balanceOf(address), decimals) }`);
 }
   
-export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, gasprice: number, wait: number, signer: SignerWithAddress | undefined) => {
-
-    let idleGame = new Contract(
-        contractAddress.IdleGame,
-        abi.IdleGame,
-        hre.ethers.provider
-    )
+export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: number, attackerContractAddress: string|undefined, attackerTeamId: number, wait: number, signer: SignerWithAddress | undefined) => {
 
     if (!signer){
         signer = (await hre.ethers.getSigners())[0]
     }
-    
-    if (signer)
-        idleGame = idleGame.connect(signer)
+
+    const idleGame = new Contract(
+        contractAddress.IdleGame,
+        abi.IdleGame,
+        hre.ethers.provider
+    ).connect(signer)
+
+    const Player = (await hre.ethers.getContractFactory("Player"));
+    const attacker = Player.attach(attackerContractAddress).connect(signer)
 
     const tusToken = new Contract(
         contractAddress.tusToken,
@@ -97,25 +129,32 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
 
     console.log('signerAddress', signerAddress);
 
-    let teamInfo
+    const { lockTo: minerLockTo, currentGameId: minerCurrentGameId } = await idleGame.getTeamInfo(minerTeamId)
 
-    teamInfo = await idleGame.getTeamInfo(teamId)
-
-    const { lockTo } = teamInfo
+    const { lockTo: attackerLockTo, currentGameId: attackerCurrentGameId } = await idleGame.getTeamInfo(attackerTeamId) // @todo Validate if attackerCurrentGameId can be used to settle.
 
     const timestamp = await currentBlockTimeStamp(hre)
-    const difference = (lockTo as BigNumber).sub(timestamp)
-    if (difference.lt(0))
-        console.log(`TEAM ${teamId} UNLOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
-    else{
-        console.log(`TEAM ${teamId} LOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
-        return
+
+    const locked = async (teamId: number, lockTo: BigNumber, timestamp: number) => {
+        const extraSeconds = 10 // 10 extra seconds of lock, in case timestamp has an error.
+        const difference = (lockTo as BigNumber).sub(timestamp).add(extraSeconds)
+        if (difference.lt(0)){
+            console.log(`TEAM ${teamId} UNLOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
+            return false
+        }
+        else{
+            console.log(`TEAM ${teamId} LOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
+            return true
+        }
     }
+
+    if (await locked(attackerTeamId, attackerLockTo, timestamp))
+        return
     
-    const { currentGameId } = teamInfo
+    if (await locked(minerTeamId, minerLockTo, timestamp))
+        return
 
-    await logBalance(hre, signerAddress)
-
+    await logBalance(hre, signerAddress) ////
 
     // CLOSE GAME
     
@@ -124,8 +163,8 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
         const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT}
 
         try {
-            console.log(`callStatic.closeGame(gameId: ${currentGameId})`);        
-            await idleGame.callStatic.closeGame(currentGameId, override)
+            console.log(`callStatic.closeGame(gameId: ${minerCurrentGameId})`);        
+            await idleGame.callStatic.closeGame(minerCurrentGameId, override)
         } catch (error) {
             console.error(`ERROR: ${error.toString()}`)
             console.error(`INFO: Maybe it is too early to close the game`)
@@ -135,8 +174,8 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
         await logTokenBalance(tusToken, 'TUS', signerAddress)
         await logTokenBalance(craToken, 'CRA', signerAddress)
     
-        console.log(`closeGame(gameId: ${currentGameId})`);
-        const transactionResponse: TransactionResponse = await idleGame.closeGame(currentGameId, override)
+        console.log(`closeGame(gameId: ${minerCurrentGameId})`);
+        const transactionResponse: TransactionResponse = await idleGame.closeGame(minerCurrentGameId, override)
         console.log(`transaction: ${transactionResponse.hash}`);        
         await logBalance(hre, signerAddress)
         await logTokenBalance(tusToken, 'TUS', signerAddress)
@@ -148,26 +187,61 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
 
     await closeGame();
 
-    // START GAME
-
-    const startGame = async () =>{
+    // SETTLE GAME
+    const settleGame = async () =>{
 
         const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT}
 
         try {
-            console.log(`callStatic.startGame(teamId: ${teamId})`);
-            await idleGame.callStatic.startGame(teamId, override)
+            console.log(`callStatic.settleGame(gameId: ${attackerCurrentGameId})`);        
+            await idleGame.callStatic.settleGame(attackerCurrentGameId, override)
+        } catch (error) {
+            console.error(`ERROR: ${error.toString()}`)
+            console.error(`INFO: Maybe it is too early to settle the game`)
+            return
+        }
+    
+        await logTokenBalance(tusToken, 'TUS', attackerContractAddress)
+        await logTokenBalance(craToken, 'CRA', attackerContractAddress)
+    
+        console.log(`settleGame(gameId: ${attackerCurrentGameId})`);
+        const transactionResponse: TransactionResponse = await idleGame.settleGame(attackerCurrentGameId, override)
+        console.log(`transaction: ${transactionResponse.hash}`);
+        await logBalance(hre, signerAddress)
+        await logTokenBalance(tusToken, 'TUS', attackerContractAddress)
+        await logTokenBalance(craToken, 'CRA', attackerContractAddress)
+    
+        await transactionResponse.wait(wait)
+    
+    }
+
+    await settleGame()
+
+    // START GAME
+
+    const startGame = async () =>{
+
+        const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT, nonce: undefined}
+
+        try {
+            console.log(`callStatic.startGame(teamId: ${minerTeamId})`);
+            await idleGame.callStatic.startGame(minerTeamId, override)
         } catch (error) {
             console.error(`ERROR: ${error.toString()}`)
             console.error(`ERROR: Not possible to start the game.`)
             return
         }
     
-        console.log(`startGame(teamId: ${teamId})`);
+        console.log(`startGame(teamId: ${minerTeamId})`);
+        const startGameTransactionResponse: TransactionResponse = await idleGame.startGame(minerTeamId, override)
+        console.log(`transaction ${startGameTransactionResponse.hash}`);
+        await startGameTransactionResponse.wait(1)
 
-        const transactionResponse: TransactionResponse = await idleGame.startGame(teamId, override)
-        console.log(`transaction ${transactionResponse.hash}`);
-        await transactionResponse.wait(wait)
+        console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
+        override.gasPrice = override.gasPrice.mul(130).div(100)
+        override.nonce = startGameTransactionResponse.nonce+1
+        const attackTeamTransactionResponse: TransactionResponse = await attacker.attackTeam(minerTeamId, attackerTeamId, override)
+        console.log(`transaction ${attackTeamTransactionResponse.hash}`);
 
         await logBalance(hre, signerAddress)
 
@@ -175,4 +249,31 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, teamId: number, g
 
     await startGame();
 
+}
+
+export const attachPlayer = async (hre: HardhatRuntimeEnvironment, contractAddress: string): Promise<Contract> => {
+
+    const Player = (await hre.ethers.getContractFactory("Player"));
+
+    return Player.attach(contractAddress)
+}
+
+export const deployPlayer = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress | undefined): Promise<Contract> => {
+
+    if (!signer){
+        signer = (await hre.ethers.getSigners())[0]
+    }
+
+    const { idleGame, crabada } = getCrabadaContracts(hre)
+
+    const Player = (await hre.ethers.getContractFactory("Player")).connect(signer);
+    const override = await getOverride(hre)
+    override.gasLimit = 2500000
+    const player = await Player.deploy(idleGame.address, crabada.address, override)
+
+    return player
+}
+
+export const getOverride = async (hre: HardhatRuntimeEnvironment) => {
+    return ({gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT, nonce: undefined})
 }

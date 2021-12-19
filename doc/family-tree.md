@@ -17,8 +17,8 @@ B1(#8700 bc2 $$$)
 style A1 fill:#AAAAAA
 style B1 fill:#AAAAAA
 
-C1(#8224 bc2 T3286)
-D1(#4564 bc2 T3286)
+C1(#8224 bc3 T3286)
+D1(#4564 bc3 T3286)
 
 A1 -- 4250 --> A2
 B1 -- 4250 --> A2
@@ -32,7 +32,6 @@ D1 -- 12750 --> D2
 
 
 A2(#9217 bc0)
-style A2 fill:#00AAAA
 B2(#9787 p2 bc0)
 C2(#9309 bc0 T3286)
 D2(#9860 p1 bc0)
@@ -49,7 +48,9 @@ B2 -- 8500 --> D3
 D2 -- 8500 --> D3
 
 A3(#9980 p2 bc0)
+style A3 fill:#00AAAA
 B3(#9981 p4 bc0)
+style B3 fill:#00AAAA
 
 style C3 fill:#AA0000
 

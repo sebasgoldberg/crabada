@@ -54,7 +54,7 @@ describe('IdleGame', function () {
       ],
     );
 
-    await evm_increaseTime(7 * 24 * 60 * 60)
+    await evm_increaseTime(hre, 7 * 24 * 60 * 60)
 
     this.IdleGame = new Contract(
       contractAddress.IdleGame,
@@ -148,7 +148,7 @@ describe('IdleGame', function () {
     
     await this.IdleGame.connect(this.withTeam).startGame(this.teamId)
 
-    await evm_increaseTime(4 * 60 * 60) // 4 hours
+    await evm_increaseTime(hre, 4 * 60 * 60) // 4 hours
 
     const teamInfo1 = await this.IdleGame.getTeamInfo(this.teamId)
     const { currentGameId: firstGame } = teamInfo1
@@ -166,7 +166,7 @@ describe('IdleGame', function () {
 
     await this.IdleGame.connect(this.withTeam).startGame(this.teamId)
 
-    await evm_increaseTime(4 * 60 * 60) // 4 hours
+    await evm_increaseTime(hre, 4 * 60 * 60) // 4 hours
 
     const teamInfo1 = await this.IdleGame.getTeamInfo(this.teamId)
     const { currentGameId: firstGame } = teamInfo1
@@ -212,7 +212,7 @@ describe('IdleGame', function () {
     const teamInfo = await this.IdleGame.getTeamInfo(this.teamId)
     const { currentGameId } = teamInfo
 
-    await evm_increaseTime(91 * 60) // 1:31 hours
+    await evm_increaseTime(hre, 91 * 60) // 1:31 hours
 
     await expect(
       this.IdleGame.connect(this.withTeam).closeGame(currentGameId)
@@ -227,7 +227,7 @@ describe('IdleGame', function () {
     const teamInfo1 = await this.IdleGame.getTeamInfo(this.teamId)
     const { currentGameId: gameId1 } = teamInfo1
 
-    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+    await evm_increaseTime(hre, 4 * 60 * 60 + 1) // 4 hours
 
     await this.IdleGame.connect(this.withTeam).closeGame(gameId1)
 
@@ -252,7 +252,7 @@ describe('IdleGame', function () {
     const teamInfo = await this.IdleGame.getTeamInfo(this.teamId)
     const { currentGameId } = teamInfo
 
-    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+    await evm_increaseTime(hre, 4 * 60 * 60 + 1) // 4 hours
 
     await this.IdleGame.connect(this.withTeam).closeGame(currentGameId)
     
@@ -283,7 +283,7 @@ describe('IdleGame', function () {
       const teamInfo = await this.IdleGame.getTeamInfo(this.teamId)
       const { currentGameId } = teamInfo
   
-      await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+      await evm_increaseTime(hre, 4 * 60 * 60 + 1) // 4 hours
   
       await this.IdleGame.connect(this.withTeam).closeGame(currentGameId)
       
@@ -314,7 +314,7 @@ describe('IdleGame', function () {
 
     expect(gameId1.toString()).to.not.eq('0')
 
-    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+    await evm_increaseTime(hre, 4 * 60 * 60 + 1) // 4 hours
 
     await this.IdleGame.connect(this.withTeam).closeGame(gameId1)
 
@@ -334,7 +334,7 @@ describe('IdleGame', function () {
 
     expect(gameId1.toString()).to.not.eq('0')
 
-    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+    await evm_increaseTime(hre, 4 * 60 * 60 + 1) // 4 hours
 
     await this.IdleGame.connect(this.withTeam).closeGame(gameId1)
 
@@ -348,7 +348,7 @@ describe('IdleGame', function () {
 
     expect(timestamp0+4*60*60).to.eq(lockTo2)
 
-    await evm_increaseTime(4 * 60 * 60) // 4 hours
+    await evm_increaseTime(hre, 4 * 60 * 60) // 4 hours
 
     const timestamp1 = await currentBlockTimeStamp(hre)
 
@@ -368,7 +368,7 @@ describe('IdleGame', function () {
 
     expect(gameId1.toString()).to.not.eq('0')
 
-    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+    await evm_increaseTime(hre, 4 * 60 * 60 + 1) // 4 hours
 
     await this.IdleGame.connect(this.withTeam).closeGame(gameId1)
 
@@ -381,7 +381,7 @@ describe('IdleGame', function () {
 
   it('should not be possible to attack my own team.', async function () {
 
-    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+    await evm_increaseTime(hre, 4 * 60 * 60 + 1) // 4 hours
 
     await this.IdleGame.connect(this.owner).startGame(this.teamId)
 
@@ -396,7 +396,7 @@ describe('IdleGame', function () {
 
   it('should be possible to attack with other account.', async function () {
 
-    await evm_increaseTime(4 * 60 * 60 + 1) // 4 hours
+    await evm_increaseTime(hre, 4 * 60 * 60 + 1) // 4 hours
 
     // Get team members
     const { crabadaId1, crabadaId2, crabadaId3 } = await this.IdleGame.getTeamInfo(this.teamId)

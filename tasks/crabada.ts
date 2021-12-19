@@ -1,15 +1,11 @@
 import { task } from "hardhat/config";
-import { default as fetch } from 'node-fetch';
-import { TransactionResponse } from "@ethersproject/abstract-provider";
 
-import * as fs from "fs"
-import { BigNumber } from "ethers";
-import { formatUnits } from "ethers/lib/utils";
-import { monitorEventLoopDelay } from "perf_hooks";
+import { formatEther, formatUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { baseFee, gasPrice, mineStep } from "../scripts/crabada";
-import { string } from "hardhat/internal/core/params/argumentTypes";
+import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, getOverride, mineStep } from "../scripts/crabada";
 import { types } from "hardhat/config"
+import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -18,14 +14,27 @@ task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
 task("gasprice", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await gasPrice(hre), 9))
 })
-  
+
+const getSigner = async (hre: HardhatRuntimeEnvironment, testaccount: string): Promise<SignerWithAddress> => {
+    if (testaccount){
+        await hre.ethers.provider.send('hardhat_impersonateAccount', [testaccount] );
+        const signer: any = await hre.ethers.provider.getSigner(testaccount)
+        if(!(signer as any).address)
+            signer.address = signer._address
+        return signer
+    }
+    else
+        return (await hre.ethers.getSigners())[0]
+}
+
+// npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 task(
     "minestep",
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
-    async ({ teamid, gasprice, wait, testaccount }, hre: HardhatRuntimeEnvironment) => {
+    async ({ minerteamid, attackercontract, attackerteamid, wait, testaccount }, hre: HardhatRuntimeEnvironment) => {
         
         let signer = undefined
-
+        
         if (testaccount){
             await hre.ethers.provider.send('hardhat_impersonateAccount', [testaccount] );
             signer = await hre.ethers.provider.getSigner(testaccount)
@@ -34,14 +43,15 @@ task(
         }
 
         try {
-            await mineStep(hre, teamid, gasprice, wait, signer)
+            await mineStep(hre, minerteamid, attackercontract, attackerteamid, wait, signer)
         } catch (error) {
             console.error(`ERROR: ${error.toString()}`)
         }
 
     })
-    .addParam("teamid", "The team ID to use for mining.")
-    .addOptionalParam("gasprice", "Gas price in gwei.", 25, types.int)
+    .addParam("minerteamid", "The team ID to use for mining.")
+    .addParam("attackercontract", "The attacker contract address.")
+    .addParam("attackerteamid", "The team ID to use for attack.")
     .addOptionalParam("wait", "Number of confirmation before continue execution.", 10, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
@@ -65,7 +75,7 @@ task(
 
                 try {
                     try {
-                        await mineStep(hre, teamid, gasprice, wait, signer)
+                        // await mineStep(hre, teamid, gasprice, wait, signer)
                     } catch (error) {
                         console.error(`ERROR: mineStep: ${error.toString()}`);
                     }
@@ -194,3 +204,143 @@ task(
         })
 
     })
+
+task(
+    "setupplayertest",
+    "Mine step: If mining, try to close game. Then, if not mining, create a game.",
+    async ({ teamid, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        await evm_increaseTime(hre, 4*60*60)
+
+        let signer = undefined
+
+        await hre.ethers.provider.send('hardhat_impersonateAccount', [testaccount] );
+        signer = await hre.ethers.provider.getSigner(testaccount)
+        if(!signer.address)
+            signer.address = signer._address
+
+        const { idleGame, crabada } = getCrabadaContracts(hre)
+
+        const crabadaTeamMembers = await transferCrabadasFromTeam(hre, teamid, signer.address, idleGame, crabada)
+
+        console.log(crabadaTeamMembers.map(x => x.toNumber()));
+        
+        // const player = await deployPlayer(hre, signer)
+        // console.log(`Player created: ${player.address}`);
+
+        // await crabada.connect(signer).setApprovalForAll(player.address, true)
+        // await player.connect(signer).deposit(signer.address, crabadaTeamMembers)
+        // await player.connect(signer).createTeam(...crabadaTeamMembers)
+        // const teamId = await player.teams(0)
+        // console.log(`Player's team created: ${teamId}`);
+
+    })
+    .addOptionalParam("teamid", "The team ID to use to setup player for testing.", 3156, types.int)
+    .addOptionalParam("testaccount", "Account used for testing", '0xB2f4C513164cD12a1e121Dc4141920B805d024B8', types.string)
+
+task(
+    "playerdeploy",
+    "Deploy of player contract.",
+    async ({ testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const player = await deployPlayer(hre, signer)
+        console.log(`Player created: ${player.address}`);
+    
+    })
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
+    "playersetapproval",
+    "Team creation for player.",
+    async ({ player, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const { crabada } = getCrabadaContracts(hre)
+
+        await crabada.connect(signer).setApprovalForAll(player, true, await getOverride(hre))
+        
+    })
+    .addParam("player", "Player contract address, for which will be created the team.")
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
+    "playerdeposit",
+    "Deposit of crabadas in the game.",
+    async ({ player, c1, c2, c3, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const playerC = await attachPlayer(hre, player)
+
+        await playerC.connect(signer).callStatic.deposit(signer.address, [c1, c2, c3], await getOverride(hre))
+        
+        await playerC.connect(signer).deposit(signer.address, [c1, c2, c3], await getOverride(hre))
+        
+    })
+    .addParam("player", "Player contract address, for which will be created the team.")
+    .addParam("c1", "Crabada ID 1.", undefined, types.int)
+    .addParam("c2", "Crabada ID 2.", undefined, types.int)
+    .addParam("c3", "Crabada ID 3.", undefined, types.int)
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
+    "playercreateteam",
+    "Team creation for player.",
+    async ({ player, c1, c2, c3, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const playerC = await attachPlayer(hre, player)
+
+        await playerC.connect(signer).callStatic.createTeam(c1, c2, c3, await getOverride(hre))
+
+        await playerC.connect(signer).createTeam(c1, c2, c3, await getOverride(hre))
+
+        const teamId = await playerC.teams((await playerC.teamsCount()).sub(1))
+        console.log(`Team created: ${teamId}`);
+        
+    })
+    .addParam("player", "Player contract address, for which will be created the team.")
+    .addParam("c1", "Crabada ID 1.", undefined, types.int)
+    .addParam("c2", "Crabada ID 2.", undefined, types.int)
+    .addParam("c3", "Crabada ID 3.", undefined, types.int)
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
+    "playerlistteams",
+    "List player teams.",
+    async ({ player }, hre: HardhatRuntimeEnvironment) => {
+        
+        const playerC = await attachPlayer(hre, player)
+
+        const teamsCount = await playerC.teamsCount()
+        for (let i=0; i<teamsCount; i++)
+            console.log((await playerC.teams(i)).toString());
+    })
+    .addParam("player", "Player contract address, for which will be created the team.")
+
+task(
+    "playerwithdraw",
+    "Mine step: If mining, try to close game. Then, if not mining, create a game.",
+    async ({ player, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const { tusToken, craToken } = getCrabadaContracts(hre)
+
+        const playerC = await attachPlayer(hre, player)
+
+        console.log('SIGNER: TUS, CRA', formatEther(await tusToken.balanceOf(signer.address)), formatEther(await craToken.balanceOf(signer.address)));
+        console.log('PLAYER: TUS, CRA', formatEther(await tusToken.balanceOf(playerC.address)), formatEther(await craToken.balanceOf(playerC.address)));
+        
+        await playerC.connect(signer).withdrawERC20(tusToken.address, signer.address, await tusToken.balanceOf(playerC.address), await getOverride(hre))
+        await playerC.connect(signer).withdrawERC20(craToken.address, signer.address, await craToken.balanceOf(playerC.address), await getOverride(hre))
+
+        console.log('SIGNER: TUS, CRA', formatEther(await tusToken.balanceOf(signer.address)), formatEther(await craToken.balanceOf(signer.address)));
+
+    })
+    .addOptionalParam("player", "Player contract address.")
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)

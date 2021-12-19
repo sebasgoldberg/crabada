@@ -48,7 +48,7 @@ describe('Crabada', function () {
       ],
     );
 
-    await evm_increaseTime(7 * 24 * 60 * 60)
+    await evm_increaseTime(hre, 7 * 24 * 60 * 60)
 
     this.Crabada = new Contract(
       contractAddress.crabada,
