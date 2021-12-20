@@ -241,7 +241,7 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
         const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId,
             { ...override, nonce })
 
-        const attackTeamTransactionResponse: any = await new Promise((resolve, reject) => {
+        const attackTeamTransactionResponse = await new Promise<TransactionResponse>((resolve, reject) => {
             setTimeout(async () => {
                 console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
                 try {
