@@ -235,7 +235,8 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
         const nonce = await hre.ethers.provider.getTransactionCount(signer.address)
 
         console.log(`startGame(teamId: ${minerTeamId})`);
-        const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId, { ...override, nonce })
+        const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId,
+            { ...override, gasPrice: override.gasPrice.mul(120).div(100), nonce })
 
         console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
         const attackTeamTransactionResponsePromise = await attacker.attackTeam(minerTeamId, attackerTeamId, 
