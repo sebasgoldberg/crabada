@@ -224,7 +224,7 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
         //const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT, nonce: undefined}
         const override = {gasLimit: GAS_LIMIT, nonce: undefined, maxFeePerGas: MAX_FEE, maxPriorityFeePerGas: 2*ONE_GWEI}
 
-        // console.log('gasPrice', formatUnits(override.gasPrice, 9) );
+        console.log('gasPrice', formatUnits(await gasPrice(hre), 9) );
 
         try {
             console.log(`callStatic.startGame(teamId: ${minerTeamId})`);
