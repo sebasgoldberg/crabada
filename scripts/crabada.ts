@@ -239,7 +239,7 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
             { ...override, gasPrice: override.gasPrice.mul(120).div(100), nonce })
 
         const attackTeamTransactionResponse: any = await new Promise((resolve, reject) => {
-            setInterval(async () => {
+            setTimeout(async () => {
                 console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
                 try {
                     const attackTeamTransactionResponse = await attacker.attackTeam(minerTeamId, attackerTeamId, 
