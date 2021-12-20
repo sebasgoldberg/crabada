@@ -232,16 +232,21 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
             return
         }
     
+        const nonce = await hre.ethers.provider.getTransactionCount(signer.address)
+
         console.log(`startGame(teamId: ${minerTeamId})`);
-        const startGameTransactionResponse: TransactionResponse = await idleGame.startGame(minerTeamId, override)
-        console.log(`transaction ${startGameTransactionResponse.hash}`);
-        //await startGameTransactionResponse.wait(1)
+        const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId, { ...override, nonce })
 
         console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
-        override.gasPrice = override.gasPrice.mul(120).div(100)
-        override.nonce = startGameTransactionResponse.nonce+1
-        const attackTeamTransactionResponse: TransactionResponse = await attacker.attackTeam(minerTeamId, attackerTeamId, override)
-        console.log(`transaction ${attackTeamTransactionResponse.hash}`);
+        const attackTeamTransactionResponsePromise = await attacker.attackTeam(minerTeamId, attackerTeamId, 
+            { ...override, gasPrice: override.gasPrice.mul(120).div(100), nonce: nonce+1})
+
+        const startGameTransactionResponse: TransactionResponse = await startGameTransactionResponsePromise
+        console.log(`transaction ${startGameTransactionResponse.hash}`, startGameTransactionResponse.blockNumber);
+        //await startGameTransactionResponse.wait(1)
+
+        const attackTeamTransactionResponse: TransactionResponse = await attackTeamTransactionResponsePromise
+        console.log(`transaction ${attackTeamTransactionResponse.hash}`, attackTeamTransactionResponse.blockNumber);
 
         await logBalance(hre, signerAddress)
 
