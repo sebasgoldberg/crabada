@@ -238,15 +238,25 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
         const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId,
             { ...override, gasPrice: override.gasPrice.mul(120).div(100), nonce })
 
-        console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
-        const attackTeamTransactionResponsePromise = await attacker.attackTeam(minerTeamId, attackerTeamId, 
-            { ...override, gasPrice: override.gasPrice.mul(120).div(100), nonce: nonce+1})
+        const attackTeamTransactionResponse: any = await new Promise((resolve, reject) => {
+            setInterval(async () => {
+                console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
+                try {
+                    const attackTeamTransactionResponse = await attacker.attackTeam(minerTeamId, attackerTeamId, 
+                        { ...override, gasPrice: override.gasPrice.mul(120).div(100), nonce: nonce+1})
+                    resolve(attackTeamTransactionResponse)
+                } catch (error) {
+                    reject(error)
+                }
+                
+            }, 1000)
+        })
 
         const startGameTransactionResponse: TransactionResponse = await startGameTransactionResponsePromise
         console.log(`transaction ${startGameTransactionResponse.hash}`, startGameTransactionResponse.blockNumber);
         //await startGameTransactionResponse.wait(1)
 
-        const attackTeamTransactionResponse: TransactionResponse = await attackTeamTransactionResponsePromise
+        //const attackTeamTransactionResponse: TransactionResponse = await attackTeamTransactionResponsePromise
         console.log(`transaction ${attackTeamTransactionResponse.hash}`, attackTeamTransactionResponse.blockNumber);
 
         await logBalance(hre, signerAddress)
