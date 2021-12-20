@@ -8,7 +8,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { formatEther, formatUnits } from "ethers/lib/utils";
 
 const ONE_GWEI = 1000000000
-const GAS_LIMIT = 500000
+const GAS_LIMIT = 700000
 const MAX_FEE = BigNumber.from(ONE_GWEI*50)
 
 export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
@@ -235,10 +235,10 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
         console.log(`startGame(teamId: ${minerTeamId})`);
         const startGameTransactionResponse: TransactionResponse = await idleGame.startGame(minerTeamId, override)
         console.log(`transaction ${startGameTransactionResponse.hash}`);
-        await startGameTransactionResponse.wait(1)
+        //await startGameTransactionResponse.wait(1)
 
         console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
-        override.gasPrice = override.gasPrice.mul(130).div(100)
+        override.gasPrice = override.gasPrice.mul(120).div(100)
         override.nonce = startGameTransactionResponse.nonce+1
         const attackTeamTransactionResponse: TransactionResponse = await attacker.attackTeam(minerTeamId, attackerTeamId, override)
         console.log(`transaction ${attackTeamTransactionResponse.hash}`);

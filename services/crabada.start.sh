@@ -1,4 +1,3 @@
 #!/bin/bash
 . /home/cerebro/.nvm/nvm.sh
-npx hardhat minestep --network mainnet --wait 10 --gasprice 25 --teamid 3286
-npx hardhat minestep --network mainnet --wait 10 --gasprice 25 --teamid 3759
+npx hardhat minestep --network mainnet --minerteamid 3759 --attackercontract 0x019e96438ed58C7F18D799b7CC2006273F81318a --attackerteamid 3873 --wait 7

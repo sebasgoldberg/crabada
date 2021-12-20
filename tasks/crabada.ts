@@ -248,6 +248,9 @@ task(
 
         const player = await deployPlayer(hre, signer)
         console.log(`Player created: ${player.address}`);
+        console.log(player.deployTransaction.hash);
+
+        await player.deployed()
     
     })
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
@@ -413,3 +416,14 @@ task(
     .addParam("player", "Player contract address, for which will be created the team.")
     .addParam("crabadas", "Crabadas to be withdraw.")
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
+    "ownerof",
+    "Remove of crabadas from team.",
+    async ({ crabadaid }, hre: HardhatRuntimeEnvironment) => {
+        
+        const { crabada } = getCrabadaContracts(hre)
+        console.log(await crabada.ownerOf(crabadaid));
+        
+    })
+    .addParam("crabadaid", "Crabada ID.", undefined, types.int)
