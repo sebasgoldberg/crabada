@@ -332,6 +332,21 @@ task(
     .addParam("player", "Player contract address, for which will be created the team.")
 
 task(
+    "teaminfo",
+    "Team information.",
+    async ({ teamid }, hre: HardhatRuntimeEnvironment) => {
+
+        const { idleGame } = getCrabadaContracts(hre)
+        const teamInfo = await idleGame.getTeamInfo(teamid)
+        const { owner, currentGameId: gameId3, crabadaId1: c1, crabadaId2: c2, crabadaId3: c3 } = teamInfo
+        console.log(owner);
+        console.log([c1, c2, c3].map( (x:BigNumber) => x.toNumber() ));
+
+    })
+    .addParam("teamid", "Team ID.", undefined, types.int)
+
+
+task(
     "playerwithdrawerc20",
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
     async ({ player, testaccount }, hre: HardhatRuntimeEnvironment) => {
