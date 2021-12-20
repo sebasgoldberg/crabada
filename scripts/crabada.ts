@@ -9,7 +9,7 @@ import { formatEther, formatUnits } from "ethers/lib/utils";
 
 const ONE_GWEI = 1000000000
 const GAS_LIMIT = 700000
-const MAX_FEE = BigNumber.from(ONE_GWEI*50)
+const MAX_FEE = BigNumber.from(ONE_GWEI*75)
 
 export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
     const blockNumber = await hre.ethers.provider.getBlockNumber()
