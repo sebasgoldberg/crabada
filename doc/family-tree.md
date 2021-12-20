@@ -1,15 +1,7 @@
-Prime: 54
 
-
-4250
-8500
-12750
-38250
-76500
-
-
+# Family Tree
 ```mermaid
-graph TB
+graph BT
 
 
 A1(#5452 bc2 $$$)
@@ -17,8 +9,10 @@ B1(#8700 bc2 $$$)
 style A1 fill:#AAAAAA
 style B1 fill:#AAAAAA
 
-C1(#8224 bc3 T3286)
-D1(#4564 bc3 T3286)
+C1(#8224 bc3 L3873)
+style C1 fill:#FF0000
+D1(#4564 bc3 L3873)
+style D1 fill:#FF0000
 
 A1 -- 4250 --> A2
 B1 -- 4250 --> A2
@@ -31,9 +25,10 @@ C1 -- 12750 --> D2
 D1 -- 12750 --> D2
 
 
-A2(#9217 bc0)
+A2(#9217 bc0 M3759)
 B2(#9787 p2 bc0)
-C2(#9309 bc0 T3286)
+C2(#9309 bc0 L3873)
+style C2 fill:#FF0000
 D2(#9860 p1 bc0)
 
 
@@ -47,31 +42,109 @@ D2 -- 4250 --> C3
 B2 -- 8500 --> D3
 D2 -- 8500 --> D3
 
-A3(#9980 p2 bc0)
-style A3 fill:#00AAAA
-B3(#9981 p4 bc0)
-style B3 fill:#00AAAA
+A3(#9980 p2 bc0 M3759)
+B3(#9981 p4 bc0 M3759)
+C3(#10914 p4 bc0 M3759 25/12/2021 10:51:24)
 
-style C3 fill:#AA0000
+
+style C3 fill:#00AAAA
+style D3 fill:#00AAAA
 
 ```
 
+# Breeding Cost
+1. 4250 TUS + 52.5 CRA
+1. 8500 TUS + 52.5 CRA
+1. 12750 TUS + 52.5 CRA
+1. 38250 TUS + 52.5 CRA
+1. 76500 TUS + 52.5 CRA
 
-```javascript
-28000+28000+28000+20000=104000 // Sell parents
-53000-4500=48500 // Exchange 4500 TUS for 105*4 CRA 
-104000-8500*2-17000*2=53000 // Breed childs
-48500 -> 29.8153 // Convert remaining TUS to AVAX
+# Deployed Players and Their Teams
+- 0x019e96438ed58C7F18D799b7CC2006273F81318a
+  - 3873: 9309,8224,4564
+- 0xEFC8536AA8FdE6A7B15910a74b4B679cD94B337f
+
+
+# Tasks Usage Example
+## Localhost
+```bash
+npx hardhat setupplayertest --network localhost
+[ 7929, 7939, 7224 ]
+
+npx hardhat playerdeploy --network localhost --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+Player created: 0x71C9F079C03bEe608fF19c26B943E599DF115093
+npx hardhat playersetapproval --network localhost --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+
+npx hardhat playerdeposit --network localhost --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --c1 7929 --c2 7939 --c3 7224 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+npx hardhat playercreateteam --network localhost --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --c1 7929 --c2 7939 --c3 7224 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+Team created: 3785
+npx hardhat playerlistteams --network localhost --player 0x71C9F079C03bEe608fF19c26B943E599DF115093
+3785: 7929,7939,7224
+npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x71C9F079C03bEe608fF19c26B943E599DF115093 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+npx hardhat playerwithdrawerc20 --network localhost --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+
+npx hardhat playerclosegame --network localhost --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --teamid 3785 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+npx hardhat playerremovefromteam --network localhost --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --teamid 3785 --position 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+npx hardhat playerwithdraw --network localhost --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --crabadas 7939,7224 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 ```
 
+## Mainnet
+```bash
+npx hardhat playerdeploy --network mainnet
+Player created: 0x019e96438ed58C7F18D799b7CC2006273F81318a
+npx hardhat playersetapproval --network mainnet --player 0x019e96438ed58C7F18D799b7CC2006273F81318a
+npx hardhat playerdeposit --network mainnet --player 0x019e96438ed58C7F18D799b7CC2006273F81318a --c1 9309 --c2 8224 --c3 4564
+npx hardhat playercreateteam --network mainnet --player 0x019e96438ed58C7F18D799b7CC2006273F81318a --c1 9309 --c2 8224 --c3 4564
+Team created: 
+npx hardhat playerlistteams --network mainnet --player 0x019e96438ed58C7F18D799b7CC2006273F81318a
+3873: 9309,8224,4564
+npx hardhat minestep --network mainnet --minerteamid 3759 --attackercontract 0x019e96438ed58C7F18D799b7CC2006273F81318a --attackerteamid 3873 --wait 7
+npx hardhat playerwithdrawerc20 --network mainnet --player 0x019e96438ed58C7F18D799b7CC2006273F81318a
+
+npx hardhat playerclosegame --network mainnet --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --teamid 3785 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+npx hardhat playerremovefromteam --network mainnet --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --teamid 3785 --position 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+npx hardhat playerwithdraw --network mainnet --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --crabadas 7939,7224 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+```
+
+# Crabada Contracts Interfaces
 ```solidity
 
-interface Crabada{
-    event Breed(uint256 tokenId, uint256 daddyId, uint256 mommyId);
+interface ICrabada{
 
-    function view crabadaInfo(uint256) returns (uint256 daddyId, uint256 mommyId, uint256 dna, uint64 birthday, breedingCount: uint8);
+    function approve(address to, uint256 tokenId) external;
+    function safeTransferFrom(address from, address to, uint256 tokenId) external;
+    function transferFrom(address from, address to, uint256 tokenId) external;
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata _data) external;
+    function setApprovalForAll(address operator, bool approved) external;
+    function breed(uint256 daddyId, uint256 mommyId) external;
 
-    function view ownerOf(tokenId: uint256) returns address;
+    function getParentsInfo(uint256 tokenId) external view returns(uint256, uint256, uint256, uint256);
+    function crabadaInfo(uint256) external view returns (uint256 daddyId, uint256 mommyId, uint256 dna, uint64 birthday, uint8 breedingCount);
+    function ownerOf(uint256 tokenId) external view returns(address);
+    function getApproved(uint256 tokenId) external view returns(address);
+    function isApprovedForAll(address owner, address operator) external view returns(bool);
+
+}
+
+interface IIddleGame {
+
+    function withdraw(address to, uint256[] calldata crabadaIds) external;
+    function deposit(uint256[] calldata crabadaIds) external;
+    function createTeam(uint256 crabadaId1, uint256 crabadaId2, uint256 crabadaId3) external returns(uint256 teamId);
+    function addCrabadaToTeam(uint256 teamId, uint256 position, uint256 crabadaId) external;
+    function removeCrabadaFromTeam(uint256 teamId, uint256 position) external;
+    function attack(uint256 gameId, uint256 attackTeamId) external;
+
+    function startGame(uint256 teamId) external;
+    function closeGame(uint256 gameId) external;
+    function settleGame(uint256 gameId) external;
+
+    function getStats(uint256 crabadaId) external view returns(uint16 battlePoint, uint16 timePoint);
+    function getTeamInfo(uint256 teamId) external view returns(address owner, uint256 crabadaId1, uint256 crabadaId2, uint256 crabadaId3, uint16 battlePoint, uint16 timePoint, uint256 currentGameId, uint128 lockTo);
+    function ownerOf(uint256 crabadaId) external view returns(address);
+
+    function setLendingPrice(uint256 crabadaId, uint256 price) external;
+
 }
 
 interface MarketPlace{
@@ -86,7 +159,3 @@ interface MarketPlace{
 
 ```
 
-### Players
-- 0x019e96438ed58C7F18D799b7CC2006273F81318a
-  - 3873: 9309,8224,4564
-- 0xEFC8536AA8FdE6A7B15910a74b4B679cD94B337f

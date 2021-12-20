@@ -249,7 +249,7 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
                     reject(error)
                 }
                 
-            }, 1000)
+            }, 700)
         })
 
         const startGameTransactionResponse: TransactionResponse = await startGameTransactionResponsePromise
