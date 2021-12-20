@@ -222,7 +222,7 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
     const startGame = async () =>{
 
         //const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT, nonce: undefined}
-        const override = {gasLimit: GAS_LIMIT, nonce: undefined, maxFeePerGas: MAX_FEE, maxPriorityFeePerGas: 2*ONE_GWEI}
+        const override = {gasLimit: GAS_LIMIT, nonce: undefined, maxFeePerGas: MAX_FEE, maxPriorityFeePerGas: 4*ONE_GWEI}
 
         console.log('gasPrice', formatUnits(await gasPrice(hre), 9) );
 
@@ -252,7 +252,7 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
                     reject(error)
                 }
                 
-            }, 700)
+            }, 500)
         })
 
         const startGameTransactionResponse: TransactionResponse = await startGameTransactionResponsePromise
