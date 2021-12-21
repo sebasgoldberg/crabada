@@ -251,7 +251,7 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
                 console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
                 try {
                     const attackTeamTransactionResponse = await attacker.attackTeam(minerTeamId, attackerTeamId, 
-                        { ...override, nonce: nonce+1, maxPriorityFeePerGas: 15*ONE_GWEI })
+                        { ...override, nonce: nonce+1, maxFeePerGas: MAX_FEE.mul(2), maxPriorityFeePerGas: 15*ONE_GWEI })
                     resolve(attackTeamTransactionResponse)
                 } catch (error) {
                     reject(error)
