@@ -241,13 +241,13 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
         const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId,
             { ...override, nonce })
 
-        const attackTeamTransactionResponse = await new Promise<TransactionResponse>((resolve, reject) => {
+        const attackTeamTransactionResponse1Promise = await new Promise<Promise<TransactionResponse>>((resolve, reject) => {
             setTimeout(async () => {
                 console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
                 try {
-                    const attackTeamTransactionResponse = await attacker.attackTeam(minerTeamId, attackerTeamId, 
+                    const attackTeamTransactionResponsePromise = attacker.attackTeam(minerTeamId, attackerTeamId, 
                         { ...override, nonce: nonce+1})
-                    resolve(attackTeamTransactionResponse)
+                    resolve(attackTeamTransactionResponsePromise)
                 } catch (error) {
                     reject(error)
                 }
@@ -255,13 +255,33 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
             }, 500)
         })
 
+        const attackTeamTransactionResponse2Promise = await new Promise<Promise<TransactionResponse>>((resolve, reject) => {
+            setTimeout(async () => {
+                console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
+                try {
+                    const attackTeamTransactionResponsePromise = attacker.attackTeam(minerTeamId, attackerTeamId, 
+                        { ...override, nonce: nonce+2})
+                    resolve(attackTeamTransactionResponsePromise)
+                } catch (error) {
+                    reject(error)
+                }
+                
+            }, 500)
+        })
+
+
         const startGameTransactionResponse: TransactionResponse = await startGameTransactionResponsePromise
         console.log(`transaction ${startGameTransactionResponse.hash}`, startGameTransactionResponse.blockNumber);
         //await startGameTransactionResponse.wait(1)
 
         //const attackTeamTransactionResponse: TransactionResponse = await attackTeamTransactionResponsePromise
-        console.log(`transaction ${attackTeamTransactionResponse.hash}`, attackTeamTransactionResponse.blockNumber);
+        const attackTeamTransactionResponse1 = await attackTeamTransactionResponse1Promise
+        console.log(`transaction ${attackTeamTransactionResponse1.hash}`, attackTeamTransactionResponse1.blockNumber);
 
+        const attackTeamTransactionResponse2 = await attackTeamTransactionResponse2Promise
+        console.log(`transaction ${attackTeamTransactionResponse2.hash}`, attackTeamTransactionResponse2.blockNumber);
+
+        
         await logBalance(hre, signerAddress)
 
     }
