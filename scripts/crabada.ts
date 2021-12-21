@@ -158,13 +158,13 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
 
     // CLOSE GAME
     
-    const closeGame = async () =>{
+    const closeGame = async (gameId: number) =>{
 
         const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT}
 
         try {
-            console.log(`callStatic.closeGame(gameId: ${minerCurrentGameId})`);        
-            await idleGame.callStatic.closeGame(minerCurrentGameId, override)
+            console.log(`callStatic.closeGame(gameId: ${gameId})`);        
+            await idleGame.callStatic.closeGame(gameId, override)
         } catch (error) {
             console.error(`ERROR: ${error.toString()}`)
             console.error(`INFO: Maybe it is too early to close the game`)
@@ -174,8 +174,8 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
         await logTokenBalance(tusToken, 'TUS', signerAddress)
         await logTokenBalance(craToken, 'CRA', signerAddress)
     
-        console.log(`closeGame(gameId: ${minerCurrentGameId})`);
-        const transactionResponse: TransactionResponse = await idleGame.closeGame(minerCurrentGameId, override)
+        console.log(`closeGame(gameId: ${gameId})`);
+        const transactionResponse: TransactionResponse = await idleGame.closeGame(gameId, override)
         console.log(`transaction: ${transactionResponse.hash}`);        
         await logBalance(hre, signerAddress)
         await logTokenBalance(tusToken, 'TUS', signerAddress)
@@ -185,7 +185,8 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
     
     }
 
-    await closeGame();
+    await closeGame(minerCurrentGameId);
+    await closeGame(attackerCurrentGameId);
 
     // SETTLE GAME
     const settleGame = async () =>{
@@ -222,9 +223,13 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
     const startGame = async () =>{
 
         //const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT, nonce: undefined}
-        const override = {gasLimit: GAS_LIMIT, nonce: undefined, maxFeePerGas: MAX_FEE, maxPriorityFeePerGas: 4*ONE_GWEI}
-
-        console.log('gasPrice', formatUnits(await gasPrice(hre), 9) );
+        const baseFee = await gasPrice(hre)
+        const override = {
+            gasLimit: GAS_LIMIT,
+            nonce: undefined,
+            maxFeePerGas: MAX_FEE,
+            maxPriorityFeePerGas: 0 // 5% tip
+        } 
 
         try {
             console.log(`callStatic.startGame(teamId: ${minerTeamId})`);
@@ -239,14 +244,14 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
 
         console.log(`startGame(teamId: ${minerTeamId})`);
         const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId,
-            { ...override, nonce })
+            { ...override, nonce, maxPriorityFeePerGas: baseFee.mul(10).div(100) })
 
         const attackTeamTransactionResponse = await new Promise<TransactionResponse>((resolve, reject) => {
             setTimeout(async () => {
                 console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
                 try {
                     const attackTeamTransactionResponse = await attacker.attackTeam(minerTeamId, attackerTeamId, 
-                        { ...override, nonce: nonce+1})
+                        { ...override, nonce: nonce+1, maxPriorityFeePerGas: 15*ONE_GWEI })
                     resolve(attackTeamTransactionResponse)
                 } catch (error) {
                     reject(error)
@@ -257,12 +262,27 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
 
         const startGameTransactionResponse: TransactionResponse = await startGameTransactionResponsePromise
         console.log(`transaction ${startGameTransactionResponse.hash}`, startGameTransactionResponse.blockNumber);
-        //await startGameTransactionResponse.wait(1)
 
-        //const attackTeamTransactionResponse: TransactionResponse = await attackTeamTransactionResponsePromise
         console.log(`transaction ${attackTeamTransactionResponse.hash}`, attackTeamTransactionResponse.blockNumber);
 
+        startGameTransactionResponse.wait(20)
+
+        try {
+            console.log(`callStatic.startGame(teamId: ${attackerTeamId})`);
+            await attacker.callStatic.startGame(attackerTeamId)
+        } catch (error) {
+            console.error(`ERROR: ${error.toString()}`)
+            console.error(`ERROR: Not possible to start the game.`)
+            return
+        }
+
         await logBalance(hre, signerAddress)
+
+        // In case not successful attack, we try to mine with the attacker.
+        const override2 = {gasLimit: GAS_LIMIT, nonce: undefined, maxFeePerGas: MAX_FEE, maxPriorityFeePerGas: 0}
+        console.log(`startGame(teamId: ${attackerTeamId})`);
+        const attackerStartGameTransactionResponse: TransactionResponse = await attacker.startGame(attackerTeamId, override2)
+        console.log(`transaction ${attackerStartGameTransactionResponse.hash}`, attackerStartGameTransactionResponse.blockNumber);
 
     }
 
