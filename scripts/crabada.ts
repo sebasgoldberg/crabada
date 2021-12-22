@@ -10,6 +10,7 @@ import { formatEther, formatUnits } from "ethers/lib/utils";
 const ONE_GWEI = 1000000000
 const GAS_LIMIT = 700000
 const MAX_FEE = BigNumber.from(ONE_GWEI*100)
+const ATTACK_MAX_GAS_PRICE = MAX_FEE.mul(3)
 
 export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
     const blockNumber = await hre.ethers.provider.getBlockNumber()
@@ -251,8 +252,10 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
             setTimeout(async () => {
                 console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
                 try {
+                    let attackGasPrice = baseFee.mul(35).div(10)
+                    attackGasPrice = attackGasPrice.gt(ATTACK_MAX_GAS_PRICE) ? ATTACK_MAX_GAS_PRICE : attackGasPrice
                     const attackTeamTransactionResponse = await attacker.attackTeam(minerTeamId, attackerTeamId, 
-                        { ...override, nonce: nonce+1, maxFeePerGas: undefined, maxPriorityFeePerGas: undefined, gasPrice: baseFee.mul(4) })
+                        { ...override, nonce: nonce+1, maxFeePerGas: undefined, maxPriorityFeePerGas: undefined, gasPrice: attackGasPrice })
                     resolve(attackTeamTransactionResponse)
                 } catch (error) {
                     reject(error)
