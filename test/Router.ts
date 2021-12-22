@@ -159,8 +159,8 @@ describe('Win-Win Strategy', function () {
       const player1 = this.player1 as Contract
       const player2 = this.player2 as Contract
 
-      await player1.connect(this.owner).transferOwnership(router.address)
-      await player2.connect(this.owner).transferOwnership(router.address)
+      await player1.connect(this.owner).addOwner(router.address)
+      await player2.connect(this.owner).addOwner(router.address)
 
       await expect(
         router.connect(this.owner).startGameAndAttack(

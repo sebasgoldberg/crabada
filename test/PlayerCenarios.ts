@@ -165,7 +165,29 @@ describe('Win-Win Strategy', function () {
       expect(lockToAfterAttackTeam1).eq(timestampAfterAttackTeam1+60*60)
 
     });
+
+    it.only('should be possible to attack using multiple accounts at same time.', async function () {
+      
+      await this.player1.startGame(this.team1p1);
+
+      const [ , , , attacker2, attacker3] = await hre.ethers.getSigners()
+
+      this.player2.addOwner(attacker2.address)
+      this.player2.addOwner(attacker3.address)
+
+      await this.player2.connect(attacker2).attackTeam(this.team1p1, this.team1p2);
+
+      await expect(
+        this.player2.connect(attacker3).attackTeam(this.team1p1, this.team1p2)
+      ).to.be.revertedWith('GAME:LOOTED');
+      
+      await expect(
+        this.player2.attackTeam(this.team1p1, this.team1p2)
+      ).to.be.revertedWith('GAME:LOOTED');
+
+    });
   
+
     it('should win miners and attacker their corresponding rewards.', async function () {
 
       const player1 = this.player1 as Contract

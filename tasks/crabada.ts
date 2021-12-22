@@ -442,3 +442,82 @@ task(
         
     })
     .addParam("crabadaid", "Crabada ID.", undefined, types.int)
+
+
+task(
+    "listenstartgame",
+    "Listen StartGame events from current block.",
+    async ({ }, hre: HardhatRuntimeEnvironment) => {
+        
+        const { idleGame } = getCrabadaContracts(hre)
+
+        await (new Promise(() => {
+
+            idleGame.on( idleGame.filters.StartGame(), (gameId: BigNumber, teamId: BigNumber, duration: BigNumber, craReward: BigNumber, tusReward: BigNumber) => {
+                console.log(new Date().toISOString(), '(gameId, teamId, duration, craReward, tusReward):', [gameId.toNumber(), teamId.toNumber(), duration.toNumber(), formatEther(craReward), formatEther(tusReward)]);
+            })        
+    
+        }))
+        
+    })
+
+
+task(
+    "playermigrateteam",
+    "Migrate teams from one player to another",
+    async ({ playerfrom, playerto, testaccount }, hre: HardhatRuntimeEnvironment) => {
+
+        const signer = await getSigner(hre, testaccount)
+        
+        const { idleGame, crabada } = getCrabadaContracts(hre)
+
+        const _playerFrom = (await attachPlayer(hre, playerfrom)).connect(signer)
+
+        const _playerTo = (await attachPlayer(hre, playerto)).connect(signer)
+
+        const teamsCount: number = (await _playerFrom.teamsCount()).toNumber()
+
+        for (let i=0; i<teamsCount; i++){
+
+            const teamId = await _playerFrom.teams(i)
+            const teamInfo = await idleGame.getTeamInfo(teamId)
+            const { crabadaId1: c1, crabadaId2: c2, crabadaId3: c3 } = teamInfo
+
+            for (let position=0; position<3; position++){
+                console.log('_playerFrom.callStatic.removeCrabadaFromTeam(teamId, position)', teamId.toNumber(), position);
+                await _playerFrom.callStatic.removeCrabadaFromTeam(teamId, position, await getOverride(hre))
+                console.log('_playerFrom.removeCrabadaFromTeam(teamId, position)', teamId.toNumber(), position);
+                await _playerFrom.removeCrabadaFromTeam(teamId, position, await getOverride(hre))
+            }
+    
+            const crabadasIds = [c1, c2, c3]
+
+            console.log('_playerFrom.callStatic.withdraw(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
+            await _playerFrom.callStatic.withdraw(signer.address, crabadasIds, await getOverride(hre))
+            console.log('_playerFrom.withdraw(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
+            await _playerFrom.withdraw(signer.address, crabadasIds, await getOverride(hre))
+
+            const isApprovedForAll = await crabada.isApprovedForAll(signer.address, _playerTo.address)
+            if (!isApprovedForAll){
+                console.log('crabada.callStatic.setApprovalForAll(_playerTo.address, true)', _playerTo.address);
+                await crabada.connect(signer).callStatic.setApprovalForAll(_playerTo.address, true, await getOverride(hre))
+                console.log('crabada.setApprovalForAll(_playerTo.address, true)', _playerTo.address);
+                await crabada.connect(signer).setApprovalForAll(_playerTo.address, true, await getOverride(hre))
+            }
+
+            console.log('_playerTo.callStatic.deposit(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
+            await _playerTo.callStatic.deposit(signer.address, crabadasIds, await getOverride(hre))
+            console.log('_playerTo.deposit(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
+            await _playerTo.deposit(signer.address, crabadasIds, await getOverride(hre))
+
+            console.log('_playerTo.callStatic.createTeam(c1, c2, c3)', ...(crabadasIds.map(x=>x.toString())) );
+            await _playerTo.callStatic.createTeam(c1, c2, c3, await getOverride(hre))
+            console.log('_playerTo.createTeam(c1, c2, c3)', ...(crabadasIds.map(x=>x.toString())) );
+            await _playerTo.createTeam(c1, c2, c3, await getOverride(hre))
+        }
+
+
+    })
+    .addParam("playerfrom", "The contract that has teams of crabada.")
+    .addParam("playerto", "The contract that does not has teams of crabada.")
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)

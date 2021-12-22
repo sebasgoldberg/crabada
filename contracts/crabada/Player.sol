@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "../access/MultiOwnable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "./IIddleGame.sol";
 import "./ICrabada.sol";
 
-contract Player is Ownable, IERC721Receiver{
+contract Player is MultiOwnable, IERC721Receiver{
 
     IIddleGame public iddleGame;
     ICrabada public crabada;
@@ -114,4 +114,6 @@ contract Player is Ownable, IERC721Receiver{
         to.transfer(amount);
     }
 
+    receive() external payable {
+    }
 }
