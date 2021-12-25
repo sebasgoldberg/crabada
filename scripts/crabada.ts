@@ -275,24 +275,24 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
         const [startGameTransactionResponse, ] = await Promise.all([startGameTransactionResponsePromise, attackTeamTransactionResponsesPromise])
         console.log(`transaction ${startGameTransactionResponse.hash}`, startGameTransactionResponse.blockNumber);
 
-        startGameTransactionResponse.wait(20)
+        // await startGameTransactionResponse.wait(20)
 
-        try {
-            console.log(`callStatic.startGame(teamId: ${attackerTeamId})`);
-            await attacker.callStatic.startGame(attackerTeamId)
-        } catch (error) {
-            console.error(`ERROR: ${error.toString()}`)
-            console.error(`ERROR: Not possible to start the game.`)
-            return
-        }
+        // try {
+        //     console.log(`callStatic.startGame(teamId: ${attackerTeamId})`);
+        //     await attacker.callStatic.startGame(attackerTeamId)
+        // } catch (error) {
+        //     console.error(`ERROR: ${error.toString()}`)
+        //     console.error(`ERROR: Not possible to start the game.`)
+        //     return
+        // }
+
+        // // In case not successful attack, we try to mine with the attacker.
+        // const override2 = {gasLimit: GAS_LIMIT, nonce: undefined, maxFeePerGas: MAX_FEE, maxPriorityFeePerGas: 0}
+        // console.log(`startGame(teamId: ${attackerTeamId})`);
+        // const attackerStartGameTransactionResponse: TransactionResponse = await attacker.startGame(attackerTeamId, override2)
+        // console.log(`transaction ${attackerStartGameTransactionResponse.hash}`, attackerStartGameTransactionResponse.blockNumber);
 
         await logBalance(hre, minerAddress)
-
-        // In case not successful attack, we try to mine with the attacker.
-        const override2 = {gasLimit: GAS_LIMIT, nonce: undefined, maxFeePerGas: MAX_FEE, maxPriorityFeePerGas: 0}
-        console.log(`startGame(teamId: ${attackerTeamId})`);
-        const attackerStartGameTransactionResponse: TransactionResponse = await attacker.startGame(attackerTeamId, override2)
-        console.log(`transaction ${attackerStartGameTransactionResponse.hash}`, attackerStartGameTransactionResponse.blockNumber);
 
     }
 
