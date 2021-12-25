@@ -7,6 +7,7 @@ import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
+import { string } from "hardhat/internal/core/params/argumentTypes";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -445,16 +446,48 @@ task(
 
 
 task(
-    "listenstartgame",
+    "listengames",
     "Listen StartGame events from current block.",
     async ({ }, hre: HardhatRuntimeEnvironment) => {
         
-        const { idleGame } = getCrabadaContracts(hre)
-
         await (new Promise(() => {
 
-            idleGame.on( idleGame.filters.StartGame(), (gameId: BigNumber, teamId: BigNumber, duration: BigNumber, craReward: BigNumber, tusReward: BigNumber) => {
-                console.log(new Date().toISOString(), '(gameId, teamId, duration, craReward, tusReward):', [gameId.toNumber(), teamId.toNumber(), duration.toNumber(), formatEther(craReward), formatEther(tusReward)]);
+            interface ClosedGameInfo {
+                blockNumber: number, 
+                transactionHash: string, 
+                delayInClosedEventReception: number,
+                gameId: number,
+            }
+
+            const { idleGame } = getCrabadaContracts(hre)
+            const closedGamesInfo = {}
+
+            idleGame.on( idleGame.filters.CloseGame(), async (gameId: BigNumber, { transactionHash, blockNumber, getBlock }) => {
+                const eventReceivedTimestamp = (+new Date())/1000
+                const { timestamp: blockTimestamp } = await getBlock()
+                const { teamId } = await idleGame.getGameBasicInfo(gameId)
+                closedGamesInfo[teamId.toString()] = ({ 
+                    blockNumber, 
+                    transactionHash, 
+                    delayInClosedEventReception: eventReceivedTimestamp - blockTimestamp,
+                    gameId: gameId.toNumber()
+                } as ClosedGameInfo)
+                // console.log('blockNumber', blockNumber, 'transactionHash', transactionHash)
+            })        
+
+            idleGame.on( idleGame.filters.StartGame(), async (gameId: BigNumber, teamId: BigNumber, duration: BigNumber, craReward: BigNumber, tusReward: BigNumber, { transactionHash, blockNumber, getBlock }) => {
+                const eventReceivedTimestamp = (+new Date())/1000
+                const { timestamp: blockTimestamp } = await getBlock()
+                const closedGameInfo: ClosedGameInfo|undefined = closedGamesInfo[teamId.toString()] ?
+                    closedGamesInfo[teamId.toString()] : undefined
+                // console.log('blockNumber', blockNumber, 'transactionHash', transactionHash)
+                if (closedGameInfo){
+                    console.log('CloseGame(gameId)', closedGameInfo.gameId);
+                    console.log('Blocks between closeGame and startGame', blockNumber - closedGameInfo.blockNumber)
+                    console.log('Delay in CloseGame event reception', closedGameInfo.delayInClosedEventReception)
+                }
+                console.log('StartGame(gameId, teamId, duration, craReward, tusReward):', [gameId.toNumber(), teamId.toNumber(), duration.toNumber(), formatEther(craReward), formatEther(tusReward)]);
+                console.log('');
             })        
     
         }))
