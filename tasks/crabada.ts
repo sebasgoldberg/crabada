@@ -17,7 +17,7 @@ task("gasprice", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await gasPrice(hre), 9))
 })
 
-const getSigner = async (hre: HardhatRuntimeEnvironment, testaccount: string): Promise<SignerWithAddress> => {
+const getSigner = async (hre: HardhatRuntimeEnvironment, testaccount: string, signerIndex: number = 0): Promise<SignerWithAddress> => {
     if (testaccount){
         await hre.ethers.provider.send('hardhat_impersonateAccount', [testaccount] );
         const signer: any = await hre.ethers.provider.getSigner(testaccount)
@@ -26,26 +26,21 @@ const getSigner = async (hre: HardhatRuntimeEnvironment, testaccount: string): P
         return signer
     }
     else
-        return (await hre.ethers.getSigners())[0]
+        return (await hre.ethers.getSigners())[signerIndex]
 }
 
 // npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 task(
     "minestep",
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
-    async ({ minerteamid, attackercontract, attackerteamid, wait, testaccount }, hre: HardhatRuntimeEnvironment) => {
+    async ({ minerteamid, attackercontract, attackerteamid, wait, testmineraccount, testattackeraccount, testattacker2account }, hre: HardhatRuntimeEnvironment) => {
         
-        let signer = undefined
-        
-        if (testaccount){
-            await hre.ethers.provider.send('hardhat_impersonateAccount', [testaccount] );
-            signer = await hre.ethers.provider.getSigner(testaccount)
-            if(!signer.address)
-                signer.address = signer._address
-        }
+        const minerSigner = await getSigner(hre, testmineraccount, 0)
+        const attackerSigner = await getSigner(hre, testattackeraccount, 1)
+        const attacker2Signer = await getSigner(hre, testattacker2account, 2)
 
         try {
-            await mineStep(hre, minerteamid, attackercontract, attackerteamid, wait, signer)
+            await mineStep(hre, minerteamid, attackercontract, attackerteamid, wait, minerSigner, attackerSigner, attacker2Signer)
         } catch (error) {
             console.error(`ERROR: ${error.toString()}`)
         }
@@ -55,7 +50,9 @@ task(
     .addParam("attackercontract", "The attacker contract address.")
     .addParam("attackerteamid", "The team ID to use for attack.")
     .addOptionalParam("wait", "Number of confirmation before continue execution.", 10, types.int)
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+    .addOptionalParam("testmineraccount", "Mining account used for testing", undefined, types.string)
+    .addOptionalParam("testattackeraccount", "Attacker account used for testing", undefined, types.string)
+    .addOptionalParam("testattacker2account", "Attacker account used for testing", undefined, types.string)
 
 task(
     "mineloop",
@@ -444,6 +441,23 @@ task(
     })
     .addParam("crabadaid", "Crabada ID.", undefined, types.int)
 
+task(
+    "playertransferownership",
+    "Transfer ownership.",
+    async ({ player, newowner, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const playerC = await attachPlayer(hre, player)
+
+        await playerC.connect(signer).callStatic.transferOwnership(newowner)
+
+        await playerC.connect(signer).transferOwnership(newowner, await getOverride(hre))
+
+    })
+    .addParam("player", "Player contract address that will be transfered.")
+    .addParam("newowner", "New owner of the player contract.")
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
 task(
     "listengames",
@@ -553,4 +567,22 @@ task(
     })
     .addParam("playerfrom", "The contract that has teams of crabada.")
     .addParam("playerto", "The contract that does not has teams of crabada.")
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
+    "playeraddowner",
+    "Add a new owner for player.",
+    async ({ player, newowner, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const playerC = await attachPlayer(hre, player)
+
+        await playerC.connect(signer).callStatic.addOwner(newowner)
+
+        await playerC.connect(signer).addOwner(newowner, await getOverride(hre))
+
+    })
+    .addParam("player", "Player contract for which will be added a new owner.")
+    .addParam("newowner", "New owner of the player contract.")
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)

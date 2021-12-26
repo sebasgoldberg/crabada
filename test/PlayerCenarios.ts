@@ -166,7 +166,7 @@ describe('Win-Win Strategy', function () {
 
     });
 
-    it.only('should be possible to attack using multiple accounts at same time.', async function () {
+    it('should be possible to attack using multiple accounts at same time.', async function () {
       
       await this.player1.startGame(this.team1p1);
 
