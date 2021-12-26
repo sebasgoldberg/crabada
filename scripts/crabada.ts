@@ -245,10 +245,8 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
         // attackGasPrice = attackGasPrice.gt(ATTACK_MAX_GAS_PRICE) ? ATTACK_MAX_GAS_PRICE : attackGasPrice
 
         const attackOverrides = [
-            // {...override, nonce: attackerNonce, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*101) },
-            // {...override, nonce: attackerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*101)}
-            {...override, nonce: attackerNonce, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(10).div(100) },
-            {...override, nonce: attackerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(10).div(100)}
+            {...override, nonce: attackerNonce, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(5).div(100) },
+            {...override, nonce: attackerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*101)}
         ]
 
 
@@ -256,7 +254,7 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
         const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId,
             { ...override })
 
-        const attackTeamTransactionResponsesPromise = Promise.all([500, 1000].map( (delayMilis, index) => {
+        const attackTeamTransactionResponsesPromise = Promise.all([1000, 2000].map( (delayMilis, index) => {
             return new Promise<TransactionResponse | undefined>((resolve, reject) => {
                 setTimeout(async () => {
                     console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
