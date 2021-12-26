@@ -26,10 +26,10 @@ D1 -- 12750 --> D2
 
 
 A2(#9217 bc0 M3759)
-B2(#9787 p2 bc0)
+B2(#9787 p2 bc0 M3286)
 C2(#9309 bc0 L3873)
 style C2 fill:#FF0000
-D2(#9860 p1 bc0)
+D2(#9860 p1 bc0 M3286)
 
 
 A2 -- 4250 --> A3
@@ -44,13 +44,29 @@ D2 -- 8500 --> D3
 
 A3(#9980 p2 bc0 M3759)
 B3(#9981 p4 bc0 M3759)
-C3(#10914 p4 bc0 M3759 25/12/2021 10:51:24)
+C3(#10914 p4 bc0 M3286)
 
 
-style C3 fill:#00AAAA
 style D3 fill:#00AAAA
 
+
+A3 -- 4250 --> A4
+C3 -- 4250 --> A4
+A3 -- 8500 --> B4
+C3 -- 8500 --> B4
+
+B3 -- 4250 --> C4
+D3 -- 4250 --> C4
+B3 -- 8500 --> D4
+D3 -- 8500 --> D4
+
+style A4 fill:#00AAAA
+style B4 fill:#00AAAA
+style C4 fill:#00AAAA
+style D4 fill:#00AAAA
+
 ```
+
 
 # Breeding Cost
 1. 4250 TUS + 52.5 CRA
