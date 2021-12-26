@@ -9,7 +9,7 @@ import { formatEther, formatUnits } from "ethers/lib/utils";
 
 const ONE_GWEI = 1000000000
 const GAS_LIMIT = 700000
-const MAX_FEE = BigNumber.from(ONE_GWEI*100)
+const MAX_FEE = BigNumber.from(ONE_GWEI*150)
 const ATTACK_MAX_GAS_PRICE = MAX_FEE.mul(3)
 
 export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
@@ -245,8 +245,10 @@ export const mineStep = async (hre: HardhatRuntimeEnvironment, minerTeamId: numb
         // attackGasPrice = attackGasPrice.gt(ATTACK_MAX_GAS_PRICE) ? ATTACK_MAX_GAS_PRICE : attackGasPrice
 
         const attackOverrides = [
-            {...override, nonce: attackerNonce, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*101) },
-            {...override, nonce: attackerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*101)}
+            // {...override, nonce: attackerNonce, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*101) },
+            // {...override, nonce: attackerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*101)}
+            {...override, nonce: attackerNonce, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(10).div(100) },
+            {...override, nonce: attackerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(10).div(100)}
         ]
 
 
