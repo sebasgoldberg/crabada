@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, getOverride, mineStep } from "../scripts/crabada";
+import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, getOverride, mineStep, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -347,9 +347,9 @@ task(
 task(
     "playerwithdrawerc20",
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
-    async ({ player, testaccount }, hre: HardhatRuntimeEnvironment) => {
+    async ({ player, accountindex, testaccount }, hre: HardhatRuntimeEnvironment) => {
         
-        const signer = await getSigner(hre, testaccount)
+        const signer = await getSigner(hre, testaccount, accountindex)
 
         const { tusToken, craToken } = getCrabadaContracts(hre)
 
@@ -364,6 +364,7 @@ task(
         console.log('SIGNER: TUS, CRA', formatEther(await tusToken.balanceOf(signer.address)), formatEther(await craToken.balanceOf(signer.address)));
 
     })
+    .addParam("accountindex", "The index of the account to be used.", undefined, types.int)
     .addOptionalParam("player", "Player contract address.")
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
@@ -512,9 +513,9 @@ task(
 task(
     "playermigrateteam",
     "Migrate teams from one player to another",
-    async ({ playerfrom, playerto, testaccount }, hre: HardhatRuntimeEnvironment) => {
+    async ({ playerfrom, playerto, accountindex, wait, testaccount }, hre: HardhatRuntimeEnvironment) => {
 
-        const signer = await getSigner(hre, testaccount)
+        const signer = await getSigner(hre, testaccount, accountindex)
         
         const { idleGame, crabada } = getCrabadaContracts(hre)
 
@@ -534,7 +535,7 @@ task(
                 console.log('_playerFrom.callStatic.removeCrabadaFromTeam(teamId, position)', teamId.toNumber(), position);
                 await _playerFrom.callStatic.removeCrabadaFromTeam(teamId, position, await getOverride(hre))
                 console.log('_playerFrom.removeCrabadaFromTeam(teamId, position)', teamId.toNumber(), position);
-                await _playerFrom.removeCrabadaFromTeam(teamId, position, await getOverride(hre))
+                await waitTransaction(await _playerFrom.removeCrabadaFromTeam(teamId, position, await getOverride(hre)), wait)
             }
     
             const crabadasIds = [c1, c2, c3]
@@ -542,32 +543,35 @@ task(
             console.log('_playerFrom.callStatic.withdraw(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
             await _playerFrom.callStatic.withdraw(signer.address, crabadasIds, await getOverride(hre))
             console.log('_playerFrom.withdraw(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
-            await _playerFrom.withdraw(signer.address, crabadasIds, await getOverride(hre))
+            await waitTransaction(await _playerFrom.withdraw(signer.address, crabadasIds, await getOverride(hre)), wait)
 
             const isApprovedForAll = await crabada.isApprovedForAll(signer.address, _playerTo.address)
             if (!isApprovedForAll){
                 console.log('crabada.callStatic.setApprovalForAll(_playerTo.address, true)', _playerTo.address);
                 await crabada.connect(signer).callStatic.setApprovalForAll(_playerTo.address, true, await getOverride(hre))
                 console.log('crabada.setApprovalForAll(_playerTo.address, true)', _playerTo.address);
-                await crabada.connect(signer).setApprovalForAll(_playerTo.address, true, await getOverride(hre))
+                await waitTransaction(await crabada.connect(signer).setApprovalForAll(_playerTo.address, true, await getOverride(hre)), wait)
             }
 
             console.log('_playerTo.callStatic.deposit(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
             await _playerTo.callStatic.deposit(signer.address, crabadasIds, await getOverride(hre))
             console.log('_playerTo.deposit(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
-            await _playerTo.deposit(signer.address, crabadasIds, await getOverride(hre))
+            await waitTransaction(await _playerTo.deposit(signer.address, crabadasIds, await getOverride(hre)), wait)
 
             console.log('_playerTo.callStatic.createTeam(c1, c2, c3)', ...(crabadasIds.map(x=>x.toString())) );
             await _playerTo.callStatic.createTeam(c1, c2, c3, await getOverride(hre))
             console.log('_playerTo.createTeam(c1, c2, c3)', ...(crabadasIds.map(x=>x.toString())) );
-            await _playerTo.createTeam(c1, c2, c3, await getOverride(hre))
+            await waitTransaction(await _playerTo.createTeam(c1, c2, c3, await getOverride(hre)), wait)
         }
 
 
     })
     .addParam("playerfrom", "The contract that has teams of crabada.")
     .addParam("playerto", "The contract that does not has teams of crabada.")
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+    .addParam("accountindex", "The index of the account to be used.", undefined, types.int)
+    .addOptionalParam("wait", "Number of wait per transaction.", 3, types.int)
+    .addOptionalParam("testaccount", "Account used for testing.", undefined, types.string)
+    
 
 task(
     "playeraddowner",

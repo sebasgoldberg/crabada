@@ -49,6 +49,10 @@ export const gasPrice = async (hre: HardhatRuntimeEnvironment): Promise<BigNumbe
     }
 }
 
+export const waitTransaction = async (trx: TransactionResponse, blocksToWait: number) => {
+    await trx.wait(blocksToWait)
+}
+
 const abi = {
     IdleGame: IdleGameAbi,
     ERC20: ERC20Abi,

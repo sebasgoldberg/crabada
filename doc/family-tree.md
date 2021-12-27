@@ -76,9 +76,36 @@ style D4 fill:#00AAAA
 1. 76500 TUS + 52.5 CRA
 
 # Deployed Players and Their Teams
+
+## V1
 - 0x019e96438ed58C7F18D799b7CC2006273F81318a
   - 3873: 9309,8224,4564
 - 0xEFC8536AA8FdE6A7B15910a74b4B679cD94B337f
+
+## V2
+- 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd
+
+### Migration Script
+
+```bash
+npx hardhat playerdeploy --network mainnet
+Player created: 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd
+
+npx hardhat playeraddowner --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --newowner 0xE90A22064F415896F1F72e041874Da419390CC6D
+npx hardhat playeraddowner --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --newowner 0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2
+
+# Using attacker account as signer
+npx hardhat playermigrateteam --network mainnet --playerfrom 0x019e96438ed58C7F18D799b7CC2006273F81318a --playerto 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --accountindex 1 --wait 3
+
+npx hardhat playerlistteams --network mainnet  --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd
+4400: 9309,8224,4564
+
+// change the attacker contract and team!!!
+npx hardhat minestep --network mainnet --minerteamid 3759 --attackercontract 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --attackerteamid 4400 --wait 7
+npx hardhat minestep --network mainnet --minerteamid 3286 --attackercontract 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --attackerteamid 4400 --wait 7
+
+npx hardhat playerwithdrawerc20 --network mainnet --player 0x019e96438ed58C7F18D799b7CC2006273F81318a --accountindex 1
+```
 
 
 # Tasks Usage Example
