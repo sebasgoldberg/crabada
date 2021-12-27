@@ -117,6 +117,7 @@ export const mineStep = async (
     const Player = (await hre.ethers.getContractFactory("Player"));
     const attacker = Player.attach(attackerContractAddress).connect(attackerSigner)
     const attacker2 = Player.attach(attackerContractAddress).connect(attacker2Signer)
+    const attacker3 = Player.attach(attackerContractAddress).connect(minerSigner)
 
     const tusToken = new Contract(
         contractAddress.tusToken,
@@ -248,27 +249,29 @@ export const mineStep = async (
             return
         }
     
-        //const attackerNonce = await hre.ethers.provider.getTransactionCount(attackerSigner.address)
+        const minerNonce = await hre.ethers.provider.getTransactionCount(minerSigner.address)
         // let attackGasPrice = baseFee.mul(174).div(75) // f(x) = (174/75)x + 204/3 // x: base fee, f: gas price 
         //     .add(BigNumber.from(ONE_GWEI).mul(204).div(3)) // base fee 25 -> 126, base fee 100 -> 300
         // attackGasPrice = attackGasPrice.gt(ATTACK_MAX_GAS_PRICE) ? ATTACK_MAX_GAS_PRICE : attackGasPrice
 
         const attackOverrides = [
             {...override, /*nonce: attackerNonce,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(5).div(100) },
-            {...override, /*nonce: attackerNonce+1,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(105)}
+            {...override, /*nonce: attackerNonce+1,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(105)},
+            {...override, nonce: minerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(105)}
         ]
 
         const attackers: Contract[] = [
             attacker,
-            attacker2
+            attacker2,
+            attacker3
         ]
 
 
         console.log(`startGame(teamId: ${minerTeamId})`);
         const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId,
-            { ...override })
+            { ...override, nonce: minerNonce })
 
-        const attackTeamTransactionResponsesPromise = Promise.all([1000, 1750].map( (delayMilis, index) => {
+        const attackTeamTransactionResponsesPromise = Promise.all([1000, 1750, 2750].map( (delayMilis, index) => {
             return new Promise<TransactionResponse | undefined>((resolve, reject) => {
                 setTimeout(async () => {
                     console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
