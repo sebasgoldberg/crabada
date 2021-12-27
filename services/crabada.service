@@ -5,8 +5,7 @@ StartLimitIntervalSec=0
 
 [Service]
 Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<your private key>"
-Environment="CRABADA_ATTACKER_PK=<your private key>"
-Environment="CRABADA_ATTACKER_2_PK=<your private key>"
+Environment="CRABADA_ATTACKER_PKS=<attacker pk 1>,<attacker pk 2>,..."
 Type=simple
 WatchdogSec=600
 Restart=always

@@ -33,14 +33,15 @@ const getSigner = async (hre: HardhatRuntimeEnvironment, testaccount: string, si
 task(
     "minestep",
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
-    async ({ minerteamid, attackercontract, attackerteamid, wait, testmineraccount, testattackeraccount, testattacker2account }, hre: HardhatRuntimeEnvironment) => {
+    async ({ minerteamid, attackercontract, attackerteamid, wait, testmineraccount, testattackeraccounts }, hre: HardhatRuntimeEnvironment) => {
         
-        const minerSigner = await getSigner(hre, testmineraccount, 0)
-        const attackerSigner = await getSigner(hre, testattackeraccount, 1)
-        const attacker2Signer = await getSigner(hre, testattacker2account, 2)
+        const minerSigner = await getSigner(hre, testmineraccount, 0);
+        const attackSigners = testattackeraccounts ? 
+            (await Promise.all((testattackeraccounts as string).split(',').map( testattackeraccount => getSigner(hre, testattackeraccount) )))
+            : (await hre.ethers.getSigners()).slice(1)
 
         try {
-            await mineStep(hre, minerteamid, attackercontract, attackerteamid, wait, minerSigner, attackerSigner, attacker2Signer)
+            await mineStep(hre, minerteamid, attackercontract, attackerteamid, wait, minerSigner, attackSigners)
         } catch (error) {
             console.error(`ERROR: ${error.toString()}`)
         }
@@ -51,8 +52,7 @@ task(
     .addParam("attackerteamid", "The team ID to use for attack.")
     .addOptionalParam("wait", "Number of confirmation before continue execution.", 10, types.int)
     .addOptionalParam("testmineraccount", "Mining account used for testing", undefined, types.string)
-    .addOptionalParam("testattackeraccount", "Attacker account used for testing", undefined, types.string)
-    .addOptionalParam("testattacker2account", "Attacker account used for testing", undefined, types.string)
+    .addOptionalParam("testattackeraccounts", "Attacker accounts used for testing", undefined, types.string)
 
 task(
     "mineloop",

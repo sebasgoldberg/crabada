@@ -10,7 +10,7 @@ import { formatEther, formatUnits } from "ethers/lib/utils";
 const ONE_GWEI = 1000000000
 const GAS_LIMIT = 700000
 const MAX_FEE = BigNumber.from(ONE_GWEI*150)
-const ATTACK_MAX_GAS_PRICE = MAX_FEE.mul(3)
+const ATTACK_MAX_GAS_PRICE = BigNumber.from(ONE_GWEI*250)
 
 export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
     const blockNumber = await hre.ethers.provider.getBlockNumber()
@@ -106,7 +106,7 @@ const logTokenBalance = async (token: Contract, symbol: string, address: string,
 export const mineStep = async (
     hre: HardhatRuntimeEnvironment, minerTeamId: number, attackerContractAddress: string|undefined, 
     attackerTeamId: number, wait: number, minerSigner: SignerWithAddress, 
-    attackerSigner: SignerWithAddress, attacker2Signer: SignerWithAddress) => {
+    attackerSigners: SignerWithAddress[]) => {
 
     const idleGame = new Contract(
         contractAddress.IdleGame,
@@ -115,9 +115,7 @@ export const mineStep = async (
     ).connect(minerSigner)
 
     const Player = (await hre.ethers.getContractFactory("Player"));
-    const attacker = Player.attach(attackerContractAddress).connect(attackerSigner)
-    const attacker2 = Player.attach(attackerContractAddress).connect(attacker2Signer)
-    const attacker3 = Player.attach(attackerContractAddress).connect(minerSigner)
+    const attackers = attackerSigners.map( signer => Player.attach(attackerContractAddress).connect(signer) ) 
 
     const tusToken = new Contract(
         contractAddress.tusToken,
@@ -134,9 +132,8 @@ export const mineStep = async (
     const minerAddress = minerSigner.address
 
     console.log('Miner address', minerSigner.address);
-    console.log('Attacker address', attackerSigner.address);
-    console.log('Attacker 2 address', attacker2Signer.address);
-
+    attackerSigners.forEach( (signer, index) => console.log('Attacker address', index, signer.address) )
+    
     const { lockTo: minerLockTo, currentGameId: minerCurrentGameId } = await idleGame.getTeamInfo(minerTeamId)
 
     const { lockTo: attackerLockTo, currentGameId: attackerCurrentGameId } = await idleGame.getTeamInfo(attackerTeamId) // @todo Validate if attackerCurrentGameId can be used to settle.
@@ -234,8 +231,8 @@ export const mineStep = async (
         const baseFee = await gasPrice(hre)
         const override = {
             gasLimit: GAS_LIMIT,
-            nonce: undefined,
-            gasPrice: undefined,
+            // nonce: undefined,
+            // gasPrice: undefined,
             maxFeePerGas: MAX_FEE,
             maxPriorityFeePerGas: baseFee.mul(5).div(100) // 5% tip
         } 
@@ -249,35 +246,29 @@ export const mineStep = async (
             return
         }
     
-        const minerNonce = await hre.ethers.provider.getTransactionCount(minerSigner.address)
+        // const minerNonce = await hre.ethers.provider.getTransactionCount(minerSigner.address)
         // let attackGasPrice = baseFee.mul(174).div(75) // f(x) = (174/75)x + 204/3 // x: base fee, f: gas price 
         //     .add(BigNumber.from(ONE_GWEI).mul(204).div(3)) // base fee 25 -> 126, base fee 100 -> 300
         // attackGasPrice = attackGasPrice.gt(ATTACK_MAX_GAS_PRICE) ? ATTACK_MAX_GAS_PRICE : attackGasPrice
 
-        const attackOverrides = [
-            {...override, /*nonce: attackerNonce,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(5).div(100) },
-            {...override, /*nonce: attackerNonce+1,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(90)},
-            {...override, nonce: minerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(90)}
-        ]
+        // const attackOverrides = [
+        //     {...override, /*nonce: attackerNonce,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(5).div(100) },
+        //     {...override, /*nonce: attackerNonce+1,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(90)},
+        //     {...override, nonce: minerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(90)}
+        // ]
 
-        const attackers: Contract[] = [
-            attacker,
-            attacker2,
-            attacker3
-        ]
-
+        const attackDelays = attackers.map( (attacker, index) => 900*(index+1) )
 
         console.log(`startGame(teamId: ${minerTeamId})`);
-        const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId,
-            { ...override, nonce: minerNonce })
+        const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId, override)
 
-        const attackTeamTransactionResponsesPromise = Promise.all([1250, 2250, 3250].map( (delayMilis, index) => {
-            return new Promise<TransactionResponse | undefined>((resolve, reject) => {
+        const attackTeamTransactionResponsesPromise = Promise.all(attackDelays.map( (delayMilis, index) => {
+            return new Promise<TransactionResponse | undefined>( resolve => {
                 setTimeout(async () => {
                     console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
                     try {
                         const attackTeamTransactionResponse = await attackers[index].attackTeam(minerTeamId, attackerTeamId, 
-                            attackOverrides[index]
+                            {...override, maxFeePerGas: ATTACK_MAX_GAS_PRICE}
                             )
                         console.log(`transaction ${attackTeamTransactionResponse.hash}`, attackTeamTransactionResponse.blockNumber)
                         resolve(attackTeamTransactionResponse)

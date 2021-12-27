@@ -4,8 +4,7 @@ import { BigNumber } from "ethers"
 import "@nomiclabs/hardhat-waffle"
 
 const MAINNET_AVAX_MAIN_ACCOUNT_PK = process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK']
-const CRABADA_ATTACKER_PK = process.env['CRABADA_ATTACKER_PK']
-const CRABADA_ATTACKER_2_PK = process.env['CRABADA_ATTACKER_2_PK']
+const CRABADA_ATTACKER_PKS = process.env['CRABADA_ATTACKER_PKS'].split(',')
 
 // For testing with mainet account when forking
 const USE_MAINNET_ACCOUNT = MAINNET_AVAX_MAIN_ACCOUNT_PK ? true : false
@@ -15,15 +14,12 @@ const mainnetAccount = {
   balance: '10000000000000000000000'
 }
 
-const crabadaAttackerAccount = {
-  privateKey: CRABADA_ATTACKER_PK,
-  balance: '10000000000000000000000'
-}
 
-const crabadaAttacker2Account = {
-  privateKey: CRABADA_ATTACKER_2_PK,
+const crabadaAttackerAccounts = CRABADA_ATTACKER_PKS.map( pk => ({
+  privateKey: pk,
   balance: '10000000000000000000000'
-}
+}))
+
 
 // When using the hardhat network, you may choose to fork Fuji or Avalanche Mainnet
 // This will allow you to debug contracts using the hardhat network while keeping the current network state
@@ -84,13 +80,13 @@ export default {
       gasPrice: 51000000000,
       chainId: !forkingData ? 43112 : undefined, //Only specify a chainId if we are not forking
       forking: forkingData,
-      accounts: USE_MAINNET_ACCOUNT ? [ mainnetAccount ] : undefined
+      accounts: USE_MAINNET_ACCOUNT ? [ mainnetAccount, ...crabadaAttackerAccounts ] : undefined
     },
     local: {
       url: 'http://localhost:9650/ext/bc/C/rpc',
       gasPrice: 225000000000,
       chainId: 43112,
-      accounts: USE_MAINNET_ACCOUNT ? [ MAINNET_AVAX_MAIN_ACCOUNT_PK, CRABADA_ATTACKER_PK, CRABADA_ATTACKER_2_PK ] : [
+      accounts: USE_MAINNET_ACCOUNT ? [ MAINNET_AVAX_MAIN_ACCOUNT_PK, ...CRABADA_ATTACKER_PKS ] : [
         "0x56289e99c94b6912bfc12adc093c9b51124f0dc54ac7a766b2bc5ccf558d8027",
         "0x7b4198529994b0dc604278c99d153cfd069d594753d471171a1d102a10438e07",
         "0x15614556be13730e9e8d6eacc1603143e7b96987429df8726384c2ec4502ef6e",
@@ -113,7 +109,7 @@ export default {
       url: 'https://api.avax.network/ext/bc/C/rpc',
       gasPrice: 25000000000,
       chainId: 43114,
-      accounts: USE_MAINNET_ACCOUNT ? [ MAINNET_AVAX_MAIN_ACCOUNT_PK, CRABADA_ATTACKER_PK, CRABADA_ATTACKER_2_PK ] : [ ]
+      accounts: USE_MAINNET_ACCOUNT ? [ MAINNET_AVAX_MAIN_ACCOUNT_PK, ...CRABADA_ATTACKER_PKS ] : [ ]
     }
   }
 }
