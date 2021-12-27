@@ -256,8 +256,8 @@ export const mineStep = async (
 
         const attackOverrides = [
             {...override, /*nonce: attackerNonce,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(5).div(100) },
-            {...override, /*nonce: attackerNonce+1,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(105)},
-            {...override, nonce: minerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(105)}
+            {...override, /*nonce: attackerNonce+1,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(90)},
+            {...override, nonce: minerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(90)}
         ]
 
         const attackers: Contract[] = [
@@ -271,7 +271,7 @@ export const mineStep = async (
         const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId,
             { ...override, nonce: minerNonce })
 
-        const attackTeamTransactionResponsesPromise = Promise.all([1000, 1750, 2750].map( (delayMilis, index) => {
+        const attackTeamTransactionResponsesPromise = Promise.all([1250, 2250, 3250].map( (delayMilis, index) => {
             return new Promise<TransactionResponse | undefined>((resolve, reject) => {
                 setTimeout(async () => {
                     console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
