@@ -268,7 +268,7 @@ export const mineStep = async (
         const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId,
             { ...override })
 
-        const attackTeamTransactionResponsesPromise = Promise.all([1000, 2000].map( (delayMilis, index) => {
+        const attackTeamTransactionResponsesPromise = Promise.all([1000, 1750].map( (delayMilis, index) => {
             return new Promise<TransactionResponse | undefined>((resolve, reject) => {
                 setTimeout(async () => {
                     console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
