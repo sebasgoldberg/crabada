@@ -255,7 +255,7 @@ export const mineStep = async (
 
         const attackOverrides = [
             {...override, /*nonce: attackerNonce,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(5).div(100) },
-            {...override, /*nonce: attackerNonce+1,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(5).div(100)}
+            {...override, /*nonce: attackerNonce+1,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(105)}
         ]
 
         const attackers: Contract[] = [
