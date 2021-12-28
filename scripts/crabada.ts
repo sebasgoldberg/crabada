@@ -255,6 +255,7 @@ export const mineStep = async (
             override,
             override,
             override,
+            override,
             // When the time between blocks is long enough the looters has better chance to win,
             // so it is necessary to rise the priority fee.
             {...override, maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(105)}
