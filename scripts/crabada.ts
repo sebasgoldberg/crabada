@@ -254,11 +254,10 @@ export const mineStep = async (
         const attackOverrides = [
             override,
             override,
-            override,
-            override,
             // When the time between blocks is long enough the looters has better chance to win,
             // so it is necessary to rise the priority fee.
-            {...override, maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(105)}
+            {...override, maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(105)},
+            {...override, maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(105)},
         ]
 
         const attackDelays = attackers.map( (attacker, index) => 900*(index+1) )

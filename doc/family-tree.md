@@ -131,7 +131,7 @@ npx hardhat playerremovefromteam --network localhost --player 0x71C9F079C03bEe60
 npx hardhat playerwithdraw --network localhost --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --crabadas 7939,7224 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 
 # minestep with 5 attackers
-npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --attackerteamid 4400 --wait 1 --testmineraccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8 --testattackeraccounts 0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2,0xE90A22064F415896F1F72e041874Da419390CC6D,0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4,0xbfca579D0eB8e294DeAe8C8a94cD3eF3c4836634,0xf597AC540730B2c99A31aE1e1362867C4675de2C
+npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --attackerteamid 4400 --wait 1 --testmineraccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8 --testattackeraccounts 0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2,0xE90A22064F415896F1F72e041874Da419390CC6D,0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4,0xbfca579D0eB8e294DeAe8C8a94cD3eF3c4836634
 ```
 
 ## Mainnet
