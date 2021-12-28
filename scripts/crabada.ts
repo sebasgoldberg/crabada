@@ -251,11 +251,14 @@ export const mineStep = async (
         //     .add(BigNumber.from(ONE_GWEI).mul(204).div(3)) // base fee 25 -> 126, base fee 100 -> 300
         // attackGasPrice = attackGasPrice.gt(ATTACK_MAX_GAS_PRICE) ? ATTACK_MAX_GAS_PRICE : attackGasPrice
 
-        // const attackOverrides = [
-        //     {...override, /*nonce: attackerNonce,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: baseFee.mul(5).div(100) },
-        //     {...override, /*nonce: attackerNonce+1,*/ maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(90)},
-        //     {...override, nonce: minerNonce+1, maxFeePerGas: BigNumber.from(ONE_GWEI*250), maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(90)}
-        // ]
+        const attackOverrides = [
+            override,
+            override,
+            override,
+            // When the time between blocks is long enough the looters has better chance to win,
+            // so it is necessary to rise the priority fee.
+            {...override, maxPriorityFeePerGas: BigNumber.from(ONE_GWEI).mul(105)}
+        ]
 
         const attackDelays = attackers.map( (attacker, index) => 900*(index+1) )
 
@@ -268,7 +271,7 @@ export const mineStep = async (
                     console.log(`attackTeam(minerTeamId: ${minerTeamId}, attackerTeamId: ${attackerTeamId})`);
                     try {
                         const attackTeamTransactionResponse = await attackers[index].attackTeam(minerTeamId, attackerTeamId, 
-                            {...override, maxFeePerGas: ATTACK_MAX_GAS_PRICE}
+                            {...attackOverrides[index], maxFeePerGas: ATTACK_MAX_GAS_PRICE}
                             )
                         console.log(`transaction ${attackTeamTransactionResponse.hash}`, attackTeamTransactionResponse.blockNumber)
                         resolve(attackTeamTransactionResponse)

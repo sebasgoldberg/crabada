@@ -4,7 +4,7 @@ import { BigNumber } from "ethers"
 import "@nomiclabs/hardhat-waffle"
 
 const MAINNET_AVAX_MAIN_ACCOUNT_PK = process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK']
-const CRABADA_ATTACKER_PKS = process.env['CRABADA_ATTACKER_PKS'].split(',')
+const CRABADA_ATTACKER_PKS = process.env['CRABADA_ATTACKER_PKS'] ? process.env['CRABADA_ATTACKER_PKS'].split(',') : []
 
 // For testing with mainet account when forking
 const USE_MAINNET_ACCOUNT = MAINNET_AVAX_MAIN_ACCOUNT_PK ? true : false
