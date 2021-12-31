@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, getOverride, mineStep, waitTransaction } from "../scripts/crabada";
+import { attachPlayer, baseFee, currentBlockTimeStamp, deployPlayer, gasPrice, GAS_LIMIT, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, locked, MAX_FEE, mineStep, ONE_GWEI, settleGame, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -507,7 +507,7 @@ task(
             })        
     
         }))
-        
+
     })
 
 
@@ -752,3 +752,100 @@ task(
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 630 , types.int)
 
+task(
+    "loot",
+    "Loot process.",
+    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, playeraddress, looterteamid, testaccount }, hre: HardhatRuntimeEnvironment) => {
+
+        // TODO Pending tests
+
+        const possibleTargetsByTeamId = getPossibleTargetsByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints)
+
+        const signer = await getSigner(hre, testaccount)
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        const player = (await attachPlayer(hre, playeraddress)).connect(signer)
+
+        const { lockTo: looterLockTo, currentGameId: looterCurrentGameId } = await idleGame.getTeamInfo(looterteamid)
+
+        const timestamp = await currentBlockTimeStamp(hre)
+
+        if (await locked(looterteamid, looterLockTo, timestamp))
+            return
+
+        settleGame(idleGame.connect(signer), looterCurrentGameId, 10)
+
+        await (new Promise((resolve) => {
+
+            let attackInProgress = false
+
+            idleGame.on( idleGame.filters.StartGame(), async (gameId: BigNumber, teamId: BigNumber) => {
+                
+                // TODO Maybe would be interesting to consider only the events that have
+                // a timestamp near the block's timestamp.
+
+                if (attackInProgress)
+                    return
+
+                const possibleTarget = possibleTargetsByTeamId[teamId.toString()]
+                
+                if (!possibleTarget)
+                    return
+
+                attackInProgress = true
+                console.log('Begin Attack', 'target team id', teamId.toNumber());
+
+                try {
+
+                    await player.attackTeam(teamId, looterteamid, {
+                        gasLimit: GAS_LIMIT,
+                        maxFeePerGas: MAX_FEE,
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50) // Tip based on teamId battle points
+                    })
+
+                } catch (error) {
+                    
+                }
+
+                const timestamp = await currentBlockTimeStamp(hre)
+                
+                if (await locked(looterteamid, looterLockTo, timestamp)){
+                    resolve(undefined)
+                    return
+                }
+
+                console.log('End Attack');
+                attackInProgress = false
+
+            })        
+    
+        }))
+
+
+    })
+    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 3600 /*2 hours*/ , types.int)
+    .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
+    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 630 , types.int)
+    .addParam("playeraddress", "Player contract address that will be looting.")
+    .addParam("looterteamid", "Player contract address that will be looting.", undefined, types.int)
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
+    "meassurestartgameevents",
+    "Listen StartGame events and meassure the time between block and event reception.",
+    async ({ }, hre: HardhatRuntimeEnvironment) => {
+        
+        await (new Promise(() => {
+
+            const { idleGame } = getCrabadaContracts(hre)
+
+            idleGame.on( idleGame.filters.StartGame(), async (gameId: BigNumber, teamId: BigNumber, duration: BigNumber, craReward: BigNumber, tusReward: BigNumber, { transactionHash, blockNumber, getBlock }) => {
+                const eventReceivedTimestamp = (+new Date())/1000
+                const { timestamp: blockTimestamp } = await getBlock()
+                console.log('Delay between startGame transaction and StartGame event reception', eventReceivedTimestamp-blockTimestamp)
+            })        
+    
+        }))
+
+    })

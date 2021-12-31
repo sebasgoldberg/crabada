@@ -2,15 +2,15 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import * as IdleGameAbi from "../abis/IdleGame.json"
 import * as ERC20Abi from "../abis/ERC20.json"
 import * as CrabadaAbi from "../abis/Crabada.json"
-import { BigNumber, Contract } from "ethers";
+import { BigNumber, Contract, ethers } from "ethers";
 import { TransactionResponse } from "@ethersproject/abstract-provider";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { formatEther, formatUnits } from "ethers/lib/utils";
 
-const ONE_GWEI = 1000000000
-const GAS_LIMIT = 700000
-const MAX_FEE = BigNumber.from(ONE_GWEI*150)
-const ATTACK_MAX_GAS_PRICE = BigNumber.from(ONE_GWEI*250)
+export const ONE_GWEI = 1000000000
+export const GAS_LIMIT = 700000
+export const MAX_FEE = BigNumber.from(ONE_GWEI*150)
+export const ATTACK_MAX_GAS_PRICE = BigNumber.from(ONE_GWEI*250)
 
 export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
     const blockNumber = await hre.ethers.provider.getBlockNumber()
@@ -102,6 +102,45 @@ const logBalance = async (hre: HardhatRuntimeEnvironment, signerAddress: string)
 const logTokenBalance = async (token: Contract, symbol: string, address: string, decimals: number = 18) => {
     console.log(`${symbol} balanceOf(${address}): ${ formatUnits(await token.balanceOf(address), decimals) }`);
 }
+
+export const settleGame = async (idleGame: Contract, attackerCurrentGameId: BigNumber, wait: number) =>{
+
+    const override = {
+        gasLimit: GAS_LIMIT,
+        maxFeePerGas: MAX_FEE,
+        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
+    }
+
+    try {
+        console.log(`callStatic.settleGame(gameId: ${attackerCurrentGameId})`);        
+        await idleGame.callStatic.settleGame(attackerCurrentGameId, override)
+    } catch (error) {
+        console.error(`ERROR: ${error.toString()}`)
+        console.error(`INFO: Maybe it is too early to settle the game`)
+        return
+    }
+
+    console.log(`settleGame(gameId: ${attackerCurrentGameId})`);
+    const transactionResponse: TransactionResponse = await idleGame.settleGame(attackerCurrentGameId, override)
+    console.log(`transaction: ${transactionResponse.hash}`);
+
+    await transactionResponse.wait(wait)
+
+}
+
+export const locked = async (teamId: number, lockTo: BigNumber, timestamp: number) => {
+    const extraSeconds = 10 // 10 extra seconds of lock, in case timestamp has an error.
+    const difference = (lockTo as BigNumber).sub(timestamp).add(extraSeconds)
+    if (difference.lt(0)){
+        console.log(`TEAM ${teamId} UNLOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
+        return false
+    }
+    else{
+        console.log(`TEAM ${teamId} LOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
+        return true
+    }
+}
+
   
 export const mineStep = async (
     hre: HardhatRuntimeEnvironment, minerTeamId: number, attackerContractAddress: string|undefined, 
@@ -139,19 +178,6 @@ export const mineStep = async (
     const { lockTo: attackerLockTo, currentGameId: attackerCurrentGameId } = await idleGame.getTeamInfo(attackerTeamId) // @todo Validate if attackerCurrentGameId can be used to settle.
 
     const timestamp = await currentBlockTimeStamp(hre)
-
-    const locked = async (teamId: number, lockTo: BigNumber, timestamp: number) => {
-        const extraSeconds = 10 // 10 extra seconds of lock, in case timestamp has an error.
-        const difference = (lockTo as BigNumber).sub(timestamp).add(extraSeconds)
-        if (difference.lt(0)){
-            console.log(`TEAM ${teamId} UNLOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
-            return false
-        }
-        else{
-            console.log(`TEAM ${teamId} LOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
-            return true
-        }
-    }
 
     if (await locked(attackerTeamId, attackerLockTo, timestamp))
         return
@@ -194,34 +220,8 @@ export const mineStep = async (
     await closeGame(attackerCurrentGameId);
 
     // SETTLE GAME
-    const settleGame = async () =>{
 
-        const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT}
-
-        try {
-            console.log(`callStatic.settleGame(gameId: ${attackerCurrentGameId})`);        
-            await idleGame.callStatic.settleGame(attackerCurrentGameId, override)
-        } catch (error) {
-            console.error(`ERROR: ${error.toString()}`)
-            console.error(`INFO: Maybe it is too early to settle the game`)
-            return
-        }
-    
-        await logTokenBalance(tusToken, 'TUS', attackerContractAddress)
-        await logTokenBalance(craToken, 'CRA', attackerContractAddress)
-    
-        console.log(`settleGame(gameId: ${attackerCurrentGameId})`);
-        const transactionResponse: TransactionResponse = await idleGame.settleGame(attackerCurrentGameId, override)
-        console.log(`transaction: ${transactionResponse.hash}`);
-        await logBalance(hre, minerAddress)
-        await logTokenBalance(tusToken, 'TUS', attackerContractAddress)
-        await logTokenBalance(craToken, 'CRA', attackerContractAddress)
-    
-        await transactionResponse.wait(wait)
-    
-    }
-
-    await settleGame()
+    await settleGame(idleGame, attackerCurrentGameId, wait)
 
     // START GAME
 
@@ -320,4 +320,135 @@ export const deployPlayer = async (hre: HardhatRuntimeEnvironment, signer: Signe
 
 export const getOverride = async (hre: HardhatRuntimeEnvironment) => {
     return ({maxFeePerGas: 30*ONE_GWEI, maxPriorityFeePerGas: ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
+}
+
+export interface TeamInfo {
+    startedGamesCount?: number,
+    firstDefenseCount?: number,
+    battlePoint?: number,
+}
+
+export type TeamInfoByTeam = { [teamId: string]: TeamInfo }
+
+export const getPossibleTargetsByTeamId = async (
+    hre: HardhatRuntimeEnvironment, blockstoanalyze: number, 
+    firstdefendwindow: number, maxbattlepoints: number): Promise<TeamInfoByTeam> =>{
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    hre.ethers.provider.blockNumber
+
+    const BLOCKS_TO_ANALYZE = blockstoanalyze
+    const FIRST_DEFEND_WINDOW = firstdefendwindow
+
+    const fromBlock = hre.ethers.provider.blockNumber-BLOCKS_TO_ANALYZE
+    const toBlock = hre.ethers.provider.blockNumber-FIRST_DEFEND_WINDOW
+
+    const fightEventsPromise = idleGame.queryFilter(idleGame.filters.Fight(), fromBlock, "latest")
+    // gameId uint256
+    // turn uint256
+    // attackTeamId uint256
+    // defenseTeamId uint256
+    // soldierId uint256
+    // attackTime uint256
+    // attackPoint uint16
+    // defensePoint uint16
+
+    const startGameEvents = await idleGame.queryFilter(idleGame.filters.StartGame(), fromBlock, toBlock)
+    // gameId uint256
+    // teamId uint256
+    // duration uint256
+    // craReward uint256
+    // tusReward uint256
+
+    const fightEvents = await fightEventsPromise
+
+    console.log('startGameEvents', startGameEvents.length);
+
+    const teamsBehaviour: TeamInfoByTeam = {}
+
+    // It is retrieved the quantity of started games by team
+    
+    const START_GAME_TEAM_ID_ARG_INDEX=1
+
+    for (const e of startGameEvents){
+        const teamId: BigNumber = e.args[START_GAME_TEAM_ID_ARG_INDEX]
+        const teamBehaviour = teamsBehaviour[teamId.toString()]
+        teamsBehaviour[teamId.toString()] = {
+            startedGamesCount: teamBehaviour ? teamBehaviour.startedGamesCount+1 : 1
+        }
+    }
+
+    // It is retrieved the quantity of first defense by team, and battlePoints
+    const FIGHT_DEFENSE_TEAM_ID_ARG_INDEX = 3
+    const FIGHT_TURN_ARG_INDEX = 1
+    const FIGHT_DEFENSE_POINT = 7
+
+    for (const e of fightEvents){
+
+        const defenseTeamId: BigNumber = e.args[FIGHT_DEFENSE_TEAM_ID_ARG_INDEX] as any
+        const turn: BigNumber = e.args[FIGHT_TURN_ARG_INDEX] as any
+
+        const firstDefenseCount = turn.toNumber() == 1 ? 1 : 0
+
+        const teamBehaviour = teamsBehaviour[defenseTeamId.toString()]
+
+        const defensePoint: number = turn.isZero() ? e.args[FIGHT_DEFENSE_POINT] : undefined
+
+        teamsBehaviour[defenseTeamId.toString()] = {
+            ...teamsBehaviour[defenseTeamId.toString()],
+            firstDefenseCount: teamBehaviour ? 
+                teamBehaviour.firstDefenseCount ? teamBehaviour.firstDefenseCount+firstDefenseCount : firstDefenseCount
+                : firstDefenseCount,
+            battlePoint: defensePoint ? 
+                defensePoint : teamBehaviour ?
+                teamBehaviour.battlePoint : undefined
+        }
+
+    }
+
+    // It is retrieved the quantity of teams that started a game and 
+    // defended at least once.
+
+    let teamsThatStartedGameAndFight = 0
+    for (const teamId in teamsBehaviour){
+        const teamBehaviour = teamsBehaviour[teamId]
+        if (teamBehaviour.startedGamesCount){
+            if (teamBehaviour.firstDefenseCount)
+                teamsThatStartedGameAndFight = teamsThatStartedGameAndFight+1
+        }
+    }
+
+    console.log('teamsThatStartedGameAndFight', teamsThatStartedGameAndFight);
+
+    // Are obtained the teams that play to loose.
+    const teamsThatPlayToLoose: TeamInfoByTeam = {}
+
+    for (const teamId in teamsBehaviour){
+        const teamBehaviour = teamsBehaviour[teamId]
+        if (teamBehaviour.startedGamesCount && !teamBehaviour.firstDefenseCount)
+            teamsThatPlayToLoose[teamId] = teamBehaviour
+    }
+
+    // For the looser teams, are obtained the mining points.
+
+    await Promise.all(
+        Object.keys(teamsThatPlayToLoose)
+            .filter( (teamId) => !teamsThatPlayToLoose[teamId].battlePoint )
+            .map( async (teamId) => {
+                const { battlePoint } = await idleGame.getTeamInfo(teamId)
+                teamsThatPlayToLoose[teamId].battlePoint = battlePoint
+            })
+    )
+
+    const possibleTargetsByTeam: TeamInfoByTeam = {}
+
+    for (const teamId in teamsThatPlayToLoose){
+        if (teamsThatPlayToLoose[teamId].battlePoint < maxbattlepoints)
+            possibleTargetsByTeam[teamId] = teamsThatPlayToLoose[teamId]
+    }
+
+    console.log(`Possible targets below ${maxbattlepoints} battle points`, Object.keys(possibleTargetsByTeam).length)
+
+    return possibleTargetsByTeam
 }
