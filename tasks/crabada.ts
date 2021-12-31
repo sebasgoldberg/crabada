@@ -6,8 +6,9 @@ import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, get
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber } from "ethers";
+import { BigNumber, ethers } from "ethers";
 import { string } from "hardhat/internal/core/params/argumentTypes";
+import { type } from "os";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -590,3 +591,164 @@ task(
     .addParam("player", "Player contract for which will be added a new owner.")
     .addParam("newowner", "New owner of the player contract.")
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
+    "lootpossibletargets",
+    "Loot process.",
+    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints }, hre: HardhatRuntimeEnvironment) => {
+
+        console.log('Analyzed blocks', blockstoanalyze);
+        console.log('First defend window in blocks', firstdefendwindow);
+        console.log('Target´s max. battle points', maxbattlepoints);
+        
+    
+        const { idleGame } = getCrabadaContracts(hre)
+
+        hre.ethers.provider.blockNumber
+
+        const BLOCKS_TO_ANALYZE = blockstoanalyze
+        const FIRST_DEFEND_WINDOW = firstdefendwindow
+
+        const fromBlock = hre.ethers.provider.blockNumber-BLOCKS_TO_ANALYZE
+        const toBlock = hre.ethers.provider.blockNumber-FIRST_DEFEND_WINDOW
+
+        const fightEventsPromise = idleGame.queryFilter(idleGame.filters.Fight(), fromBlock, "latest")
+        // gameId uint256
+        // turn uint256
+        // attackTeamId uint256
+        // defenseTeamId uint256
+        // soldierId uint256
+        // attackTime uint256
+        // attackPoint uint16
+        // defensePoint uint16
+
+        const startGameEvents = await idleGame.queryFilter(idleGame.filters.StartGame(), fromBlock, toBlock)
+        // gameId uint256
+        // teamId uint256
+        // duration uint256
+        // craReward uint256
+        // tusReward uint256
+
+        const fightEvents = await fightEventsPromise
+
+        const turns = fightEvents
+            .map(e => (e.args[1] as BigNumber).toNumber())
+        
+        console.log('startGameEvents', startGameEvents.length);
+
+        interface TeamInfo {
+            startedGamesCount?: number,
+            firstDefenseCount?: number,
+            battlePoint?: number,
+        }
+
+        type TeamInfoByTeam = { [teamId: string]: TeamInfo }
+
+        const teamsBehaviour: TeamInfoByTeam = {}
+
+        // It is retrieved the quantity of started games by team
+        
+        const START_GAME_TEAM_ID_ARG_INDEX=1
+
+        for (const e of startGameEvents){
+            const teamId: BigNumber = e.args[START_GAME_TEAM_ID_ARG_INDEX]
+            const teamBehaviour = teamsBehaviour[teamId.toString()]
+            teamsBehaviour[teamId.toString()] = {
+                startedGamesCount: teamBehaviour ? teamBehaviour.startedGamesCount+1 : 1
+            }
+        }
+
+        // It is retrieved the quantity of first defense by team, and battlePoints
+        const FIGHT_DEFENSE_TEAM_ID_ARG_INDEX = 3
+        const FIGHT_TURN_ARG_INDEX = 1
+        const FIGHT_DEFENSE_POINT = 7
+
+        for (const e of fightEvents){
+
+            const defenseTeamId: BigNumber = e.args[FIGHT_DEFENSE_TEAM_ID_ARG_INDEX] as any
+            const turn: BigNumber = e.args[FIGHT_TURN_ARG_INDEX] as any
+
+            const firstDefenseCount = turn.toNumber() == 1 ? 1 : 0
+
+            const teamBehaviour = teamsBehaviour[defenseTeamId.toString()]
+
+            const defensePoint: number = turn.isZero() ? e.args[FIGHT_DEFENSE_POINT] : undefined
+
+            teamsBehaviour[defenseTeamId.toString()] = {
+                ...teamsBehaviour[defenseTeamId.toString()],
+                firstDefenseCount: teamBehaviour ? 
+                    teamBehaviour.firstDefenseCount ? teamBehaviour.firstDefenseCount+firstDefenseCount : firstDefenseCount
+                    : firstDefenseCount,
+                battlePoint: defensePoint ? 
+                    defensePoint : teamBehaviour ?
+                    teamBehaviour.battlePoint : undefined
+            }
+
+        }
+
+        // It is retrieved the quantity of teams that started a game and 
+        // defended at least once.
+
+        let teamsThatStartedGameAndFight = 0
+        for (const teamId in teamsBehaviour){
+            const teamBehaviour = teamsBehaviour[teamId]
+            if (teamBehaviour.startedGamesCount){
+                if (teamBehaviour.firstDefenseCount)
+                    teamsThatStartedGameAndFight = teamsThatStartedGameAndFight+1
+            }
+        }
+
+        console.log('teamsThatStartedGameAndFight', teamsThatStartedGameAndFight);
+
+        // Are obtained the teams that play to loose.
+        const teamsThatPlayToLoose: TeamInfoByTeam = {}
+
+        for (const teamId in teamsBehaviour){
+            const teamBehaviour = teamsBehaviour[teamId]
+            if (teamBehaviour.startedGamesCount && !teamBehaviour.firstDefenseCount)
+                teamsThatPlayToLoose[teamId] = teamBehaviour
+        }
+
+        // For the looser teams, are obtained the mining points.
+
+        await Promise.all(
+            Object.keys(teamsThatPlayToLoose)
+                .filter( (teamId) => !teamsThatPlayToLoose[teamId].battlePoint )
+                .map( async (teamId) => {
+                    const { battlePoint } = await idleGame.getTeamInfo(teamId)
+                    teamsThatPlayToLoose[teamId].battlePoint = battlePoint
+                })
+        )
+
+        const possibleTargetsByTeam: TeamInfoByTeam = {}
+
+        for (const teamId in teamsThatPlayToLoose){
+            if (teamsThatPlayToLoose[teamId].battlePoint < maxbattlepoints)
+                possibleTargetsByTeam[teamId] = teamsThatPlayToLoose[teamId]
+        }
+
+        console.log(`Possible targets below ${maxbattlepoints} battle points`, Object.keys(possibleTargetsByTeam).length)
+
+
+        // It is obtained the distribution of the attack points.
+
+        const attackPointsDist = Array.from(Array(10).keys()).map(x=>0)
+
+        const MIN_BATTLE_POINTS = 564
+        const MAX_BATTLE_POINTS = 712
+        const STEP_BATTLE_POINTS = (MAX_BATTLE_POINTS-MIN_BATTLE_POINTS)/10
+
+        Object.keys(teamsThatPlayToLoose).map( async (teamId) => {
+            const index = Math.floor( (teamsThatPlayToLoose[teamId].battlePoint - MIN_BATTLE_POINTS) / STEP_BATTLE_POINTS )
+            attackPointsDist[index]++
+        })
+
+        console.log('attackPointsDist', attackPointsDist
+            .map( (q, index) => ({ [`${MIN_BATTLE_POINTS+STEP_BATTLE_POINTS*(index)} - ${MIN_BATTLE_POINTS+STEP_BATTLE_POINTS*(index+1)}`]: q }))
+        )
+
+    })
+    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 3600 /*2 hours*/ , types.int)
+    .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
+    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 630 , types.int)
+
