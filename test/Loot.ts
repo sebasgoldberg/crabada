@@ -5,6 +5,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "ethers";
 import { evm_increaseTime } from "./utils";
 import { getCrabadaContracts, loot, TeamInfoByTeam } from "../scripts/crabada";
+import { TransactionResponse } from "@ethersproject/abstract-provider";
 
 const AVALANCHE_NODE_URL: string = process.env.AVALANCHE_MAINNET_URL as string || "https://api.avax.network/ext/bc/C/rpc";
 const FORK_BLOCKNUMBER: number = Number(process.env.AVALANCHE_FORK_BLOCKNUMBER || "9009873") //
@@ -41,6 +42,7 @@ describe('Looting', function () {
 
     this.teamId1 = 3286;
     this.teamId2 = 3759;
+    this.looterTeamId = 4400
 
     // Getting teams info
     const teamInfo = await idleGame.getTeamInfo(this.teamId1)
@@ -70,11 +72,40 @@ describe('Looting', function () {
         }
       }
 
-      const lootPromise = loot(hre, possibleTargetsByTeamId, '0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd', 4400, this.owner, ()=>{})
+      const lootPromise = loot(hre, possibleTargetsByTeamId, '0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd', this.looterTeamId, this.owner, ()=>{})
 
       await idleGame.connect(this.owner).startGame(this.teamId1)
 
-      await lootPromise
+      const tx: TransactionResponse = await lootPromise
+
+      const events = await idleGame.queryFilter(idleGame.filters.Fight(), tx.blockNumber, tx.blockNumber);
+      const lootedTeamId = events.map(x => x.args.defenseTeamId)[0]
+
+      expect(lootedTeamId).to.eq(this.teamId1)
+
+    });
+  
+    it('Should loot only the possible targets.', async function () {
+
+      const { idleGame } = getCrabadaContracts(hre)
+
+      const possibleTargetsByTeamId: TeamInfoByTeam = {
+        [this.teamId1.toString()]: {
+        }
+      }
+
+      const lootPromise = loot(hre, possibleTargetsByTeamId, '0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd', this.looterTeamId, this.owner, ()=>{})
+
+      await idleGame.connect(this.owner).startGame(this.teamId2)
+
+      await idleGame.connect(this.owner).startGame(this.teamId1)
+  
+      const tx: TransactionResponse = await lootPromise
+
+      const events = await idleGame.queryFilter(idleGame.filters.Fight(), tx.blockNumber, tx.blockNumber);
+      const lootedTeamId = events.map(x => x.args.defenseTeamId)[0]
+
+      expect(lootedTeamId).to.eq(this.teamId1)
 
     });
   

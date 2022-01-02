@@ -453,7 +453,10 @@ export const getPossibleTargetsByTeamId = async (
     return possibleTargetsByTeam
 }
 
-export const loot = async (hre: HardhatRuntimeEnvironment, possibleTargetsByTeamId: TeamInfoByTeam, playeraddress: string, looterteamid: number, signer: SignerWithAddress, log: (typeof console.log) = console.log) => {
+export const loot = async (
+    hre: HardhatRuntimeEnvironment, possibleTargetsByTeamId: TeamInfoByTeam, 
+    playeraddress: string, looterteamid: number, signer: SignerWithAddress, 
+    log: (typeof console.log) = console.log): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
 
@@ -468,11 +471,11 @@ export const loot = async (hre: HardhatRuntimeEnvironment, possibleTargetsByTeam
 
     settleGame(idleGame.connect(signer), looterCurrentGameId, 10, log)
 
-    await (new Promise((resolve) => {
+    return await (new Promise((resolve) => {
 
         let attackInProgress = false
 
-        idleGame.on( idleGame.filters.StartGame(), async (gameId: BigNumber, teamId: BigNumber) => {
+        const eventListener = async (gameId: BigNumber, teamId: BigNumber) => {
             
             // TODO Maybe would be interesting to consider only the events that have
             // a timestamp near the block's timestamp.
@@ -488,9 +491,11 @@ export const loot = async (hre: HardhatRuntimeEnvironment, possibleTargetsByTeam
             attackInProgress = true
             log('Begin Attack', 'target team id', teamId.toNumber());
 
+            let transactionResponse: TransactionResponse
+
             try {
 
-                await player.attackTeam(teamId, looterteamid, {
+                transactionResponse = await player.attackTeam(teamId, looterteamid, {
                     gasLimit: GAS_LIMIT,
                     maxFeePerGas: MAX_FEE,
                     maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50) // Tip based on teamId battle points
@@ -509,13 +514,17 @@ export const loot = async (hre: HardhatRuntimeEnvironment, possibleTargetsByTeam
             log('End Attack');
 
             if (await locked(looterteamid, looterLockTo, timestamp, log)){
-                resolve(undefined)
+                eventListener
+                idleGame.off(idleGame.filters.StartGame(), eventListener)
+                resolve(transactionResponse)
                 return
             }
 
             attackInProgress = false
 
-        })        
+        }
+
+        idleGame.on( idleGame.filters.StartGame(), eventListener)        
 
     }))
 
