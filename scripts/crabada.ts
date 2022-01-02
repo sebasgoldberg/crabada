@@ -103,7 +103,7 @@ const logTokenBalance = async (token: Contract, symbol: string, address: string,
     console.log(`${symbol} balanceOf(${address}): ${ formatUnits(await token.balanceOf(address), decimals) }`);
 }
 
-export const settleGame = async (idleGame: Contract, attackerCurrentGameId: BigNumber, wait: number) =>{
+export const settleGame = async (idleGame: Contract, attackerCurrentGameId: BigNumber, wait: number, log: (typeof console.log) = console.log) =>{
 
     const override = {
         gasLimit: GAS_LIMIT,
@@ -112,31 +112,31 @@ export const settleGame = async (idleGame: Contract, attackerCurrentGameId: BigN
     }
 
     try {
-        console.log(`callStatic.settleGame(gameId: ${attackerCurrentGameId})`);        
+        log(`callStatic.settleGame(gameId: ${attackerCurrentGameId})`);        
         await idleGame.callStatic.settleGame(attackerCurrentGameId, override)
     } catch (error) {
-        console.error(`ERROR: ${error.toString()}`)
-        console.error(`INFO: Maybe it is too early to settle the game`)
+        log(`ERROR: ${error.toString()}`)
+        log(`INFO: Maybe it is too early to settle the game`)
         return
     }
 
-    console.log(`settleGame(gameId: ${attackerCurrentGameId})`);
+    log(`settleGame(gameId: ${attackerCurrentGameId})`);
     const transactionResponse: TransactionResponse = await idleGame.settleGame(attackerCurrentGameId, override)
-    console.log(`transaction: ${transactionResponse.hash}`);
+    log(`transaction: ${transactionResponse.hash}`);
 
     await transactionResponse.wait(wait)
 
 }
 
-export const locked = async (teamId: number, lockTo: BigNumber, timestamp: number) => {
+export const locked = async (teamId: number, lockTo: BigNumber, timestamp: number, log: (typeof console.log) = console.log) => {
     const extraSeconds = 10 // 10 extra seconds of lock, in case timestamp has an error.
     const difference = (lockTo as BigNumber).sub(timestamp).add(extraSeconds)
     if (difference.lt(0)){
-        console.log(`TEAM ${teamId} UNLOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
+        log(`TEAM ${teamId} UNLOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
         return false
     }
     else{
-        console.log(`TEAM ${teamId} LOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
+        log(`TEAM ${teamId} LOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
         return true
     }
 }
@@ -452,3 +452,72 @@ export const getPossibleTargetsByTeamId = async (
 
     return possibleTargetsByTeam
 }
+
+export const loot = async (hre: HardhatRuntimeEnvironment, possibleTargetsByTeamId: TeamInfoByTeam, playeraddress: string, looterteamid: number, signer: SignerWithAddress, log: (typeof console.log) = console.log) => {
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    const player = (await attachPlayer(hre, playeraddress)).connect(signer)
+
+    const { lockTo: looterLockTo, currentGameId: looterCurrentGameId } = await idleGame.getTeamInfo(looterteamid)
+
+    const timestamp = await currentBlockTimeStamp(hre)
+
+    if (await locked(looterteamid, looterLockTo, timestamp, log))
+        return
+
+    settleGame(idleGame.connect(signer), looterCurrentGameId, 10, log)
+
+    await (new Promise((resolve) => {
+
+        let attackInProgress = false
+
+        idleGame.on( idleGame.filters.StartGame(), async (gameId: BigNumber, teamId: BigNumber) => {
+            
+            // TODO Maybe would be interesting to consider only the events that have
+            // a timestamp near the block's timestamp.
+
+            if (attackInProgress)
+                return
+
+            const possibleTarget = possibleTargetsByTeamId[teamId.toString()]
+            
+            if (!possibleTarget)
+                return
+
+            attackInProgress = true
+            log('Begin Attack', 'target team id', teamId.toNumber());
+
+            try {
+
+                await player.attackTeam(teamId, looterteamid, {
+                    gasLimit: GAS_LIMIT,
+                    maxFeePerGas: MAX_FEE,
+                    maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50) // Tip based on teamId battle points
+                })
+
+            } catch (error) {
+
+                log(`ERROR: ${error.toString()}`);
+                
+            }
+
+            const timestamp = await currentBlockTimeStamp(hre)
+
+            const { lockTo: looterLockTo } = await idleGame.getTeamInfo(looterteamid)
+
+            log('End Attack');
+
+            if (await locked(looterteamid, looterLockTo, timestamp, log)){
+                resolve(undefined)
+                return
+            }
+
+            attackInProgress = false
+
+        })        
+
+    }))
+
+}
+

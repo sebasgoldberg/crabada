@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, currentBlockTimeStamp, deployPlayer, gasPrice, GAS_LIMIT, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, locked, MAX_FEE, mineStep, ONE_GWEI, settleGame, waitTransaction } from "../scripts/crabada";
+import { attachPlayer, baseFee, currentBlockTimeStamp, deployPlayer, gasPrice, GAS_LIMIT, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, locked, loot, MAX_FEE, mineStep, ONE_GWEI, settleGame, TeamInfoByTeam, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -18,7 +18,7 @@ task("gasprice", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await gasPrice(hre), 9))
 })
 
-const getSigner = async (hre: HardhatRuntimeEnvironment, testaccount: string, signerIndex: number = 0): Promise<SignerWithAddress> => {
+export const getSigner = async (hre: HardhatRuntimeEnvironment, testaccount: string, signerIndex: number = 0): Promise<SignerWithAddress> => {
     if (testaccount){
         await hre.ethers.provider.send('hardhat_impersonateAccount', [testaccount] );
         const signer: any = await hre.ethers.provider.getSigner(testaccount)
@@ -759,69 +759,11 @@ task(
 
         // TODO Pending tests
 
-        const possibleTargetsByTeamId = getPossibleTargetsByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints)
-
         const signer = await getSigner(hre, testaccount)
 
-        const { idleGame } = getCrabadaContracts(hre)
+        const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints)
 
-        const player = (await attachPlayer(hre, playeraddress)).connect(signer)
-
-        const { lockTo: looterLockTo, currentGameId: looterCurrentGameId } = await idleGame.getTeamInfo(looterteamid)
-
-        const timestamp = await currentBlockTimeStamp(hre)
-
-        if (await locked(looterteamid, looterLockTo, timestamp))
-            return
-
-        settleGame(idleGame.connect(signer), looterCurrentGameId, 10)
-
-        await (new Promise((resolve) => {
-
-            let attackInProgress = false
-
-            idleGame.on( idleGame.filters.StartGame(), async (gameId: BigNumber, teamId: BigNumber) => {
-                
-                // TODO Maybe would be interesting to consider only the events that have
-                // a timestamp near the block's timestamp.
-
-                if (attackInProgress)
-                    return
-
-                const possibleTarget = possibleTargetsByTeamId[teamId.toString()]
-                
-                if (!possibleTarget)
-                    return
-
-                attackInProgress = true
-                console.log('Begin Attack', 'target team id', teamId.toNumber());
-
-                try {
-
-                    await player.attackTeam(teamId, looterteamid, {
-                        gasLimit: GAS_LIMIT,
-                        maxFeePerGas: MAX_FEE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50) // Tip based on teamId battle points
-                    })
-
-                } catch (error) {
-                    
-                }
-
-                const timestamp = await currentBlockTimeStamp(hre)
-                
-                if (await locked(looterteamid, looterLockTo, timestamp)){
-                    resolve(undefined)
-                    return
-                }
-
-                console.log('End Attack');
-                attackInProgress = false
-
-            })        
-    
-        }))
-
+        loot(hre, possibleTargetsByTeamId, playeraddress, looterteamid, signer);
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 3600 /*2 hours*/ , types.int)
@@ -846,6 +788,21 @@ task(
                 console.log('Delay between startGame transaction and StartGame event reception', eventReceivedTimestamp-blockTimestamp)
             })        
     
+        }))
+
+    })
+
+task(
+    "pendingtransactions",
+    "Listen for pending transactions.",
+    async ({ }, hre: HardhatRuntimeEnvironment) => {
+        
+        await (new Promise(() => {
+
+            hre.ethers.provider.on("pending", (tx: ethers.Transaction) =>{
+                console.log(tx.data)
+            })
+
         }))
 
     })
