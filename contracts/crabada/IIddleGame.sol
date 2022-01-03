@@ -11,6 +11,8 @@ interface IIddleGame {
     function attack(uint256 gameId, uint256 attackTeamId) external;
 
     function startGame(uint256 teamId) external;
+    function reinforceAttack(uint256 gameId, uint256 crabadaId, uint256 borrowPrice) external;
+    function reinforceDefense(uint256 gameId, uint256 crabadaId, uint256 borrowPrice) external;
     function closeGame(uint256 gameId) external;
     function settleGame(uint256 gameId) external;
 

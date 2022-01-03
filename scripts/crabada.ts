@@ -332,7 +332,7 @@ export type TeamInfoByTeam = { [teamId: string]: TeamInfo }
 
 export const getPossibleTargetsByTeamId = async (
     hre: HardhatRuntimeEnvironment, blockstoanalyze: number, 
-    firstdefendwindow: number, maxbattlepoints: number): Promise<TeamInfoByTeam> =>{
+    firstdefendwindow: number, maxbattlepoints: number, log = console.log): Promise<TeamInfoByTeam> =>{
 
     const { idleGame } = getCrabadaContracts(hre)
 
@@ -363,7 +363,7 @@ export const getPossibleTargetsByTeamId = async (
 
     const fightEvents = await fightEventsPromise
 
-    console.log('startGameEvents', startGameEvents.length);
+    log('startGameEvents', startGameEvents.length);
 
     const teamsBehaviour: TeamInfoByTeam = {}
 
@@ -419,7 +419,7 @@ export const getPossibleTargetsByTeamId = async (
         }
     }
 
-    console.log('teamsThatStartedGameAndFight', teamsThatStartedGameAndFight);
+    log('teamsThatStartedGameAndFight', teamsThatStartedGameAndFight);
 
     // Are obtained the teams that play to loose.
     const teamsThatPlayToLoose: TeamInfoByTeam = {}
@@ -448,7 +448,7 @@ export const getPossibleTargetsByTeamId = async (
             possibleTargetsByTeam[teamId] = teamsThatPlayToLoose[teamId]
     }
 
-    console.log(`Possible targets below ${maxbattlepoints} battle points`, Object.keys(possibleTargetsByTeam).length)
+    log(`Possible targets below ${maxbattlepoints} battle points`, Object.keys(possibleTargetsByTeam).length)
 
     return possibleTargetsByTeam
 }
