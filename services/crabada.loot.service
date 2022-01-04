@@ -1,0 +1,18 @@
+[Unit]
+Description=Crabada service for looting.
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<your private key>"
+Type=simple
+WatchdogSec=900
+Restart=always
+RestartSec=15
+User=cerebro
+ExecStart=/home/cerebro/crabada/services/crabada.loot.sh
+WorkingDirectory=/home/cerebro/crabada
+
+
+[Install]
+WantedBy=multi-user.target
