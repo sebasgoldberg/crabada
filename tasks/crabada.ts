@@ -657,7 +657,8 @@ task(
             idleGame.on( idleGame.filters.StartGame(), async (gameId: BigNumber, teamId: BigNumber, duration: BigNumber, craReward: BigNumber, tusReward: BigNumber, { transactionHash, blockNumber, getBlock }) => {
                 const eventReceivedTimestamp = (+new Date())/1000
                 const { timestamp: blockTimestamp } = await getBlock()
-                console.log('Delay between startGame transaction and StartGame event reception', eventReceivedTimestamp-blockTimestamp)
+                const now = (+new Date())/1000
+                console.log('Delay between startGame transaction and StartGame event reception, obtaining block.', eventReceivedTimestamp-blockTimestamp, now-blockTimestamp)
             })        
     
         }))

@@ -537,7 +537,6 @@ export const loot = async (
             log('End Attack');
 
             if (await locked(looterteamid, looterLockTo, timestamp, log)){
-                eventListener
                 idleGame.off(idleGame.filters.StartGame(), eventListener)
                 resolve(transactionResponse)
                 return
