@@ -629,21 +629,27 @@ task(
 task(
     "loot",
     "Loot process.",
-    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, playeraddress, looterteamid, testaccount }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, playeraddress, looterteamid, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
         const signer = await getSigner(hre, testaccount)
 
-        const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints)
+        const { idleGame } = getCrabadaContracts(hre)
 
-        loot(hre, possibleTargetsByTeamId, playeraddress, looterteamid, signer);
+        const { battlePoint } = await idleGame.getTeamInfo(looterteamid)
+
+        const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints ? maxbattlepoints : battlePoint-1)
+
+        await loot(hre, possibleTargetsByTeamId, playeraddress, looterteamid, signer, console.log, testmode);
 
     })
-    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 3600 /*2 hours*/ , types.int)
+    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
-    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 630 , types.int)
-    .addParam("playeraddress", "Player contract address that will be looting.")
+    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", undefined , types.int)
+    .addOptionalParam("playeraddress", "Player contract address that will be looting.", undefined, types.string) // TODO remove optional or remove
     .addParam("looterteamid", "Player contract address that will be looting.", undefined, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+    .addOptionalParam("testmode", "Test mode", true, types.boolean)
+    
 
 task(
     "meassurestartgameevents",
