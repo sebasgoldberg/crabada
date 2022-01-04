@@ -476,6 +476,10 @@ export const getPossibleTargetsByTeamId = async (
     return possibleTargetsByTeam
 }
 
+export const getDelayFrom = (timeFromInSeconds: number) => {
+    return ((+new Date())/1000) - timeFromInSeconds
+}
+
 export const loot = async (
     hre: HardhatRuntimeEnvironment, possibleTargetsByTeamId: TeamInfoByTeam, 
     playeraddress: string, looterteamid: number, signer: SignerWithAddress, 
@@ -508,13 +512,11 @@ export const loot = async (
                 craReward: BigNumber, tusReward: BigNumber, 
                 { transactionHash, blockNumber, getBlock }) => {
             
-            const eventReceivedTimestamp = (+new Date())/1000
+            const eventReceivedDelay = (+new Date())/1000
             const { timestamp: blockTimestamp } = await getBlock()
-            const now = (+new Date())/1000
-            const delay = now-blockTimestamp
             console.log('StartGame received', transactionHash, blockNumber, gameId.toNumber(), gameId.toHexString())
-            console.log('StartGame event delay', eventReceivedTimestamp-blockTimestamp, delay)
-            if (maxEventReceptionDelay && delay>maxEventReceptionDelay){
+            console.log('StartGame event delay', eventReceivedDelay-blockTimestamp, getDelayFrom(blockTimestamp))
+            if (maxEventReceptionDelay && getDelayFrom(blockTimestamp)>maxEventReceptionDelay){
                 console.log('StartGame event discarded. High delay in event reception.')
                 return
             }
@@ -523,7 +525,7 @@ export const loot = async (
             // a timestamp near the block's timestamp.
 
             if (attackInProgress){
-                console.log('StartGame event discarded. Attack in progress', eventReceivedTimestamp-blockTimestamp, now-blockTimestamp)
+                console.log('StartGame event discarded. Attack in progress', eventReceivedDelay-blockTimestamp, getDelayFrom(blockTimestamp))
                 return
             }
 
@@ -533,7 +535,7 @@ export const loot = async (
                 return
 
             attackInProgress = true
-            log('Begin Attack', 'target game id', gameId.toNumber(), gameId.toHexString());
+            log('Begin Attack', 'target game id', gameId.toNumber(), gameId.toHexString(), getDelayFrom(blockTimestamp));
 
             let transactionResponse: TransactionResponse
 
@@ -566,7 +568,7 @@ export const loot = async (
 
             const { lockTo: looterLockTo } = await idleGame.getTeamInfo(looterteamid)
 
-            log('End Attack');
+            log('End Attack', getDelayFrom(blockTimestamp));
 
             if (!testMode && await locked(looterteamid, looterLockTo, timestamp, log)){
                 idleGame.off(idleGame.filters.StartGame(), eventListener)
