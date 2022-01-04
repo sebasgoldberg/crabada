@@ -597,7 +597,7 @@ task(
     const MAX_BATTLE_POINTS = 712
     const STEP_BATTLE_POINTS = (MAX_BATTLE_POINTS-MIN_BATTLE_POINTS)/10
 
-    task(
+task(
     "lootpossibletargets",
     "Loot process.",
     async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints }, hre: HardhatRuntimeEnvironment) => {

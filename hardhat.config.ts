@@ -110,6 +110,12 @@ export default {
       gasPrice: 25000000000,
       chainId: 43114,
       accounts: USE_MAINNET_ACCOUNT ? [ MAINNET_AVAX_MAIN_ACCOUNT_PK, ...CRABADA_ATTACKER_PKS ] : [ ]
+    },
+    localmainnet: {
+      url: 'http://localhost:9650/ext/bc/C/rpc',
+      gasPrice: 25000000000,
+      chainId: 43114,
+      accounts: USE_MAINNET_ACCOUNT ? [ MAINNET_AVAX_MAIN_ACCOUNT_PK, ...CRABADA_ATTACKER_PKS ] : [ ]
     }
   }
 }

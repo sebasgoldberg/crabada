@@ -330,21 +330,43 @@ export interface TeamInfo {
 
 export type TeamInfoByTeam = { [teamId: string]: TeamInfo }
 
+export const queryFilterByPage = async (
+    hre: HardhatRuntimeEnvironment,
+    contract: Contract, filter: ethers.EventFilter, fromBlock: number, toBlock :number, 
+    log = console.log, queryPageSize=3600
+) => {
+
+    const eventsPromises = []
+    for (
+        let _fromBlock=fromBlock; 
+        _fromBlock < toBlock; 
+        _fromBlock+=queryPageSize
+        )
+        eventsPromises.push(contract.queryFilter(filter, _fromBlock, Math.min(_fromBlock+queryPageSize, hre.ethers.provider.blockNumber) ))
+
+    const events = []
+    for (const fightEventsPromise of eventsPromises){
+        try {
+            events.push(...(await fightEventsPromise))
+        } catch (error) {
+            log(`ERROR: events of ${queryPageSize} blocks were discarded`)
+        }
+    }
+    
+    return events
+}
+
 export const getPossibleTargetsByTeamId = async (
     hre: HardhatRuntimeEnvironment, blockstoanalyze: number, 
-    firstdefendwindow: number, maxbattlepoints: number, log = console.log): Promise<TeamInfoByTeam> =>{
+    firstdefendwindow: number, maxbattlepoints: number, log = console.log, queryPageSize=3600): Promise<TeamInfoByTeam> =>{
 
     const { idleGame } = getCrabadaContracts(hre)
 
     hre.ethers.provider.blockNumber
 
-    const BLOCKS_TO_ANALYZE = blockstoanalyze
-    const FIRST_DEFEND_WINDOW = firstdefendwindow
+    const fromBlock = hre.ethers.provider.blockNumber-blockstoanalyze
 
-    const fromBlock = hre.ethers.provider.blockNumber-BLOCKS_TO_ANALYZE
-    const toBlock = hre.ethers.provider.blockNumber-FIRST_DEFEND_WINDOW
-
-    const fightEventsPromise = idleGame.queryFilter(idleGame.filters.Fight(), fromBlock, "latest")
+    const fightEventsPromise = queryFilterByPage(hre, idleGame, idleGame.filters.Fight(), fromBlock, hre.ethers.provider.blockNumber, log)
     // gameId uint256
     // turn uint256
     // attackTeamId uint256
@@ -354,7 +376,8 @@ export const getPossibleTargetsByTeamId = async (
     // attackPoint uint16
     // defensePoint uint16
 
-    const startGameEvents = await idleGame.queryFilter(idleGame.filters.StartGame(), fromBlock, toBlock)
+    const toBlock = hre.ethers.provider.blockNumber-firstdefendwindow
+    const startGameEvents = await queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, toBlock, log)
     // gameId uint256
     // teamId uint256
     // duration uint256
