@@ -629,7 +629,7 @@ task(
 task(
     "loot",
     "Loot process.",
-    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, playeraddress, looterteamid, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, playeraddress, looterteamid, testaccount, testmode, maxeventdelay }, hre: HardhatRuntimeEnvironment) => {
 
         const signer = await getSigner(hre, testaccount)
 
@@ -639,7 +639,7 @@ task(
 
         const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints ? maxbattlepoints : battlePoint-1)
 
-        await loot(hre, possibleTargetsByTeamId, playeraddress, looterteamid, signer, console.log, testmode);
+        await loot(hre, possibleTargetsByTeamId, playeraddress, looterteamid, signer, console.log, testmode, maxeventdelay/1000);
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
@@ -649,6 +649,8 @@ task(
     .addParam("looterteamid", "Player contract address that will be looting.", undefined, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
+    .addOptionalParam("maxeventdelay", "Max StartGame event delay in miliseconds.", 3500, types.int)
+    
     
 
 task(

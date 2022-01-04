@@ -479,7 +479,7 @@ export const getPossibleTargetsByTeamId = async (
 export const loot = async (
     hre: HardhatRuntimeEnvironment, possibleTargetsByTeamId: TeamInfoByTeam, 
     playeraddress: string, looterteamid: number, signer: SignerWithAddress, 
-    log: (typeof console.log) = console.log, testMode=true): Promise<TransactionResponse|undefined> => {
+    log: (typeof console.log) = console.log, testMode=true, maxEventReceptionDelay: number=undefined): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
 
@@ -511,8 +511,13 @@ export const loot = async (
             const eventReceivedTimestamp = (+new Date())/1000
             const { timestamp: blockTimestamp } = await getBlock()
             const now = (+new Date())/1000
+            const delay = now-blockTimestamp
             console.log('StartGame received', transactionHash, blockNumber, gameId.toNumber(), gameId.toHexString())
-            console.log('StartGame event delay', eventReceivedTimestamp-blockTimestamp, now-blockTimestamp)
+            console.log('StartGame event delay', eventReceivedTimestamp-blockTimestamp, delay)
+            if (maxEventReceptionDelay && delay>maxEventReceptionDelay){
+                console.log('StartGame event discarded. High delay in event reception.')
+                return
+            }
     
             // TODO Maybe would be interesting to consider only the events that have
             // a timestamp near the block's timestamp.
