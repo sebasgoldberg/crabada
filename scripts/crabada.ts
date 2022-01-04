@@ -534,22 +534,32 @@ export const loot = async (
 
             let transactionResponse: TransactionResponse
 
-            if (!testMode){
+            try {
 
-                try {
+                if (!testMode){
 
                     transactionResponse = await player.attackTeam(teamId, looterteamid, {
                         gasLimit: GAS_LIMIT,
                         maxFeePerGas: MAX_FEE,
                         maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*25) // Tip based on teamId battle points
                     })
-    
-                } catch (error) {
-    
-                    log(`ERROR: ${error.toString()}`);
-                    
+
                 }
-    
+                else{
+
+                    await player.callStatic.attackTeam(teamId, looterteamid, {
+                        gasLimit: GAS_LIMIT,
+                        maxFeePerGas: MAX_FEE,
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*25) // Tip based on teamId battle points
+                    })
+
+                }
+
+
+            } catch (error) {
+
+                log(`ERROR: ${error.toString()}`);
+                
             }
 
             const timestamp = await currentBlockTimeStamp(hre)
