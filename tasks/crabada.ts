@@ -629,7 +629,7 @@ task(
 task(
     "loot",
     "Loot process.",
-    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, playeraddress, looterteamid, testaccount, testmode, maxeventdelay }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, playeraddress, looterteamid, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
         const signer = await getSigner(hre, testaccount)
 
@@ -639,20 +639,19 @@ task(
 
         const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints ? maxbattlepoints : battlePoint-1)
 
-        await loot(hre, possibleTargetsByTeamId, playeraddress, looterteamid, signer, console.log, testmode, maxeventdelay/1000);
+        await loot(hre, possibleTargetsByTeamId, playeraddress, looterteamid, signer, console.log, testmode);
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", undefined , types.int)
-    .addOptionalParam("playeraddress", "Player contract address that will be looting.", undefined, types.string) // TODO remove optional or remove
+    .addParam("playeraddress", "Player contract address that will be looting.", undefined, types.string)
     .addParam("looterteamid", "Player contract address that will be looting.", undefined, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
-    .addOptionalParam("maxeventdelay", "Max StartGame event delay in miliseconds.", 3500, types.int)
     
     
-const START_GAME_ENCODED_OPERATION = '0xe5ed1d59'
+export const START_GAME_ENCODED_OPERATION = '0xe5ed1d59'
 
 task(
     "meassurestartgameevents",
@@ -660,15 +659,17 @@ task(
     async ({ }, hre: HardhatRuntimeEnvironment) => {
         
         await (new Promise(() => {
+            const { idleGame } = getCrabadaContracts(hre)
 
             hre.ethers.provider.on("pending", (tx: ethers.Transaction) =>{
-                if (tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION){
+                if (tx.to === idleGame.address &&
+                    tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION){
+
                     const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
                     console.log(+new Date()/1000, 'Pending transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
+
                 }
             })
-
-            const { idleGame } = getCrabadaContracts(hre)
 
             idleGame.on( idleGame.filters.StartGame(), async (gameId: BigNumber, teamId: BigNumber, duration: BigNumber, craReward: BigNumber, tusReward: BigNumber, { transactionHash, blockNumber, getBlock }) => {
                 const eventReceivedTimestamp = (+new Date())/1000

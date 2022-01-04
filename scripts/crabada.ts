@@ -480,15 +480,16 @@ export const getDelayFrom = (timeFromInSeconds: number) => {
     return ((+new Date())/1000) - timeFromInSeconds
 }
 
+export const START_GAME_ENCODED_OPERATION = '0xe5ed1d59'
+
 export const loot = async (
     hre: HardhatRuntimeEnvironment, possibleTargetsByTeamId: TeamInfoByTeam, 
     playeraddress: string, looterteamid: number, signer: SignerWithAddress, 
-    log: (typeof console.log) = console.log, testMode=true, maxEventReceptionDelay: number=undefined): Promise<TransactionResponse|undefined> => {
+    log: (typeof console.log) = console.log, testMode=true): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
 
-    // TODO Verify if would be used player
-    // const player = (await attachPlayer(hre, playeraddress)).connect(signer)
+    const player = (await attachPlayer(hre, playeraddress)).connect(signer)
 
     const { lockTo: looterLockTo, currentGameId: looterCurrentGameId } = await idleGame.getTeamInfo(looterteamid)
 
@@ -497,9 +498,9 @@ export const loot = async (
     if (!testMode){
 
         if (await locked(looterteamid, looterLockTo, timestamp, log))
-        return
+            return
 
-        settleGame(idleGame.connect(signer), looterCurrentGameId, 10, log)
+        await settleGame(idleGame.connect(signer), looterCurrentGameId, 10, log)
 
     }
 
@@ -507,25 +508,19 @@ export const loot = async (
 
         let attackInProgress = false
 
-        const eventListener = async (
-                gameId: BigNumber, teamId: BigNumber, duration: BigNumber, 
-                craReward: BigNumber, tusReward: BigNumber, 
-                { transactionHash, blockNumber, getBlock }) => {
-            
-            const eventReceivedDelay = (+new Date())/1000
-            const { timestamp: blockTimestamp } = await getBlock()
-            console.log('StartGame received', transactionHash, blockNumber, gameId.toNumber(), gameId.toHexString())
-            console.log('StartGame event delay', eventReceivedDelay-blockTimestamp, getDelayFrom(blockTimestamp))
-            if (maxEventReceptionDelay && getDelayFrom(blockTimestamp)>maxEventReceptionDelay){
-                console.log('StartGame event discarded. High delay in event reception.')
+        const eventListener = async (tx: ethers.Transaction) => {
+
+            if (tx.to !== idleGame.address)
                 return
-            }
-    
-            // TODO Maybe would be interesting to consider only the events that have
-            // a timestamp near the block's timestamp.
+
+            if (tx.data.slice(0,10) !== START_GAME_ENCODED_OPERATION)
+                return
+
+            const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
+            log(+new Date()/1000, 'Pending transaction (hash, block, teamId)', tx.hash, (tx as any).blockNumber, teamId.toNumber());
 
             if (attackInProgress){
-                console.log('StartGame event discarded. Attack in progress', eventReceivedDelay-blockTimestamp, getDelayFrom(blockTimestamp))
+                log('StartGame event discarded. Attack in progress')
                 return
             }
 
@@ -535,7 +530,7 @@ export const loot = async (
                 return
 
             attackInProgress = true
-            log('Begin Attack', 'target game id', gameId.toNumber(), gameId.toHexString(), getDelayFrom(blockTimestamp));
+            log('Begin Attack', '(teamId, teamIdHex)', teamId.toNumber(), teamId.toHexString());
 
             let transactionResponse: TransactionResponse
 
@@ -543,17 +538,10 @@ export const loot = async (
 
                 try {
 
-                    // TODO Verify if would be used player
-                    // transactionResponse = await player.attackTeam(teamId, looterteamid, {
-                    //     gasLimit: GAS_LIMIT,
-                    //     maxFeePerGas: MAX_FEE,
-                    //     maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50) // Tip based on teamId battle points
-                    // })
-    
-                    transactionResponse = await idleGame.attack(gameId, looterteamid, {
+                    transactionResponse = await player.attackTeam(teamId, looterteamid, {
                         gasLimit: GAS_LIMIT,
                         maxFeePerGas: MAX_FEE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50) // Tip based on teamId battle points
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*25) // Tip based on teamId battle points
                     })
     
                 } catch (error) {
@@ -568,10 +556,10 @@ export const loot = async (
 
             const { lockTo: looterLockTo } = await idleGame.getTeamInfo(looterteamid)
 
-            log('End Attack', getDelayFrom(blockTimestamp));
+            log('End Attack');
 
             if (!testMode && await locked(looterteamid, looterLockTo, timestamp, log)){
-                idleGame.off(idleGame.filters.StartGame(), eventListener)
+                hre.ethers.provider.off("pending", eventListener)
                 resolve(transactionResponse)
                 return
             }
@@ -580,7 +568,7 @@ export const loot = async (
 
         }
 
-        idleGame.on( idleGame.filters.StartGame(), eventListener)        
+        hre.ethers.provider.on("pending", eventListener)
 
     }))
 
