@@ -263,8 +263,15 @@ task(
 
         const { crabada } = getCrabadaContracts(hre)
 
-        await crabada.connect(signer).setApprovalForAll(player, true, await getOverride(hre))
-        
+        const isApprovedForAll = await crabada.isApprovedForAll(signer.address, player)
+        if (!isApprovedForAll){
+            console.log('crabada.callStatic.setApprovalForAll(_playerTo.address, true)', player);
+            await crabada.connect(signer).callStatic.setApprovalForAll(player, true, await getOverride(hre))
+            console.log('crabada.setApprovalForAll(_playerTo.address, true)', player);
+            await waitTransaction(await crabada.connect(signer).setApprovalForAll(player, true, await getOverride(hre)), 2)
+        }else
+            console.log('Already approved')
+
     })
     .addParam("player", "Player contract address, for which will be created the team.")
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
@@ -272,21 +279,21 @@ task(
 task(
     "playerdeposit",
     "Deposit of crabadas in the game.",
-    async ({ player, c1, c2, c3, testaccount }, hre: HardhatRuntimeEnvironment) => {
+    async ({ player, crabadas, testaccount }, hre: HardhatRuntimeEnvironment) => {
         
         const signer = await getSigner(hre, testaccount)
 
         const playerC = await attachPlayer(hre, player)
 
-        await playerC.connect(signer).callStatic.deposit(signer.address, [c1, c2, c3], await getOverride(hre))
+        const crabadasToDesposit = crabadas.split(',').map( s => BigNumber.from(s))
+
+        await playerC.connect(signer).callStatic.deposit(signer.address, crabadasToDesposit, await getOverride(hre))
         
-        await playerC.connect(signer).deposit(signer.address, [c1, c2, c3], await getOverride(hre))
+        await playerC.connect(signer).deposit(signer.address, crabadasToDesposit, await getOverride(hre))
         
     })
     .addParam("player", "Player contract address, for which will be created the team.")
-    .addParam("c1", "Crabada ID 1.", undefined, types.int)
-    .addParam("c2", "Crabada ID 2.", undefined, types.int)
-    .addParam("c3", "Crabada ID 3.", undefined, types.int)
+    .addParam("crabadas", "Crabada to deposit separated by ','.", '', types.string)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
 task(
@@ -392,6 +399,23 @@ task(
     .addParam("teamid", "Team ID from which Crabada has to be removed.", undefined, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
+task(
+    "settlegame",
+    "Settle game id.",
+    async ({ player, teamid, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        const { currentGameId } = await idleGame.getTeamInfo(teamid)
+
+        await settleGame(idleGame.connect(signer), currentGameId, 3)
+
+    })
+    .addParam("teamid", "Team ID which have a game to settle.", undefined, types.int)
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
 
 task(
     "playerremovefromteam",
@@ -413,8 +437,28 @@ task(
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
 task(
+    "playeraddtoteam",
+    "Add crabada to team in the specified position.",
+    async ({ player, teamid, position, crabada, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const _player = await attachPlayer(hre, player)
+
+        await _player.connect(signer).callStatic.addCrabadaToTeam(teamid, position, crabada, await getOverride(hre))
+        
+        await _player.connect(signer).addCrabadaToTeam(teamid, position, crabada, await getOverride(hre))
+        
+    })
+    .addParam("player", "Player contract address, for which will be created the team.")
+    .addParam("teamid", "Team ID from which Crabada has to be removed.", undefined, types.int)
+    .addParam("position", "Position of Crabada to be removed.", undefined, types.int)
+    .addParam("crabada", "Position of Crabada to be removed.", undefined, types.int)
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
     "playerwithdraw",
-    "Remove of crabadas from team.",
+    "Remove crabadas from game and transfer to signer.",
     async ({ player, crabadas, testaccount }, hre: HardhatRuntimeEnvironment) => {
         
         const signer = await getSigner(hre, testaccount)
