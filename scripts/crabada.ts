@@ -511,7 +511,7 @@ export const loot = async (
             const eventReceivedTimestamp = (+new Date())/1000
             const { timestamp: blockTimestamp } = await getBlock()
             const now = (+new Date())/1000
-            console.log('StartGame received', transactionHash, blockNumber)
+            console.log('StartGame received', transactionHash, blockNumber, gameId.toNumber(), gameId.toHexString())
             console.log('StartGame event delay', eventReceivedTimestamp-blockTimestamp, now-blockTimestamp)
     
             // TODO Maybe would be interesting to consider only the events that have
@@ -528,7 +528,7 @@ export const loot = async (
                 return
 
             attackInProgress = true
-            log('Begin Attack', 'target team id', teamId.toNumber());
+            log('Begin Attack', 'target game id', gameId.toNumber(), gameId.toHexString());
 
             let transactionResponse: TransactionResponse
 
