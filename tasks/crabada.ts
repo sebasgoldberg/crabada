@@ -652,6 +652,7 @@ task(
     .addOptionalParam("maxeventdelay", "Max StartGame event delay in miliseconds.", 3500, types.int)
     
     
+const START_GAME_ENCODED_OPERATION = '0xe5ed1d59'
 
 task(
     "meassurestartgameevents",
@@ -660,13 +661,20 @@ task(
         
         await (new Promise(() => {
 
+            hre.ethers.provider.on("pending", (tx: ethers.Transaction) =>{
+                if (tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION){
+                    const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
+                    console.log(+new Date()/1000, 'Pending transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
+                }
+            })
+
             const { idleGame } = getCrabadaContracts(hre)
 
             idleGame.on( idleGame.filters.StartGame(), async (gameId: BigNumber, teamId: BigNumber, duration: BigNumber, craReward: BigNumber, tusReward: BigNumber, { transactionHash, blockNumber, getBlock }) => {
                 const eventReceivedTimestamp = (+new Date())/1000
                 const { timestamp: blockTimestamp } = await getBlock()
                 const now = (+new Date())/1000
-                console.log('Delay between startGame transaction and StartGame event reception, obtaining block.', eventReceivedTimestamp-blockTimestamp, now-blockTimestamp)
+                console.log(+new Date()/1000, 'StartGame event received.', eventReceivedTimestamp-blockTimestamp, now-blockTimestamp, teamId.toNumber())
             })        
     
         }))
