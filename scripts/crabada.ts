@@ -10,7 +10,7 @@ import { formatEther, formatUnits } from "ethers/lib/utils";
 export const ONE_GWEI = 1000000000
 export const GAS_LIMIT = 700000
 export const MAX_FEE = BigNumber.from(ONE_GWEI*150)
-export const ATTACK_MAX_GAS_PRICE = BigNumber.from(ONE_GWEI*250)
+export const ATTACK_MAX_GAS_PRICE = BigNumber.from(ONE_GWEI*300)
 
 export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
     const blockNumber = await hre.ethers.provider.getBlockNumber()
@@ -579,8 +579,8 @@ export const loot = async (
 
                     transactionResponse = await idleGame.connect(signer).attack(e.gameId, looterteamid, {
                         gasLimit: GAS_LIMIT,
-                        maxFeePerGas: MAX_FEE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*5)
+                        maxFeePerGas: ATTACK_MAX_GAS_PRICE,
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*150)
                     })
 
                 }
@@ -588,8 +588,8 @@ export const loot = async (
 
                     transactionResponse = await idleGame.connect(signer).callStatic.attack(e.gameId, looterteamid, {
                         gasLimit: GAS_LIMIT,
-                        maxFeePerGas: MAX_FEE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*5)
+                        maxFeePerGas: ATTACK_MAX_GAS_PRICE,
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*150)
                     })
 
                 }
