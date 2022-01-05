@@ -689,7 +689,7 @@ task(
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", undefined , types.int)
-    .addParam("playeraddress", "Player contract address that will be looting.", undefined, types.string)
+    .addOptionalParam("playeraddress", "Player contract address that will be looting.", undefined, types.string) // TODO Remove optional or remove player
     .addParam("looterteamid", "Player contract address that will be looting.", undefined, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)

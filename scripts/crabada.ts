@@ -489,7 +489,7 @@ export const loot = async (
 
     const { idleGame } = getCrabadaContracts(hre)
 
-    const player = (await attachPlayer(hre, playeraddress)).connect(signer)
+    //const player = (await attachPlayer(hre, playeraddress)).connect(signer)
 
     const { lockTo: looterLockTo, currentGameId: looterCurrentGameId } = await idleGame.getTeamInfo(looterteamid)
 
@@ -504,33 +504,53 @@ export const loot = async (
 
     }
 
+    const START_GAME_FILTER = {
+        fromBlock: 'pending',
+        toBlock: 'pending',
+        address: idleGame.address,
+        topics: [ '0x0eef6f7452b7d2ee11184579c086fb47626e796a83df2b2e16254df60ab761eb' ]
+    };
+    
+    const provider = hre.ethers.provider
+    const filterId = await provider.send("eth_newFilter", [START_GAME_FILTER]);
+    
     return await (new Promise((resolve) => {
+
+        const interval = setInterval(async () => {
+            const logs = await provider.send("eth_getFilterChanges", [filterId]);
+            for (const log of logs){
+                const gameId = BigNumber.from((log.data as string).slice(0,66))
+                const teamId = BigNumber.from('0x'+(log.data as string).slice(66,130))
+                const blockNumber = BigNumber.from(log.blockNumber)
+                /* no await */ eventListener({ gameId, teamId, transactionHash: log.transactionHash, blockNumber })
+            }
+        }, 3)
+
+        interface StartGameEvent {
+            gameId: BigNumber,
+            teamId: BigNumber,
+            transactionHash: string,
+            blockNumber: BigNumber,
+        }
 
         let attackInProgress = false
 
-        const eventListener = async (tx: ethers.Transaction) => {
+        const eventListener = async (e: StartGameEvent) => {
 
-            if (tx.to !== idleGame.address)
-                return
-
-            if (tx.data.slice(0,10) !== START_GAME_ENCODED_OPERATION)
-                return
-
-            const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
-            log(+new Date()/1000, 'Pending transaction (hash, block, teamId)', tx.hash, (tx as any).blockNumber, teamId.toNumber());
+            log(+new Date()/1000, 'Pending transaction (hash, block, teamId)', e.transactionHash, e.blockNumber.toNumber(), e.gameId.toNumber());
 
             if (attackInProgress){
                 log('StartGame event discarded. Attack in progress')
                 return
             }
 
-            const possibleTarget = possibleTargetsByTeamId[teamId.toString()]
+            const possibleTarget = possibleTargetsByTeamId[e.teamId.toString()]
             
             if (!possibleTarget)
                 return
 
             attackInProgress = true
-            log('Begin Attack', '(teamId, teamIdHex)', teamId.toNumber(), teamId.toHexString());
+            log('Begin Attack', '(teamId, teamIdHex)', e.gameId.toNumber(), e.gameId.toHexString());
 
             let transactionResponse: TransactionResponse
 
@@ -538,19 +558,19 @@ export const loot = async (
 
                 if (!testMode){
 
-                    transactionResponse = await player.attackTeam(teamId, looterteamid, {
+                    transactionResponse = await idleGame.connect(signer).attack(e.gameId, looterteamid, {
                         gasLimit: GAS_LIMIT,
                         maxFeePerGas: MAX_FEE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*25) // Tip based on teamId battle points
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*5)
                     })
 
                 }
                 else{
 
-                    await player.callStatic.attackTeam(teamId, looterteamid, {
+                    transactionResponse = await idleGame.connect(signer).callStatic.attack(e.gameId, looterteamid, {
                         gasLimit: GAS_LIMIT,
                         maxFeePerGas: MAX_FEE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*25) // Tip based on teamId battle points
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*5)
                     })
 
                 }
@@ -566,19 +586,16 @@ export const loot = async (
 
             const { lockTo: looterLockTo } = await idleGame.getTeamInfo(looterteamid)
 
-            log('End Attack');
-
             if (!testMode && await locked(looterteamid, looterLockTo, timestamp, log)){
-                hre.ethers.provider.off("pending", eventListener)
+                clearInterval(interval)
                 resolve(transactionResponse)
                 return
             }
 
+            log('End Attack');
             attackInProgress = false
 
         }
-
-        hre.ethers.provider.on("pending", eventListener)
 
     }))
 
