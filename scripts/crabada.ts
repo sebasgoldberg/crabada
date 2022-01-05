@@ -350,6 +350,7 @@ export const queryFilterByPage = async (
             events.push(...(await fightEventsPromise))
         } catch (error) {
             log(`ERROR: events of ${queryPageSize} blocks were discarded`)
+            throw(error)
         }
     }
     
