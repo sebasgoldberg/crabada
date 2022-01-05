@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, currentBlockTimeStamp, deployPlayer, gasPrice, GAS_LIMIT, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, locked, loot, MAX_FEE, mineStep, ONE_GWEI, settleGame, TeamInfoByTeam, waitTransaction } from "../scripts/crabada";
+import { attachPlayer, baseFee, currentBlockTimeStamp, deployPlayer, gasPrice, GAS_LIMIT, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, ONE_GWEI, settleGame, TeamInfoByTeam, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -673,23 +673,25 @@ task(
 task(
     "loot",
     "Loot process.",
-    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, playeraddress, looterteamid, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, looterteamid, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
         const signer = await getSigner(hre, testaccount)
 
         const { idleGame } = getCrabadaContracts(hre)
 
+        if (!testmode && await isTeamLocked(hre, idleGame, looterteamid))
+            return
+
         const { battlePoint } = await idleGame.getTeamInfo(looterteamid)
 
         const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints ? maxbattlepoints : battlePoint-1)
 
-        await loot(hre, possibleTargetsByTeamId, playeraddress, looterteamid, signer, console.log, testmode);
+        await loot(hre, possibleTargetsByTeamId, undefined, looterteamid, signer, console.log, testmode);
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", undefined , types.int)
-    .addOptionalParam("playeraddress", "Player contract address that will be looting.", undefined, types.string) // TODO Remove optional or remove player
     .addParam("looterteamid", "Player contract address that will be looting.", undefined, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
@@ -757,28 +759,6 @@ task(
     async ({ }, hre: HardhatRuntimeEnvironment) => {
         
         const provider = hre.ethers.provider
-
-        // await (new Promise(() => {
-
-        //     hre.ethers.provider.on("pending", (tx: ethers.Transaction) =>{
-        //         console.log(tx.data)
-        //     })
-
-        // }))
-
-
-        // const filterId = await provider.send("eth_newPendingTransactionFilter", []);
-        // console.log(filterId);
-
-        // await (new Promise(() => {
-
-        //     setInterval(async () => {
-        //         const logs = await provider.send("eth_getFilterChanges", [filterId]);
-        //         console.log(logs);    
-        //     }, 100)
-
-        // }))
-
 
         const { idleGame } = getCrabadaContracts(hre)
 

@@ -155,6 +155,8 @@ npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0
 ```
 
 ## Mainnet
+
+### Create Player
 ```bash
 npx hardhat playerdeploy --network mainnet
 Player created: 0x019e96438ed58C7F18D799b7CC2006273F81318a
@@ -171,6 +173,19 @@ npx hardhat playerclosegame --network mainnet --player 0x71C9F079C03bEe608fF19c2
 npx hardhat playerremovefromteam --network mainnet --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --teamid 3785 --position 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 npx hardhat playerwithdraw --network mainnet --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --crabadas 7939,7224 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 ```
+
+### Player: Change Crabada
+```bash
+# Remove of 4564
+npx hardhat playerlistteams --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd
+npx hardhat settlegame --network mainnet --teamid 4400
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 4400 --position 2 # In position 2: 4564
+npx hardhat playersetapproval --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd
+npx hardhat playerdeposit --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --crabadas 12777
+npx hardhat playeraddtoteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 4400 --position 2 --crabada 12777
+npx hardhat playerlistteams --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd
+```
+
 
 # Crabada Contracts Interfaces
 ```solidity

@@ -482,14 +482,25 @@ export const getDelayFrom = (timeFromInSeconds: number) => {
 
 export const START_GAME_ENCODED_OPERATION = '0xe5ed1d59'
 
+export const isTeamLocked = async (
+    hre: HardhatRuntimeEnvironment, idleGame: Contract, teamId: number,
+    log: (typeof console.log) = console.log) => {
+
+    const { lockTo } = await idleGame.getTeamInfo(teamId)
+
+    const timestamp = await currentBlockTimeStamp(hre)
+
+    return await locked(teamId, lockTo, timestamp, log)
+
+}
+
+// TODO Remove playeraddress
 export const loot = async (
     hre: HardhatRuntimeEnvironment, possibleTargetsByTeamId: TeamInfoByTeam, 
     playeraddress: string, looterteamid: number, signer: SignerWithAddress, 
     log: (typeof console.log) = console.log, testMode=true): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
-
-    //const player = (await attachPlayer(hre, playeraddress)).connect(signer)
 
     const { lockTo: looterLockTo, currentGameId: looterCurrentGameId } = await idleGame.getTeamInfo(looterteamid)
 
@@ -525,6 +536,14 @@ export const loot = async (
                 /* no await */ eventListener({ gameId, teamId, transactionHash: log.transactionHash, blockNumber })
             }
         }, 3)
+
+        const exitInterval = setInterval(async () =>{
+            if (!testMode && await isTeamLocked(hre, idleGame, looterteamid, log)){
+                clearInterval(interval)
+                clearInterval(exitInterval)
+                resolve(undefined)
+            }
+        }, 3000)
 
         interface StartGameEvent {
             gameId: BigNumber,
@@ -580,16 +599,6 @@ export const loot = async (
 
                 log(`ERROR: ${error.toString()}`);
                 
-            }
-
-            const timestamp = await currentBlockTimeStamp(hre)
-
-            const { lockTo: looterLockTo } = await idleGame.getTeamInfo(looterteamid)
-
-            if (!testMode && await locked(looterteamid, looterLockTo, timestamp, log)){
-                clearInterval(interval)
-                resolve(transactionResponse)
-                return
             }
 
             log('End Attack');
