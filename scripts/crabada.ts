@@ -538,12 +538,12 @@ export const loot = async (
         }, 3)
 
         const exitInterval = setInterval(async () =>{
-            if (!testMode && await isTeamLocked(hre, idleGame, looterteamid, log)){
+            if (!testMode && await isTeamLocked(hre, idleGame, looterteamid, ()=>{})){
                 clearInterval(interval)
                 clearInterval(exitInterval)
                 resolve(undefined)
             }
-        }, 3000)
+        }, 10*1000)
 
         interface StartGameEvent {
             gameId: BigNumber,
@@ -580,7 +580,7 @@ export const loot = async (
                     transactionResponse = await idleGame.connect(signer).attack(e.gameId, looterteamid, {
                         gasLimit: GAS_LIMIT,
                         maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*150)
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50)
                     })
 
                 }
@@ -589,7 +589,7 @@ export const loot = async (
                     transactionResponse = await idleGame.connect(signer).callStatic.attack(e.gameId, looterteamid, {
                         gasLimit: GAS_LIMIT,
                         maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*150)
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50)
                     })
 
                 }
@@ -602,6 +602,14 @@ export const loot = async (
             }
 
             log('End Attack');
+
+            if (!testMode && await isTeamLocked(hre, idleGame, looterteamid, ()=>{})){
+                clearInterval(interval)
+                clearInterval(exitInterval)
+                resolve(undefined)
+                return
+            }
+
             attackInProgress = false
 
         }
