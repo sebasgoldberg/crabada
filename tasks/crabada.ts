@@ -702,7 +702,7 @@ task(
     "Listen StartGame events and meassure the time between block and event reception.",
     async ({ }, hre: HardhatRuntimeEnvironment) => {
         
-        await (new Promise(() => {
+        await (new Promise(async () => {
             const { idleGame } = getCrabadaContracts(hre)
 
             hre.ethers.provider.on("pending", (tx: ethers.Transaction) =>{
@@ -721,6 +721,31 @@ task(
                 const now = (+new Date())/1000
                 console.log(+new Date()/1000, 'StartGame event received.', eventReceivedTimestamp-blockTimestamp, now-blockTimestamp, teamId.toNumber())
             })        
+
+
+            const filter = {
+                fromBlock: 'pending',
+                toBlock: 'pending',
+                address: idleGame.address,
+                topics: [ '0x0eef6f7452b7d2ee11184579c086fb47626e796a83df2b2e16254df60ab761eb' ]
+            };
+            
+            const provider = hre.ethers.provider
+            const filterId = await provider.send("eth_newFilter", [filter]);
+            console.log(filterId);
+    
+            await (new Promise(() => {
+    
+                setInterval(async () => {
+                    const logs = await provider.send("eth_getFilterChanges", [filterId]);
+                    for (const log of logs){
+                        const gameId = BigNumber.from((log.data as string).slice(0,66))
+                        const teamId = BigNumber.from('0x'+(log.data as string).slice(66,130))
+                        console.log(+new Date()/1000, "eth_getFilterChanges", log.transactionHash, BigNumber.from(log.blockNumber).toNumber(), teamId.toNumber());
+                    }
+                }, 100)
+    
+            }))
     
         }))
 
@@ -731,11 +756,52 @@ task(
     "Listen for pending transactions.",
     async ({ }, hre: HardhatRuntimeEnvironment) => {
         
+        const provider = hre.ethers.provider
+
+        // await (new Promise(() => {
+
+        //     hre.ethers.provider.on("pending", (tx: ethers.Transaction) =>{
+        //         console.log(tx.data)
+        //     })
+
+        // }))
+
+
+        // const filterId = await provider.send("eth_newPendingTransactionFilter", []);
+        // console.log(filterId);
+
+        // await (new Promise(() => {
+
+        //     setInterval(async () => {
+        //         const logs = await provider.send("eth_getFilterChanges", [filterId]);
+        //         console.log(logs);    
+        //     }, 100)
+
+        // }))
+
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        const filter = {
+            fromBlock: 'pending',
+            toBlock: 'pending',
+            address: idleGame.address,
+            topics: [ '0x0eef6f7452b7d2ee11184579c086fb47626e796a83df2b2e16254df60ab761eb' ]
+        };
+
+        const filterId = await provider.send("eth_newFilter", [filter]);
+        console.log(filterId);
+
         await (new Promise(() => {
 
-            hre.ethers.provider.on("pending", (tx: ethers.Transaction) =>{
-                console.log(tx.data)
-            })
+            setInterval(async () => {
+                const logs = await provider.send("eth_getFilterChanges", [filterId]);
+                for (const log of logs){
+                    const gameId = BigNumber.from((log.data as string).slice(0,66))
+                    const teamId = BigNumber.from('0x'+(log.data as string).slice(66,130))
+                    console.log(+new Date()/1000, "eth_getFilterChanges", log.transactionHash, BigNumber.from(log.blockNumber).toNumber(), teamId.toNumber());
+                }
+            }, 100)
 
         }))
 
