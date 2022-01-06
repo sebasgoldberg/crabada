@@ -544,7 +544,7 @@ export const loot = async (
                 clearInterval(exitInterval)
                 resolve(undefined)
             }
-        }, 10*1000)
+        }, 5*1000)
 
         interface StartGameEvent {
             gameId: BigNumber,
@@ -581,7 +581,7 @@ export const loot = async (
                     transactionResponse = await idleGame.connect(signer).attack(e.gameId, looterteamid, {
                         gasLimit: GAS_LIMIT,
                         maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50)
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*150)
                     })
 
                 }
@@ -590,7 +590,7 @@ export const loot = async (
                     transactionResponse = await idleGame.connect(signer).callStatic.attack(e.gameId, looterteamid, {
                         gasLimit: GAS_LIMIT,
                         maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50)
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*150)
                     })
 
                 }
