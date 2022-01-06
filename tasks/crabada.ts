@@ -34,12 +34,14 @@ export const getSigner = async (hre: HardhatRuntimeEnvironment, testaccount: str
 task(
     "minestep",
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
-    async ({ minerteamid, attackercontract, attackerteamid, wait, testmineraccount, testattackeraccounts }, hre: HardhatRuntimeEnvironment) => {
+    async ({ minerteamid, attackercontract, attackerteamid, wait, testmineraccount, testattackeraccounts, accountindex }, hre: HardhatRuntimeEnvironment) => {
         
-        const minerSigner = await getSigner(hre, testmineraccount, 0);
-        const attackSigners = testattackeraccounts ? 
-            (await Promise.all((testattackeraccounts as string).split(',').map( testattackeraccount => getSigner(hre, testattackeraccount) )))
-            : (await hre.ethers.getSigners()).slice(1)
+        const minerSigner = await getSigner(hre, testmineraccount, accountindex);
+        const attackSigners = attackerteamid ?
+            testattackeraccounts ? 
+                (await Promise.all((testattackeraccounts as string).split(',').map( testattackeraccount => getSigner(hre, testattackeraccount) )))
+                : (await hre.ethers.getSigners()).slice(accountindex+1)
+            : []
 
         try {
             await mineStep(hre, minerteamid, attackercontract, attackerteamid, wait, minerSigner, attackSigners)
@@ -49,11 +51,12 @@ task(
 
     })
     .addParam("minerteamid", "The team ID to use for mining.")
-    .addParam("attackercontract", "The attacker contract address.")
-    .addParam("attackerteamid", "The team ID to use for attack.")
+    .addOptionalParam("attackercontract", "The attacker contract address.", undefined, types.string)
+    .addOptionalParam("attackerteamid", "The team ID to use for attack.", undefined, types.int)
     .addOptionalParam("wait", "Number of confirmation before continue execution.", 10, types.int)
     .addOptionalParam("testmineraccount", "Mining account used for testing", undefined, types.string)
     .addOptionalParam("testattackeraccounts", "Attacker accounts used for testing", undefined, types.string)
+    .addOptionalParam("accountindex", "The index of the account to be used to sign the transactions", 0, types.int)
 
 task(
     "mineloop",
@@ -673,9 +676,9 @@ task(
 task(
     "loot",
     "Loot process.",
-    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, looterteamid, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, looterteamid, testaccount, testmode, accountindex }, hre: HardhatRuntimeEnvironment) => {
 
-        const signer = await getSigner(hre, testaccount)
+        const signer = await getSigner(hre, testaccount, accountindex)
 
         const { idleGame } = getCrabadaContracts(hre)
 
@@ -686,7 +689,7 @@ task(
 
         const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints ? maxbattlepoints : battlePoint-1)
 
-        await loot(hre, possibleTargetsByTeamId, undefined, looterteamid, signer, console.log, testmode);
+        await loot(hre, possibleTargetsByTeamId, looterteamid, signer, console.log, testmode);
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
@@ -695,6 +698,7 @@ task(
     .addParam("looterteamid", "Player contract address that will be looting.", undefined, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
+    .addOptionalParam("accountindex", "The index of the account to be used to sign the transactions", 0, types.int)
     
     
 export const START_GAME_ENCODED_OPERATION = '0xe5ed1d59'

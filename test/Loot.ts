@@ -72,7 +72,7 @@ describe('Looting', function () {
         }
       }
 
-      const lootPromise = loot(hre, possibleTargetsByTeamId, '0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd', this.looterTeamId, this.owner, ()=>{})
+      const lootPromise = loot(hre, possibleTargetsByTeamId, this.looterTeamId, this.owner, ()=>{})
 
       await idleGame.connect(this.owner).startGame(this.teamId1)
 
@@ -94,7 +94,7 @@ describe('Looting', function () {
         }
       }
 
-      const lootPromise = loot(hre, possibleTargetsByTeamId, '0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd', this.looterTeamId, this.owner, ()=>{})
+      const lootPromise = loot(hre, possibleTargetsByTeamId, this.looterTeamId, this.owner, ()=>{})
 
       await idleGame.connect(this.owner).startGame(this.teamId2)
 

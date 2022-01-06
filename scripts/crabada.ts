@@ -147,6 +147,14 @@ export const mineStep = async (
     attackerTeamId: number, wait: number, minerSigner: SignerWithAddress, 
     attackerSigners: SignerWithAddress[]) => {
 
+    const override = {
+        gasLimit: GAS_LIMIT,
+        // nonce: undefined,
+        // gasPrice: undefined,
+        maxFeePerGas: MAX_FEE,
+        maxPriorityFeePerGas: ONE_GWEI
+    } 
+
     const idleGame = new Contract(
         contractAddress.IdleGame,
         abi.IdleGame,
@@ -175,23 +183,20 @@ export const mineStep = async (
     
     const { lockTo: minerLockTo, currentGameId: minerCurrentGameId } = await idleGame.getTeamInfo(minerTeamId)
 
-    const { lockTo: attackerLockTo, currentGameId: attackerCurrentGameId } = await idleGame.getTeamInfo(attackerTeamId) // @todo Validate if attackerCurrentGameId can be used to settle.
+    const { lockTo: attackerLockTo, currentGameId: attackerCurrentGameId } = attackerTeamId ?
+        await idleGame.getTeamInfo(attackerTeamId) : { lockTo: 0, currentGameId: 0 }
 
     const timestamp = await currentBlockTimeStamp(hre)
 
-    if (await locked(attackerTeamId, attackerLockTo, timestamp))
+    if (attackerTeamId && await locked(attackerTeamId, attackerLockTo, timestamp))
         return
     
     if (await locked(minerTeamId, minerLockTo, timestamp))
         return
 
-    await logBalance(hre, minerAddress) ////
-
     // CLOSE GAME
     
     const closeGame = async (gameId: number) =>{
-
-        const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT}
 
         try {
             console.log(`callStatic.closeGame(gameId: ${gameId})`);        
@@ -202,40 +207,24 @@ export const mineStep = async (
             return
         }
     
-        await logTokenBalance(tusToken, 'TUS', minerAddress)
-        await logTokenBalance(craToken, 'CRA', minerAddress)
-    
         console.log(`closeGame(gameId: ${gameId})`);
         const transactionResponse: TransactionResponse = await idleGame.closeGame(gameId, override)
         console.log(`transaction: ${transactionResponse.hash}`);        
-        await logBalance(hre, minerAddress)
-        await logTokenBalance(tusToken, 'TUS', minerAddress)
-        await logTokenBalance(craToken, 'CRA', minerAddress)
     
         await transactionResponse.wait(wait)
     
     }
 
     await closeGame(minerCurrentGameId);
-    await closeGame(attackerCurrentGameId);
+    attackerTeamId && await closeGame(attackerCurrentGameId);
 
     // SETTLE GAME
 
-    await settleGame(idleGame, attackerCurrentGameId, wait)
+    attackerTeamId && await settleGame(idleGame, attackerCurrentGameId, wait)
 
     // START GAME
 
     const startGame = async () =>{
-
-        //const override = {gasPrice: await gasPrice(hre), gasLimit: GAS_LIMIT, nonce: undefined}
-        const baseFee = await gasPrice(hre)
-        const override = {
-            gasLimit: GAS_LIMIT,
-            // nonce: undefined,
-            // gasPrice: undefined,
-            maxFeePerGas: MAX_FEE,
-            maxPriorityFeePerGas: baseFee.mul(5).div(100) // 5% tip
-        } 
 
         try {
             console.log(`callStatic.startGame(teamId: ${minerTeamId})`);
@@ -286,8 +275,6 @@ export const mineStep = async (
 
         const [startGameTransactionResponse, ] = await Promise.all([startGameTransactionResponsePromise, attackTeamTransactionResponsesPromise])
         console.log(`transaction ${startGameTransactionResponse.hash}`, startGameTransactionResponse.blockNumber);
-
-        await logBalance(hre, minerAddress)
 
     }
 
@@ -498,7 +485,7 @@ export const isTeamLocked = async (
 // TODO Remove playeraddress
 export const loot = async (
     hre: HardhatRuntimeEnvironment, possibleTargetsByTeamId: TeamInfoByTeam, 
-    playeraddress: string, looterteamid: number, signer: SignerWithAddress, 
+    looterteamid: number, signer: SignerWithAddress, 
     log: (typeof console.log) = console.log, testMode=true): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
