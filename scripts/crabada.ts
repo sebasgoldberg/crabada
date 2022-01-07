@@ -103,11 +103,11 @@ const logTokenBalance = async (token: Contract, symbol: string, address: string,
     console.log(`${symbol} balanceOf(${address}): ${ formatUnits(await token.balanceOf(address), decimals) }`);
 }
 
-export const settleGame = async (idleGame: Contract, attackerCurrentGameId: BigNumber, wait: number, log: (typeof console.log) = console.log) =>{
+export const settleGame = async (idleGame: Contract, attackerCurrentGameId: BigNumber, wait: number, log: (typeof console.log) = console.log): Promise<TransactionResponse|undefined> =>{
 
     const override = {
         gasLimit: GAS_LIMIT,
-        maxFeePerGas: MAX_FEE,
+        maxFeePerGas: ATTACK_MAX_GAS_PRICE,
         maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
     }
 
@@ -117,7 +117,7 @@ export const settleGame = async (idleGame: Contract, attackerCurrentGameId: BigN
     } catch (error) {
         log(`ERROR: ${error.toString()}`)
         log(`INFO: Maybe it is too early to settle the game`)
-        return
+        return undefined
     }
 
     log(`settleGame(gameId: ${attackerCurrentGameId})`);
@@ -125,6 +125,8 @@ export const settleGame = async (idleGame: Contract, attackerCurrentGameId: BigN
     log(`transaction: ${transactionResponse.hash}`);
 
     await transactionResponse.wait(wait)
+
+    return transactionResponse
 
 }
 
@@ -515,23 +517,31 @@ export const loot = async (
     
     return await (new Promise((resolve) => {
 
-        const interval = setInterval(async () => {
+        // In case a settleGame was needed, but an error happens when transaction was performed,
+        // to avoid attack transactions to be reverted with 'GAME:TEAM IS BUSY', we set an
+        // interval to call settleGame every minute.
+        const settleGameInterval = setInterval(async()=>{
+            await settleGame(idleGame.connect(signer), looterCurrentGameId, 1, log)
+        }, 60*1000)
+
+        const attackStartedGameInterval = setInterval(async () => {
             const logs = await provider.send("eth_getFilterChanges", [filterId]);
             for (const log of logs){
                 const gameId = BigNumber.from((log.data as string).slice(0,66))
                 const teamId = BigNumber.from('0x'+(log.data as string).slice(66,130))
                 const blockNumber = BigNumber.from(log.blockNumber)
-                /* no await */ eventListener({ gameId, teamId, transactionHash: log.transactionHash, blockNumber })
+                /* no await */ attackStartedGame({ gameId, teamId, transactionHash: log.transactionHash, blockNumber })
             }
-        }, 3)
+        }, 5)
 
         const exitInterval = setInterval(async () =>{
             if (!testMode && await isTeamLocked(hre, idleGame, looterteamid, ()=>{})){
-                clearInterval(interval)
+                clearInterval(attackStartedGameInterval)
+                clearInterval(settleGameInterval)
                 clearInterval(exitInterval)
                 resolve(undefined)
             }
-        }, 5*1000)
+        }, 3*1000)
 
         interface StartGameEvent {
             gameId: BigNumber,
@@ -542,7 +552,7 @@ export const loot = async (
 
         let attackInProgress = false
 
-        const eventListener = async (e: StartGameEvent) => {
+        const attackStartedGame = async (e: StartGameEvent) => {
 
             log(+new Date()/1000, 'Pending transaction (hash, block, teamId)', e.transactionHash, e.blockNumber.toNumber(), e.gameId.toNumber());
 
@@ -592,7 +602,8 @@ export const loot = async (
             log('End Attack');
 
             if (!testMode && await isTeamLocked(hre, idleGame, looterteamid, ()=>{})){
-                clearInterval(interval)
+                clearInterval(settleGameInterval)
+                clearInterval(attackStartedGameInterval)
                 clearInterval(exitInterval)
                 resolve(undefined)
                 return

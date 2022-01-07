@@ -6,7 +6,7 @@ StartLimitIntervalSec=0
 [Service]
 Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<your private key>"
 Type=simple
-WatchdogSec=2700
+WatchdogSec=900
 Restart=always
 RestartSec=15
 User=cerebro
