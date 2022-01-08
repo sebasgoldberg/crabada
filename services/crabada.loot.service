@@ -4,7 +4,7 @@ After=network.target
 StartLimitIntervalSec=0
 
 [Service]
-Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<your private key>"
+Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<private key 1>,<private key 2>,..,<private key n>"
 Type=simple
 WatchdogSec=900
 Restart=always

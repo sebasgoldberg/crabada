@@ -3,16 +3,16 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { BigNumber } from "ethers"
 import "@nomiclabs/hardhat-waffle"
 
-const MAINNET_AVAX_MAIN_ACCOUNT_PK = process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK']
+const MAINNET_AVAX_MAIN_ACCOUNTS_PKS = process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK'] ? process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK'].split(',') : []
 const CRABADA_ATTACKER_PKS = process.env['CRABADA_ATTACKER_PKS'] ? process.env['CRABADA_ATTACKER_PKS'].split(',') : []
 
 // For testing with mainet account when forking
-const USE_MAINNET_ACCOUNT = MAINNET_AVAX_MAIN_ACCOUNT_PK ? true : false
+const USE_MAINNET_ACCOUNT = MAINNET_AVAX_MAIN_ACCOUNTS_PKS.length > 0 ? true : false
 
-const mainnetAccount = {
-  privateKey: MAINNET_AVAX_MAIN_ACCOUNT_PK,
+const mainnetAccount = MAINNET_AVAX_MAIN_ACCOUNTS_PKS.map( account => ({
+  privateKey: account,
   balance: '10000000000000000000000'
-}
+}))
 
 
 const crabadaAttackerAccounts = CRABADA_ATTACKER_PKS.map( pk => ({
@@ -93,13 +93,13 @@ export default {
       gasPrice: 51000000000,
       chainId: !forkingData ? 43112 : undefined, //Only specify a chainId if we are not forking
       forking: forkingData,
-      accounts: USE_MAINNET_ACCOUNT ? [ mainnetAccount, ...crabadaAttackerAccounts ] : undefined
+      accounts: USE_MAINNET_ACCOUNT ? [ ...mainnetAccount, ...crabadaAttackerAccounts ] : undefined
     },
     local: {
       url: 'http://localhost:9650/ext/bc/C/rpc',
       gasPrice: 225000000000,
       chainId: 43112,
-      accounts: USE_MAINNET_ACCOUNT ? [ MAINNET_AVAX_MAIN_ACCOUNT_PK, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS
+      accounts: USE_MAINNET_ACCOUNT ? [ ...MAINNET_AVAX_MAIN_ACCOUNTS_PKS, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS
     },
     fuji: {
       url: 'https://api.avax-test.network/ext/bc/C/rpc',
@@ -111,13 +111,13 @@ export default {
       url: 'https://api.avax.network/ext/bc/C/rpc',
       gasPrice: 25000000000,
       chainId: 43114,
-      accounts: USE_MAINNET_ACCOUNT ? [ MAINNET_AVAX_MAIN_ACCOUNT_PK, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS
+      accounts: USE_MAINNET_ACCOUNT ? [ ...MAINNET_AVAX_MAIN_ACCOUNTS_PKS, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS
     },
     localmainnet: {
       url: 'http://localhost:9650/ext/bc/C/rpc',
       gasPrice: 25000000000,
       chainId: 43114,
-      accounts: USE_MAINNET_ACCOUNT ? [ MAINNET_AVAX_MAIN_ACCOUNT_PK, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS
+      accounts: USE_MAINNET_ACCOUNT ? [ ...MAINNET_AVAX_MAIN_ACCOUNTS_PKS, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS
     }
   }
 }
