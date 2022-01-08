@@ -6,7 +6,7 @@ import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, get
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { BigNumber, ethers } from "ethers";
+import { BigNumber, Contract, ethers } from "ethers";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -671,6 +671,12 @@ task(
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", MAX_BATTLE_POINTS, types.int)
 
+export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, lootersTeams: number[]) => {
+    return (await Promise.all(
+        lootersTeams.map( async(looterteamid): Promise<boolean> => await isTeamLocked(hre, idleGame, looterteamid)) 
+        )).every( locked => locked )
+}
+
 task(
     "loot",
     "Loot process.",
@@ -684,36 +690,35 @@ task(
 
         const lootersTeams = lootersTeamsByAccountIndex.flat()
 
-        if (!testmode){
+        if (lootersTeams.length == 0)
+            return
 
-            const allTeamsAreLocked = (await Promise.all(
-                lootersTeams.map( async(looterteamid): Promise<boolean> => await isTeamLocked(hre, idleGame, looterteamid)) 
-                )).every( locked => locked )
-    
-            if (allTeamsAreLocked)
-                return
-
-        }
+        if ( !testmode && (await areAllTeamsLocked(hre, idleGame, lootersTeams)) )
+            return
 
         const teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
 
-        for (let accountIndex=0; accountIndex<lootersTeamsByAccountIndex.length; accountIndex++){
+        while (testmode || !(await areAllTeamsLocked(hre, idleGame, lootersTeams))){
 
-            const signer = await getSigner(hre, testaccount, accountIndex)
+            for (let accountIndex=0; accountIndex<lootersTeamsByAccountIndex.length; accountIndex++){
 
-            console.log('Looting with signer', signer.address);
-
-            for (const looterTeamId of lootersTeamsByAccountIndex[accountIndex]){
-
-                console.log('Looting with team id', looterTeamId);
-
-                const { battlePoint } = await idleGame.getTeamInfo(looterTeamId)
-
-                const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, teamsThatPlayToLooseByTeamId, maxbattlepoints ? maxbattlepoints : battlePoint-1)
-        
-                await loot(hre, possibleTargetsByTeamId, looterTeamId, signer, console.log, testmode);    
+                const signer = await getSigner(hre, testaccount, accountIndex)
+    
+                console.log('Looting with signer', signer.address);
+    
+                for (const looterTeamId of lootersTeamsByAccountIndex[accountIndex]){
+    
+                    console.log('Looting with team id', looterTeamId);
+    
+                    const { battlePoint } = await idleGame.getTeamInfo(looterTeamId)
+    
+                    const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, teamsThatPlayToLooseByTeamId, maxbattlepoints ? maxbattlepoints : battlePoint-1)
+            
+                    await loot(hre, possibleTargetsByTeamId, looterTeamId, signer, console.log, testmode);    
+                }
+    
             }
-
+    
         }
 
     })
