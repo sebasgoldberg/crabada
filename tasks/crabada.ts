@@ -2,13 +2,11 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, currentBlockTimeStamp, deployPlayer, gasPrice, GAS_LIMIT, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, ONE_GWEI, settleGame, TeamInfoByTeam, waitTransaction } from "../scripts/crabada";
+import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, ONE_GWEI, settleGame, TeamInfoByTeam, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, ethers } from "ethers";
-import { string } from "hardhat/internal/core/params/argumentTypes";
-import { type } from "os";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -653,7 +651,7 @@ task(
         console.log('First defend window in blocks', firstdefendwindow);
         console.log('Target´s max. battle points', maxbattlepoints);
         
-        const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints)
+        const possibleTargetsByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints)
 
         // It is obtained the distribution of the attack points.
 
@@ -676,29 +674,55 @@ task(
 task(
     "loot",
     "Loot process.",
-    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, looterteamid, testaccount, testmode, accountindex }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, lootersteamsbyaccount, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
-        const signer = await getSigner(hre, testaccount, accountindex)
+        type LootersTeamsByAccountIndex = Array<Array<number>> // each element are the looters teams for the respective account index
+
+        const lootersTeamsByAccountIndex: LootersTeamsByAccountIndex = JSON.parse(lootersteamsbyaccount)
 
         const { idleGame } = getCrabadaContracts(hre)
 
-        if (!testmode && await isTeamLocked(hre, idleGame, looterteamid))
-            return
+        const lootersTeams = lootersTeamsByAccountIndex.flat()
 
-        const { battlePoint } = await idleGame.getTeamInfo(looterteamid)
+        if (!testmode){
 
-        const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints ? maxbattlepoints : battlePoint-1)
+            const allTeamsAreLocked = (await Promise.all(
+                lootersTeams.map( async(looterteamid): Promise<boolean> => await isTeamLocked(hre, idleGame, looterteamid)) 
+                )).every( locked => locked )
+    
+            if (allTeamsAreLocked)
+                return
 
-        await loot(hre, possibleTargetsByTeamId, looterteamid, signer, console.log, testmode);
+        }
+
+        const teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+
+        for (let accountIndex=0; accountIndex<lootersTeamsByAccountIndex.length; accountIndex++){
+
+            const signer = await getSigner(hre, testaccount, accountIndex)
+
+            console.log('Looting with signer', signer.address);
+
+            for (const looterTeamId of lootersTeamsByAccountIndex[accountIndex]){
+
+                console.log('Looting with team id', looterTeamId);
+
+                const { battlePoint } = await idleGame.getTeamInfo(looterTeamId)
+
+                const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, teamsThatPlayToLooseByTeamId, maxbattlepoints ? maxbattlepoints : battlePoint-1)
+        
+                await loot(hre, possibleTargetsByTeamId, looterTeamId, signer, console.log, testmode);    
+            }
+
+        }
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", undefined , types.int)
-    .addParam("looterteamid", "Player contract address that will be looting.", undefined, types.int)
+    .addParam("lootersteamsbyaccount", "JSON (array of arrays) with the looters teams ids by account. Example: '[[0,1,2],[4,5],[6]]'.", '[]', types.string)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
-    .addOptionalParam("accountindex", "The index of the account to be used to sign the transactions", 0, types.int)
     
     
 export const START_GAME_ENCODED_OPERATION = '0xe5ed1d59'

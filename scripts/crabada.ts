@@ -347,8 +347,24 @@ export const queryFilterByPage = async (
 }
 
 export const getPossibleTargetsByTeamId = async (
+    hre: HardhatRuntimeEnvironment, teamsThatPlayToLoose: TeamInfoByTeam, 
+    maxbattlepoints: number, log = console.log): Promise<TeamInfoByTeam> =>{
+
+    const possibleTargetsByTeam: TeamInfoByTeam = {}
+
+    for (const teamId in teamsThatPlayToLoose){
+        if (teamsThatPlayToLoose[teamId].battlePoint < maxbattlepoints)
+            possibleTargetsByTeam[teamId] = teamsThatPlayToLoose[teamId]
+    }
+
+    log(`Possible targets below ${maxbattlepoints} battle points`, Object.keys(possibleTargetsByTeam).length)
+
+    return possibleTargetsByTeam
+}
+    
+export const getTeamsThatPlayToLooseByTeamId = async (
     hre: HardhatRuntimeEnvironment, blockstoanalyze: number, 
-    firstdefendwindow: number, maxbattlepoints: number, log = console.log, queryPageSize=3600): Promise<TeamInfoByTeam> =>{
+    firstdefendwindow: number, log = console.log, queryPageSize=3600): Promise<TeamInfoByTeam> =>{
 
     const { idleGame } = getCrabadaContracts(hre)
 
@@ -367,7 +383,7 @@ export const getPossibleTargetsByTeamId = async (
     // defensePoint uint16
 
     const toBlock = hre.ethers.provider.blockNumber-firstdefendwindow
-    const startGameEvents = await queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, toBlock, log)
+    const startGameEvents = await queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, toBlock, log, queryPageSize)
     // gameId uint256
     // teamId uint256
     // duration uint256
@@ -454,16 +470,8 @@ export const getPossibleTargetsByTeamId = async (
             })
     )
 
-    const possibleTargetsByTeam: TeamInfoByTeam = {}
+    return teamsThatPlayToLoose
 
-    for (const teamId in teamsThatPlayToLoose){
-        if (teamsThatPlayToLoose[teamId].battlePoint < maxbattlepoints)
-            possibleTargetsByTeam[teamId] = teamsThatPlayToLoose[teamId]
-    }
-
-    log(`Possible targets below ${maxbattlepoints} battle points`, Object.keys(possibleTargetsByTeam).length)
-
-    return possibleTargetsByTeam
 }
 
 export const getDelayFrom = (timeFromInSeconds: number) => {
@@ -517,6 +525,13 @@ export const loot = async (
     
     return await (new Promise((resolve) => {
 
+        const clearIntervalsAndExit = (attackStartedGameInterval: NodeJS.Timer, settleGameInterval: NodeJS.Timer, exitInterval: NodeJS.Timer) => {
+            clearInterval(attackStartedGameInterval)
+            clearInterval(settleGameInterval)
+            clearInterval(exitInterval)
+            resolve(undefined)
+        }
+
         // In case a settleGame was needed, but an error happens when transaction was performed,
         // to avoid attack transactions to be reverted with 'GAME:TEAM IS BUSY', we set an
         // interval to call settleGame every minute.
@@ -536,12 +551,15 @@ export const loot = async (
 
         const exitInterval = setInterval(async () =>{
             if (!testMode && await isTeamLocked(hre, idleGame, looterteamid, ()=>{})){
-                clearInterval(attackStartedGameInterval)
-                clearInterval(settleGameInterval)
-                clearInterval(exitInterval)
-                resolve(undefined)
+                clearIntervalsAndExit(attackStartedGameInterval, settleGameInterval, exitInterval)
             }
         }, 3*1000)
+
+        if (testMode){
+            setTimeout(async () =>{
+                clearIntervalsAndExit(attackStartedGameInterval, settleGameInterval, exitInterval)
+            }, 30*1000)
+        }
 
         interface StartGameEvent {
             gameId: BigNumber,
@@ -554,7 +572,7 @@ export const loot = async (
 
         const attackStartedGame = async (e: StartGameEvent) => {
 
-            log(+new Date()/1000, 'Pending transaction (hash, block, teamId)', e.transactionHash, e.blockNumber.toNumber(), e.gameId.toNumber());
+            log(+new Date()/1000, 'Pending startGame transaction (hash, block, gameId)', e.transactionHash, e.blockNumber.toNumber(), e.gameId.toNumber());
 
             if (attackInProgress){
                 log('StartGame event discarded. Attack in progress')
@@ -602,10 +620,7 @@ export const loot = async (
             log('End Attack');
 
             if (!testMode && await isTeamLocked(hre, idleGame, looterteamid, ()=>{})){
-                clearInterval(settleGameInterval)
-                clearInterval(attackStartedGameInterval)
-                clearInterval(exitInterval)
-                resolve(undefined)
+                clearIntervalsAndExit(attackStartedGameInterval, settleGameInterval, exitInterval)
                 return
             }
 
