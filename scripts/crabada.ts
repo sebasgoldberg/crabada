@@ -596,7 +596,7 @@ export const loot = async (
                     transactionResponse = await idleGame.connect(signer).attack(e.gameId, looterteamid, {
                         gasLimit: GAS_LIMIT,
                         maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*162)
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
                     })
 
                 }
@@ -605,7 +605,7 @@ export const loot = async (
                     transactionResponse = await idleGame.connect(signer).callStatic.attack(e.gameId, looterteamid, {
                         gasLimit: GAS_LIMIT,
                         maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*162)
+                        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
                     })
 
                 }
