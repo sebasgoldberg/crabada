@@ -888,8 +888,6 @@ task(
 
         const fightDistributionByNode = Array.from(Array(8).keys()).map(x=>0)
 
-        const baseMaxPriorityFeePerGas = parseUnits('162',9)
-
         await Promise.all(fightEvents.map(async (transferEvent: ethers.Event) =>{
            
             const { attackTeamId  } = transferEvent.args
@@ -899,7 +897,9 @@ task(
                 const transaction = await transferEvent.getTransaction()
 
                 if (transaction.maxPriorityFeePerGas){
-                    const nodeNumber = transaction.maxPriorityFeePerGas.sub(baseMaxPriorityFeePerGas).toNumber()
+                    const nodeNumber = transaction.maxPriorityFeePerGas
+                        .sub(transaction.maxPriorityFeePerGas.div(100).mul(100))
+                        .toNumber()
                     fightDistributionByNode[nodeNumber-1]++
                 }
     
