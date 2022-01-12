@@ -1,12 +1,13 @@
 import { task } from "hardhat/config";
 
-import { formatEther, formatUnits } from "ethers/lib/utils";
+import { formatEther, formatUnits, parseEther, parseUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, ONE_GWEI, settleGame, TeamInfoByTeam, waitTransaction } from "../scripts/crabada";
+import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, ONE_GWEI, queryFilterByPage, settleGame, TeamInfoByTeam, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
+import { format } from "path/posix";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -819,3 +820,97 @@ task(
         }))
 
     })
+
+export const getBlocksInterval = async (hre: HardhatRuntimeEnvironment, fromblock: number, toblock: number, blocksquan: number) => {
+        
+    const blockNumber = await hre.ethers.provider.getBlockNumber()
+
+    const toBlock = toblock ? toblock 
+        : fromblock ? fromblock+blocksquan
+            : blockNumber
+
+    const fromBlock = fromblock ? fromblock
+        : toBlock-blocksquan
+
+    return {fromBlock, toBlock}
+
+}
+
+task(
+    "tusrewards",
+    "Get TUS rewards between 2 blocks.",
+    async ({ fromblock, toblock, looter, blocksquan }, hre: HardhatRuntimeEnvironment) => {
+        
+        const provider = hre.ethers.provider
+        const { fromBlock, toBlock } = await getBlocksInterval(hre, fromblock, toblock, blocksquan)
+
+        const { tusToken } = getCrabadaContracts(hre)
+
+        const tusWinningReward = parseEther('221.7375')
+        const transferEvents = await queryFilterByPage(hre, tusToken, tusToken.filters.Transfer(undefined, looter), fromBlock, 
+            Math.min(toBlock, await provider.getBlockNumber()))
+
+        const VALUE_ARG_INDEX = 2
+        const tusReward = transferEvents.reduce((previous: BigNumber, transferEvent) =>{
+            const { value } = transferEvent.args
+            if (tusWinningReward.eq(value)){
+                return previous.add(value) 
+            }
+            return previous
+        }, hre.ethers.constants.Zero)
+
+        console.log(formatEther(tusReward))
+
+    })
+    .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)
+    .addOptionalParam("toblock", "To from.", undefined , types.int)
+    .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
+    .addParam("looter", "Looter's account address.", undefined , types.string)
+
+task(
+    "successdist",
+    "Get the distribution of successful Attack transactions.",
+    async ({ fromblock, toblock, blocksquan }, hre: HardhatRuntimeEnvironment) => {
+
+        const { fromBlock, toBlock } = await getBlocksInterval(hre, fromblock, toblock, blocksquan)
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        const fightEvents = await queryFilterByPage(hre, idleGame, idleGame.filters.Fight(), fromBlock, toBlock)
+
+        interface Result {
+            craReward: BigNumber,
+            tusReward: BigNumber,
+        }
+
+        // TODO Add as parameter.
+        const looterTeams = [3286, 3759, 5032]
+
+        const fightDistributionByNode = Array.from(Array(8).keys()).map(x=>0)
+
+        const baseMaxPriorityFeePerGas = parseUnits('162',9)
+
+        await Promise.all(fightEvents.map(async (transferEvent: ethers.Event) =>{
+           
+            const { attackTeamId  } = transferEvent.args
+
+            if (looterTeams.includes(attackTeamId.toNumber())){
+
+                const transaction = await transferEvent.getTransaction()
+
+                if (transaction.maxPriorityFeePerGas){
+                    const nodeNumber = transaction.maxPriorityFeePerGas.sub(baseMaxPriorityFeePerGas).toNumber()
+                    fightDistributionByNode[nodeNumber-1]++
+                }
+    
+            }
+
+        }))
+
+        fightDistributionByNode.forEach( (fights, index) => console.log('Node', index+1, 'fights', fights))
+
+    })
+    .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)
+    .addOptionalParam("toblock", "To from.", undefined , types.int)
+    .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
+

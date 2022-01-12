@@ -1,7 +1,10 @@
-import { task } from "hardhat/config"
+import { extendConfig, task } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { BigNumber } from "ethers"
 import "@nomiclabs/hardhat-waffle"
+
+
+const NODE_ID: number = process.env['BLOCKCHAIN_NODE_ID'] ? Number(process.env['BLOCKCHAIN_NODE_ID']) : 0
 
 const MAINNET_AVAX_MAIN_ACCOUNTS_PKS = process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK'] ? process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK'].split(',') : []
 const CRABADA_ATTACKER_PKS = process.env['CRABADA_ATTACKER_PKS'] ? process.env['CRABADA_ATTACKER_PKS'].split(',') : []
@@ -68,6 +71,17 @@ const LOCAL_ACCOUNTS = [
   "0x750839e9dbbd2a0910efe40f50b2f3b2f2f59f5580bb4b83bd8c1201cf9a010a"
 ]
 
+import { HardhatConfig, HardhatUserConfig } from "hardhat/types"
+import "./type-extensions";
+
+extendConfig(
+  (config: HardhatConfig, userConfig: Readonly<HardhatUserConfig>) => {
+
+    config.nodeId = userConfig.nodeId ? userConfig.nodeId : 0
+
+  }
+);
+
 export default {
   solidity: {
     compilers: [
@@ -117,7 +131,9 @@ export default {
       url: 'http://localhost:9650/ext/bc/C/rpc',
       gasPrice: 25000000000,
       chainId: 43114,
-      accounts: USE_MAINNET_ACCOUNT ? [ ...MAINNET_AVAX_MAIN_ACCOUNTS_PKS, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS
+      accounts: USE_MAINNET_ACCOUNT ? [ ...MAINNET_AVAX_MAIN_ACCOUNTS_PKS, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS,
+      timeout: 60000,
     }
-  }
+  },
+  nodeId: NODE_ID
 }
