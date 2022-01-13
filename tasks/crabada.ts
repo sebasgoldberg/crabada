@@ -912,6 +912,6 @@ task(
     .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)
     .addOptionalParam("toblock", "To from.", undefined , types.int)
     .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
-    .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355" , types.string)
-    .addOptionalParam("nodesquan", "Nodes quantity", 9 , types.int)
+    .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355,5357,6152" , types.string)
+    .addOptionalParam("nodesquan", "Nodes quantity", 10, types.int)
 
