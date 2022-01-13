@@ -870,7 +870,7 @@ task(
 task(
     "successdist",
     "Get the distribution of successful Attack transactions.",
-    async ({ fromblock, toblock, blocksquan }, hre: HardhatRuntimeEnvironment) => {
+    async ({ fromblock, toblock, blocksquan, teams, nodesquan }, hre: HardhatRuntimeEnvironment) => {
 
         const { fromBlock, toBlock } = await getBlocksInterval(hre, fromblock, toblock, blocksquan)
 
@@ -883,10 +883,9 @@ task(
             tusReward: BigNumber,
         }
 
-        // TODO Add as parameter.
-        const looterTeams = [3286, 3759, 5032]
+        const looterTeams = (teams as string).split(',').map(x=>Number(x))
 
-        const fightDistributionByNode = Array.from(Array(8).keys()).map(x=>0)
+        const fightDistributionByNode = Array.from(Array(nodesquan).keys()).map(x=>0)
 
         await Promise.all(fightEvents.map(async (transferEvent: ethers.Event) =>{
            
@@ -913,4 +912,6 @@ task(
     .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)
     .addOptionalParam("toblock", "To from.", undefined , types.int)
     .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
+    .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355" , types.string)
+    .addOptionalParam("nodesquan", "Nodes quantity", 9 , types.int)
 
