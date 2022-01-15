@@ -915,3 +915,10 @@ task(
     .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355,5357,6152" , types.string)
     .addOptionalParam("nodesquan", "Nodes quantity", 10, types.int)
 
+// TODO Task to understand costs
+/**
+ * 1) Wins: Gas price distance from other attacks and its distribution (-1 means no other attacks).
+ * 2) Loose:
+ *   a) Reverted transactions that attack teams already looted in other block.
+ *   b) Gas price distance from winner attack and its distribution (requires to attack same team).
+ */
