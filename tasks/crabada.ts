@@ -652,16 +652,21 @@ task(
         console.log('First defend window in blocks', firstdefendwindow);
         console.log('Target´s max. battle points', maxbattlepoints);
         
-        const possibleTargetsByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow, maxbattlepoints)
+        const possibleTargetsByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
 
         // It is obtained the distribution of the attack points.
 
         const attackPointsDist = Array.from(Array(10).keys()).map(x=>0)
+        let targetsBelowMaxBattlePoints = 0
 
         Object.keys(possibleTargetsByTeamId).map( async (teamId) => {
+            if (possibleTargetsByTeamId[teamId].battlePoint<maxbattlepoints)
+                targetsBelowMaxBattlePoints++
             const index = Math.floor( (possibleTargetsByTeamId[teamId].battlePoint - MIN_BATTLE_POINTS) / STEP_BATTLE_POINTS )
             attackPointsDist[index]++
         })
+
+        console.log('Targets below ', maxbattlepoints, 'battle points:', targetsBelowMaxBattlePoints);
 
         console.log('attackPointsDist', attackPointsDist
             .map( (q, index) => ({ [`${MIN_BATTLE_POINTS+STEP_BATTLE_POINTS*(index)} - ${MIN_BATTLE_POINTS+STEP_BATTLE_POINTS*(index+1)}`]: q }))
@@ -670,7 +675,7 @@ task(
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 3600 /*2 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
-    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", MAX_BATTLE_POINTS, types.int)
+    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 621, types.int)
 
 export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, lootersTeams: number[]) => {
     return (await Promise.all(
