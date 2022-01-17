@@ -837,7 +837,8 @@ export const getBlocksInterval = async (hre: HardhatRuntimeEnvironment, frombloc
     const fromBlock = fromblock ? fromblock
         : toBlock-blocksquan
 
-    return {fromBlock, toBlock}
+        
+    return {fromBlock, toBlock: Math.min(toBlock, blockNumber)}
 
 }
 
