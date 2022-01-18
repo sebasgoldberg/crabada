@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther, parseUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, ONE_GWEI, queryFilterByPage, settleGame, TeamInfoByTeam, waitTransaction } from "../scripts/crabada";
+import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, ONE_GWEI, queryFilterByPage, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -703,6 +703,8 @@ task(
             return
 
         const teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+
+        await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, blockstoanalyze)
 
         while (testmode || !(await areAllTeamsLocked(hre, idleGame, lootersTeams))){
 

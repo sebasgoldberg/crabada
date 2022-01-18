@@ -362,6 +362,52 @@ export const getPossibleTargetsByTeamId = async (
 
     return possibleTargetsByTeam
 }
+
+export const getTeamsThatWereChanged = async (
+    hre: HardhatRuntimeEnvironment, blockstoanalyze: number, log
+     = console.log): Promise<BigNumber[]> => {
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    hre.ethers.provider.blockNumber
+
+    const fromBlock = hre.ethers.provider.blockNumber-blockstoanalyze
+    
+    const addCrabadaEvents = await queryFilterByPage(hre, idleGame, idleGame.filters.AddCrabada(), fromBlock, hre.ethers.provider.blockNumber, log)
+
+    type Teams = { [teamId: string]: BigNumber }
+    
+    const teamsThatWereChanged: Teams = {}
+    const ADD_CRABADA_ARG_TEAM_ID = 0
+
+    addCrabadaEvents.map( (e: ethers.Event) => {
+        const { teamId } = e.args
+        teamsThatWereChanged[(teamId as BigNumber).toString()] = teamId
+    })
+
+    return (Object.keys(teamsThatWereChanged).map( key => teamsThatWereChanged[key]))
+
+}
+
+export const updateTeamsThatWereChaged = async (
+    hre: HardhatRuntimeEnvironment, teamInfoByTeam: TeamInfoByTeam,
+    blockstoanalyze: number, log = console.log): Promise<TeamInfoByTeam> => {
+    
+    const teamsThatWereChanged: BigNumber[] = await getTeamsThatWereChanged(hre, blockstoanalyze, log)
+
+    const { idleGame } = getCrabadaContracts(hre)
+    
+    await Promise.all(
+        teamsThatWereChanged.map( async(teamId) => {
+            const { battlePoint } = await idleGame.getTeamInfo(teamId)
+            teamInfoByTeam[teamId.toString()]
+                && (teamInfoByTeam[teamId.toString()].battlePoint = battlePoint)
+                && log(teamInfoByTeam[teamId.toString()].battlePoint, battlePoint)
+        })
+    )
+
+    return teamInfoByTeam
+}
     
 export const getTeamsThatPlayToLooseByTeamId = async (
     hre: HardhatRuntimeEnvironment, blockstoanalyze: number, 
