@@ -402,7 +402,6 @@ export const updateTeamsThatWereChaged = async (
             const { battlePoint } = await idleGame.getTeamInfo(teamId)
             teamInfoByTeam[teamId.toString()]
                 && (teamInfoByTeam[teamId.toString()].battlePoint = battlePoint)
-                && log(teamInfoByTeam[teamId.toString()].battlePoint, battlePoint)
         })
     )
 
