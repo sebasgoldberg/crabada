@@ -11,7 +11,7 @@ export const ONE_GWEI = 1000000000
 export const GAS_LIMIT = 700000
 export const MAX_FEE = BigNumber.from(ONE_GWEI*150)
 export const ATTACK_MAX_GAS_PRICE = BigNumber.from(ONE_GWEI*600)
-export const ATTACK_MAX_PRIORITY_GAS_PRICE = BigNumber.from(ONE_GWEI*200)
+export const ATTACK_MAX_PRIORITY_GAS_PRICE = BigNumber.from(ONE_GWEI*325)
 
 export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
     const blockNumber = await hre.ethers.provider.getBlockNumber()
