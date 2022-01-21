@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther, parseUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, deployPlayer, gasPrice, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, ONE_GWEI, queryFilterByPage, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
+import { attachPlayer, baseFee, deployPlayer, fightDistanceDistribution, gasPrice, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, ONE_GWEI, queryFilterByPage, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -676,6 +676,24 @@ task(
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 3600 /*2 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 621, types.int)
+
+task(
+    "fightdistance",
+    "Distribution of number of blocks between StartGame and Fight events for teams that play to loose with battle points up to maxbattlepoints.",
+    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints }, hre: HardhatRuntimeEnvironment) => {
+
+        const possibleTargetsByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+
+        const fightDistanceDist = await fightDistanceDistribution(hre, blockstoanalyze, possibleTargetsByTeamId, maxbattlepoints)
+        
+        console.log('fightDistanceDist', fightDistanceDist)
+
+    })
+    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 3600 /*2 hours*/ , types.int)
+    .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
+    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 621, types.int)
+
+
 
 export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, lootersTeams: number[]) => {
     return (await Promise.all(

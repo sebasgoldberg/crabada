@@ -520,6 +520,122 @@ export const getTeamsThatPlayToLooseByTeamId = async (
 
 }
 
+export interface BlockDistanceDistribution {
+    [distance: number]: number // quantity
+}
+
+export const fightDistanceDistribution = async (
+    hre: HardhatRuntimeEnvironment, blockstoanalyze: number, teamsThatPlayToloose: TeamInfoByTeam, 
+    maxBattlePoints: number, log = console.log, queryPageSize=3600): Promise<BlockDistanceDistribution> =>{
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    hre.ethers.provider.blockNumber
+
+    const fromBlock = hre.ethers.provider.blockNumber-blockstoanalyze
+
+    const fightEventsPromise = queryFilterByPage(hre, idleGame, idleGame.filters.Fight(), fromBlock, hre.ethers.provider.blockNumber, log)
+    // gameId uint256
+    // turn uint256
+    // attackTeamId uint256
+    // defenseTeamId uint256
+    // soldierId uint256
+    // attackTime uint256
+    // attackPoint uint16
+    // defensePoint uint16
+
+    const toBlock = hre.ethers.provider.blockNumber-blockstoanalyze
+    const startGameEvents: ethers.Event[] = await queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, toBlock, log, queryPageSize)
+    // gameId uint256
+    // teamId uint256
+    // duration uint256
+    // craReward uint256
+    // tusReward uint256
+
+    const fightEvents: ethers.Event[] = await fightEventsPromise
+
+    interface FightDistance {
+        startGameBlocknumber: number,
+        fight0Blocknumber?: number,
+    }
+
+    interface FightDistanceByGameId {
+        [gameId: string]: FightDistance
+    }
+
+    const fightDistanceByGameId: FightDistanceByGameId = {}
+
+    const START_GAME_GAME_ID_ARG_INDEX=0
+    const START_GAME_TEAM_ID_ARG_INDEX=1
+
+    // Sets StartGame block number for gameId
+    for (const e of startGameEvents){
+
+        const teamId: BigNumber = e.args[START_GAME_TEAM_ID_ARG_INDEX]
+
+        if (!teamsThatPlayToloose[teamId.toString()])
+            continue
+
+        if (!teamsThatPlayToloose[teamId.toString()].battlePoint)
+            continue
+
+        if (teamsThatPlayToloose[teamId.toString()].battlePoint > maxBattlePoints)
+            continue
+
+        const gameId: BigNumber = e.args[START_GAME_GAME_ID_ARG_INDEX]
+        
+        fightDistanceByGameId[gameId.toString()] = {
+            startGameBlocknumber: e.blockNumber
+        }
+    }
+
+    const FIGHT_GAME_ID_ARG_INDEX = 0
+    const FIGHT_TURN_ARG_INDEX = 1
+    const FIGHT_DEFENSE_TEAM_ID = 3
+
+    // Sets Fight block number for gameId when turn is zero
+    for (const e of startGameEvents){
+
+        const teamId: BigNumber = e.args[FIGHT_DEFENSE_TEAM_ID]
+
+        if (!teamsThatPlayToloose[teamId.toString()])
+            continue
+
+        if (!teamsThatPlayToloose[teamId.toString()].battlePoint)
+            continue
+
+        if (teamsThatPlayToloose[teamId.toString()].battlePoint > maxBattlePoints)
+            continue
+
+        const gameId: BigNumber = e.args[FIGHT_GAME_ID_ARG_INDEX]
+
+        const turn: BigNumber = e.args[FIGHT_TURN_ARG_INDEX] as any
+
+        if (!turn.isZero())
+            continue
+
+        if (!fightDistanceByGameId[gameId.toString()])
+            continue
+
+        fightDistanceByGameId[gameId.toString()].fight0Blocknumber = e.blockNumber
+    }
+
+    const blockDistanceDistribution: BlockDistanceDistribution = {}
+
+    for (const gameId in fightDistanceByGameId){
+        const fightDistance = fightDistanceByGameId[gameId]
+        if (!fightDistance.fight0Blocknumber)
+            continue
+        const distance = fightDistance.fight0Blocknumber-fightDistance.startGameBlocknumber
+        blockDistanceDistribution[distance] = blockDistanceDistribution[distance] || 0
+        blockDistanceDistribution[distance]++
+    }
+
+    return blockDistanceDistribution
+
+}
+
+
 export const getDelayFrom = (timeFromInSeconds: number) => {
     return ((+new Date())/1000) - timeFromInSeconds
 }
