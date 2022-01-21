@@ -544,8 +544,7 @@ export const fightDistanceDistribution = async (
     // attackPoint uint16
     // defensePoint uint16
 
-    const toBlock = hre.ethers.provider.blockNumber-blockstoanalyze
-    const startGameEvents: ethers.Event[] = await queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, toBlock, log, queryPageSize)
+    const startGameEvents: ethers.Event[] = await queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, hre.ethers.provider.blockNumber, log, queryPageSize)
     // gameId uint256
     // teamId uint256
     // duration uint256
@@ -594,7 +593,7 @@ export const fightDistanceDistribution = async (
     const FIGHT_DEFENSE_TEAM_ID = 3
 
     // Sets Fight block number for gameId when turn is zero
-    for (const e of startGameEvents){
+    for (const e of fightEvents){
 
         const teamId: BigNumber = e.args[FIGHT_DEFENSE_TEAM_ID]
 
