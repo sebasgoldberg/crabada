@@ -748,15 +748,15 @@ const createAttackStrategy = async (
 
 
 export const loot = async (
-    hre: HardhatRuntimeEnvironment, possibleTargetsByTeamId: TeamInfoByTeam, 
+    hre: HardhatRuntimeEnvironment, teamsThatPlayToLooseByTeamId: TeamInfoByTeam, 
     looterteamid: number, signer: SignerWithAddress, 
     log: (typeof console.log) = console.log, testMode=true, playerAddress?: string): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
 
-    const { lockTo: looterLockTo, currentGameId: looterCurrentGameId, battlePoint } = await idleGame.getTeamInfo(looterteamid)
+    const { lockTo: looterLockTo, currentGameId: looterCurrentGameId, battlePoint: looterBattlePoint } = await idleGame.getTeamInfo(looterteamid)
 
-    const attackStrategy = await createAttackStrategy(hre, looterteamid, signer, battlePoint>655, playerAddress)
+    const attackStrategy = await createAttackStrategy(hre, looterteamid, signer, looterBattlePoint>655, playerAddress)
 
     const timestamp = await currentBlockTimeStamp(hre)
 
@@ -828,9 +828,18 @@ export const loot = async (
                 return
             }
 
-            const possibleTarget = possibleTargetsByTeamId[e.teamId.toString()]
+            const possibleTarget = teamsThatPlayToLooseByTeamId[e.teamId.toString()]
             
             if (!possibleTarget)
+                return
+            
+            if (!possibleTarget.battlePoint)
+                return
+            
+            if (// Invalid battlePoint
+                possibleTarget.battlePoint < 564 || 
+                // Stronger than looter
+                possibleTarget.battlePoint >= looterBattlePoint)
                 return
 
             attackInProgress = true

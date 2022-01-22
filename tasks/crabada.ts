@@ -749,9 +749,7 @@ task(
     
                     const { battlePoint } = await idleGame.getTeamInfo(looterTeamId)
     
-                    const possibleTargetsByTeamId = await getPossibleTargetsByTeamId(hre, teamsThatPlayToLooseByTeamId, maxbattlepoints ? maxbattlepoints : battlePoint-1)
-            
-                    await loot(hre, possibleTargetsByTeamId, looterTeamId, signer, console.log, testmode);    
+                    await loot(hre, teamsThatPlayToLooseByTeamId, looterTeamId, signer, console.log, testmode);    
                 }
     
             }
