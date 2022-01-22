@@ -756,7 +756,7 @@ export const loot = async (
 
     const { lockTo: looterLockTo, currentGameId: looterCurrentGameId, battlePoint } = await idleGame.getTeamInfo(looterteamid)
 
-    const attackStrategy = await createAttackStrategy(hre, looterteamid, signer, battlePoint>255, playerAddress)
+    const attackStrategy = await createAttackStrategy(hre, looterteamid, signer, battlePoint>655, playerAddress)
 
     const timestamp = await currentBlockTimeStamp(hre)
 
