@@ -724,6 +724,17 @@ task(
 
         await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, blockstoanalyze)
 
+        const updateTeamBattlePointListener = async (teamId: BigNumber)=>{
+            if (!teamsThatPlayToLooseByTeamId[teamId.toString()])
+                return
+            const { battlePoint } = await idleGame.getTeamInfo(teamId)
+            console.log('Team', teamId.toString(), 'updated battlePoint, from', 
+                teamsThatPlayToLooseByTeamId[teamId.toString()].battlePoint, 'to', battlePoint);
+            teamsThatPlayToLooseByTeamId[teamId.toString()].battlePoint = battlePoint
+        }
+
+        idleGame.on(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
+
         while (testmode || !(await areAllTeamsLocked(hre, idleGame, lootersTeams))){
 
             for (let accountIndex=0; accountIndex<lootersTeamsByAccountIndex.length; accountIndex++){
@@ -746,6 +757,8 @@ task(
             }
     
         }
+
+        idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
