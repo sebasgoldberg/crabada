@@ -8,6 +8,7 @@ import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
 import { format } from "path/posix";
+import { CONFIG_BY_NODE_ID, LootersTeamsByAccountIndex } from "../config/nodes";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -704,11 +705,13 @@ export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame
 task(
     "loot",
     "Loot process.",
-    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, lootersteamsbyaccount, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, lootersteamsbyaccount, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
-        type LootersTeamsByAccountIndex = Array<Array<number>> // each element are the looters teams for the respective account index
+        if (!(hre.config.nodeId in CONFIG_BY_NODE_ID))
+            return
 
-        const lootersTeamsByAccountIndex: LootersTeamsByAccountIndex = JSON.parse(lootersteamsbyaccount)
+        const lootersTeamsByAccountIndex: LootersTeamsByAccountIndex = lootersteamsbyaccount ? 
+            JSON.parse(lootersteamsbyaccount) : CONFIG_BY_NODE_ID[hre.config.nodeId]
 
         const { idleGame } = getCrabadaContracts(hre)
 
@@ -762,7 +765,7 @@ task(
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", undefined , types.int)
-    .addParam("lootersteamsbyaccount", "JSON (array of arrays) with the looters teams ids by account. Example: '[[0,1,2],[4,5],[6]]'.", '[]', types.string)
+    .addOptionalParam("lootersteamsbyaccount", "JSON (array of arrays) with the looters teams ids by account. Example: '[[0,1,2],[4,5],[6]]'.", undefined, types.string)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
     
