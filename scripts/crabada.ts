@@ -653,13 +653,111 @@ export const isTeamLocked = async (
 
 }
 
-// TODO Remove playeraddress
+interface StartGameEvent {
+    gameId: BigNumber,
+    teamId: BigNumber,
+    transactionHash: string,
+    blockNumber: BigNumber,
+}
+
+abstract class AttackStrategy{
+
+    connectedContract: Contract
+    looterTeamId: number
+    nodeId: number
+
+    constructor(connectedContract: Contract, looterTeamId: number, nodeId: number){
+        this.connectedContract = connectedContract
+        this.looterTeamId = looterTeamId
+        this.nodeId = nodeId
+    }
+
+    abstract attack(e: StartGameEvent): Promise<TransactionResponse>
+
+    abstract attackCallStatic(e: StartGameEvent): Promise<TransactionResponse>
+}
+
+class IddleGameAttackStrategy extends AttackStrategy{
+
+    async attack(e: StartGameEvent): Promise<TransactionResponse>{
+
+        return await this.connectedContract.attack(e.gameId, this.looterTeamId, {
+            gasLimit: GAS_LIMIT,
+            maxFeePerGas: ATTACK_MAX_GAS_PRICE,
+            maxPriorityFeePerGas: ATTACK_MAX_PRIORITY_GAS_PRICE.add(this.nodeId)
+        })
+
+    }
+
+    async attackCallStatic(e: StartGameEvent): Promise<TransactionResponse>{
+
+        return await this.connectedContract.callStatic.attack(e.gameId, this.looterTeamId, {
+            gasLimit: GAS_LIMIT,
+            maxFeePerGas: ATTACK_MAX_GAS_PRICE,
+            maxPriorityFeePerGas: ATTACK_MAX_PRIORITY_GAS_PRICE.add(this.nodeId)
+        })
+
+    }
+
+}
+
+class PlayerAttackStrategy extends AttackStrategy{
+
+    async attack(e: StartGameEvent): Promise<TransactionResponse>{
+
+        return await this.connectedContract.attackTeam(e.teamId, this.looterTeamId, {
+            gasLimit: GAS_LIMIT,
+            maxFeePerGas: ATTACK_MAX_GAS_PRICE,
+            maxPriorityFeePerGas: ATTACK_MAX_PRIORITY_GAS_PRICE.add(this.nodeId)
+        })
+
+    }
+
+    async attackCallStatic(e: StartGameEvent): Promise<TransactionResponse>{
+
+        return await this.connectedContract.callStatic.attackTeam(e.teamId, this.looterTeamId, {
+            gasLimit: GAS_LIMIT,
+            maxFeePerGas: ATTACK_MAX_GAS_PRICE,
+            maxPriorityFeePerGas: ATTACK_MAX_PRIORITY_GAS_PRICE.add(this.nodeId)
+        })
+
+    }
+
+}
+
+const createAttackStrategy = async (
+    hre: HardhatRuntimeEnvironment, looterteamid: number, 
+    signer: SignerWithAddress, playerAddress: string): Promise<AttackStrategy> => {
+
+        if (playerAddress){
+
+            const Player = (await hre.ethers.getContractFactory("Player"));
+
+            return new PlayerAttackStrategy(
+                Player.attach(playerAddress).connect(signer),
+                looterteamid, hre.config.nodeId
+            )
+
+        }
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        return new IddleGameAttackStrategy(
+            idleGame.connect(signer),
+            looterteamid, hre.config.nodeId
+        )
+        
+    }
+
+
 export const loot = async (
     hre: HardhatRuntimeEnvironment, possibleTargetsByTeamId: TeamInfoByTeam, 
     looterteamid: number, signer: SignerWithAddress, 
-    log: (typeof console.log) = console.log, testMode=true): Promise<TransactionResponse|undefined> => {
+    log: (typeof console.log) = console.log, testMode=true, playerAddress?: string): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
+
+    const attackStrategy = await createAttackStrategy(hre, looterteamid, signer, playerAddress)
 
     const { lockTo: looterLockTo, currentGameId: looterCurrentGameId } = await idleGame.getTeamInfo(looterteamid)
 
@@ -722,13 +820,6 @@ export const loot = async (
             }, 30*1000)
         }
 
-        interface StartGameEvent {
-            gameId: BigNumber,
-            teamId: BigNumber,
-            transactionHash: string,
-            blockNumber: BigNumber,
-        }
-
         let attackInProgress = false
 
         const attackStartedGame = async (e: StartGameEvent) => {
@@ -746,7 +837,7 @@ export const loot = async (
                 return
 
             attackInProgress = true
-            log('Begin Attack', '(teamId, teamIdHex)', e.gameId.toNumber(), e.gameId.toHexString());
+            log('Begin Attack', '(teamId, teamIdHex, gameId, gameIdHex)', e.teamId.toNumber(), e.teamId.toHexString(), e.gameId.toNumber(), e.gameId.toHexString());
 
             let transactionResponse: TransactionResponse
 
@@ -754,20 +845,12 @@ export const loot = async (
 
                 if (!testMode){
 
-                    transactionResponse = await idleGame.connect(signer).attack(e.gameId, looterteamid, {
-                        gasLimit: GAS_LIMIT,
-                        maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-                        maxPriorityFeePerGas: ATTACK_MAX_PRIORITY_GAS_PRICE.add(hre.config.nodeId)
-                    })
+                    transactionResponse = await attackStrategy.attack(e)
 
                 }
                 else{
 
-                    transactionResponse = await idleGame.connect(signer).callStatic.attack(e.gameId, looterteamid, {
-                        gasLimit: GAS_LIMIT,
-                        maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-                        maxPriorityFeePerGas: ATTACK_MAX_PRIORITY_GAS_PRICE.add(hre.config.nodeId)
-                    })
+                    transactionResponse = await attackStrategy.attackCallStatic(e)
 
                 }
 
