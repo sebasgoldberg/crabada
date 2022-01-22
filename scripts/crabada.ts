@@ -12,6 +12,7 @@ export const GAS_LIMIT = 700000
 export const MAX_FEE = BigNumber.from(ONE_GWEI*150)
 export const ATTACK_MAX_GAS_PRICE = BigNumber.from(ONE_GWEI*600)
 export const ATTACK_MAX_PRIORITY_GAS_PRICE = BigNumber.from(ONE_GWEI*325)
+export const ATTACK_MAX_PRIORITY_GAS_PRICE_ELITE_TEAM = BigNumber.from(ONE_GWEI*50)
 
 export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
     const blockNumber = await hre.ethers.provider.getBlockNumber()
@@ -665,37 +666,41 @@ abstract class AttackStrategy{
     connectedContract: Contract
     looterTeamId: number
     nodeId: number
+    isEliteTeam: boolean
 
-    constructor(connectedContract: Contract, looterTeamId: number, nodeId: number){
+    constructor(connectedContract: Contract, looterTeamId: number, nodeId: number, isEliteTeam: boolean){
         this.connectedContract = connectedContract
         this.looterTeamId = looterTeamId
         this.nodeId = nodeId
+        this.isEliteTeam = isEliteTeam
     }
 
     abstract attack(e: StartGameEvent): Promise<TransactionResponse>
 
     abstract attackCallStatic(e: StartGameEvent): Promise<TransactionResponse>
+
+    getOverride(){
+        return ({
+            gasLimit: GAS_LIMIT,
+            maxFeePerGas: ATTACK_MAX_GAS_PRICE,
+            maxPriorityFeePerGas: this.isEliteTeam ?
+                ATTACK_MAX_PRIORITY_GAS_PRICE_ELITE_TEAM.add(this.nodeId)
+                : ATTACK_MAX_PRIORITY_GAS_PRICE.add(this.nodeId)
+        })
+    }
 }
 
 class IddleGameAttackStrategy extends AttackStrategy{
 
     async attack(e: StartGameEvent): Promise<TransactionResponse>{
 
-        return await this.connectedContract.attack(e.gameId, this.looterTeamId, {
-            gasLimit: GAS_LIMIT,
-            maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-            maxPriorityFeePerGas: ATTACK_MAX_PRIORITY_GAS_PRICE.add(this.nodeId)
-        })
+        return await this.connectedContract.attack(e.gameId, this.looterTeamId, this.getOverride())
 
     }
 
     async attackCallStatic(e: StartGameEvent): Promise<TransactionResponse>{
 
-        return await this.connectedContract.callStatic.attack(e.gameId, this.looterTeamId, {
-            gasLimit: GAS_LIMIT,
-            maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-            maxPriorityFeePerGas: ATTACK_MAX_PRIORITY_GAS_PRICE.add(this.nodeId)
-        })
+        return await this.connectedContract.callStatic.attack(e.gameId, this.looterTeamId, this.getOverride())
 
     }
 
@@ -705,21 +710,13 @@ class PlayerAttackStrategy extends AttackStrategy{
 
     async attack(e: StartGameEvent): Promise<TransactionResponse>{
 
-        return await this.connectedContract.attackTeam(e.teamId, this.looterTeamId, {
-            gasLimit: GAS_LIMIT,
-            maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-            maxPriorityFeePerGas: ATTACK_MAX_PRIORITY_GAS_PRICE.add(this.nodeId)
-        })
+        return await this.connectedContract.attackTeam(e.teamId, this.looterTeamId, this.getOverride())
 
     }
 
     async attackCallStatic(e: StartGameEvent): Promise<TransactionResponse>{
 
-        return await this.connectedContract.callStatic.attackTeam(e.teamId, this.looterTeamId, {
-            gasLimit: GAS_LIMIT,
-            maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-            maxPriorityFeePerGas: ATTACK_MAX_PRIORITY_GAS_PRICE.add(this.nodeId)
-        })
+        return await this.connectedContract.callStatic.attackTeam(e.teamId, this.looterTeamId, this.getOverride())
 
     }
 
@@ -727,7 +724,7 @@ class PlayerAttackStrategy extends AttackStrategy{
 
 const createAttackStrategy = async (
     hre: HardhatRuntimeEnvironment, looterteamid: number, 
-    signer: SignerWithAddress, playerAddress: string): Promise<AttackStrategy> => {
+    signer: SignerWithAddress, isEliteTeam: boolean, playerAddress: string): Promise<AttackStrategy> => {
 
         if (playerAddress){
 
@@ -735,7 +732,7 @@ const createAttackStrategy = async (
 
             return new PlayerAttackStrategy(
                 Player.attach(playerAddress).connect(signer),
-                looterteamid, hre.config.nodeId
+                looterteamid, hre.config.nodeId, isEliteTeam
             )
 
         }
@@ -744,7 +741,7 @@ const createAttackStrategy = async (
 
         return new IddleGameAttackStrategy(
             idleGame.connect(signer),
-            looterteamid, hre.config.nodeId
+            looterteamid, hre.config.nodeId, isEliteTeam
         )
         
     }
@@ -757,9 +754,9 @@ export const loot = async (
 
     const { idleGame } = getCrabadaContracts(hre)
 
-    const attackStrategy = await createAttackStrategy(hre, looterteamid, signer, playerAddress)
+    const { lockTo: looterLockTo, currentGameId: looterCurrentGameId, battlePoint } = await idleGame.getTeamInfo(looterteamid)
 
-    const { lockTo: looterLockTo, currentGameId: looterCurrentGameId } = await idleGame.getTeamInfo(looterteamid)
+    const attackStrategy = await createAttackStrategy(hre, looterteamid, signer, battlePoint>255, playerAddress)
 
     const timestamp = await currentBlockTimeStamp(hre)
 
