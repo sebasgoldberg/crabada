@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther, parseUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, compareBigNumbersDescending, deployPlayer, fightDistanceDistribution, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
+import { attachPlayer, baseFee, closeGameToStartGameDistances, compareBigNumbersDescending, deployPlayer, fightDistanceDistribution, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -700,6 +700,31 @@ task(
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 621, types.int)
 
+task(
+    "startgamedistance",
+    "Distribution of number of blocks in step between CloseGame and StartGame events for teams that play to loose with battle points up to maxbattlepoints.",
+    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, steps }, hre: HardhatRuntimeEnvironment) => {
+
+        const possibleTargetsByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+
+        console.log('Teams that play to loose', Object.keys(possibleTargetsByTeamId)
+            .filter( teamId => possibleTargetsByTeamId[teamId].battlePoint>=MIN_VALID_BATTLE_POINTS)
+            .filter( teamId => possibleTargetsByTeamId[teamId].battlePoint<=maxbattlepoints)
+            .length, 'below', maxbattlepoints, 'battle points'
+            );
+
+        const distances = await closeGameToStartGameDistances(hre, blockstoanalyze, possibleTargetsByTeamId, maxbattlepoints)
+        
+        const stepsDistributionDistances: StepMaxValuesByPercentage = getPercentualStepDistribution(
+            distances, steps)
+
+        console.log('Percentual distribution for distances between CloseGame and StartGame events', stepsDistributionDistances);
+
+    })
+    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*2 hours*/ , types.int)
+    .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
+    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 621, types.int)
+    .addOptionalParam("steps", "Step to consider in the distance analysis.", 10 , types.int)
 
 
 export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, lootersTeams: number[]) => {
@@ -963,8 +988,7 @@ task(
 
 // TODO Task to understand costs
 /**
- * 1) Wins: Gas price distance from other attacks and its distribution (-1 means no other attacks).
- * 2) Loose:
+ * Loose:
  *   a) Reverted transactions that attack teams already looted in other block.
  *   b) Gas price distance from winner attack and its distribution (requires to attack same team).
  */

@@ -568,6 +568,22 @@ export interface BlockDistanceDistribution {
     [distance: number]: number // quantity
 }
 
+export const isPossibleTarget = (teamsThatPlayToloose, teamId, maxBattlePoints): boolean => {
+    if (!teamsThatPlayToloose[teamId.toString()])
+        return false
+
+    if (!teamsThatPlayToloose[teamId.toString()].battlePoint)
+        return false
+
+    if (teamsThatPlayToloose[teamId.toString()].battlePoint < MIN_VALID_BATTLE_POINTS)
+        return false
+
+    if (teamsThatPlayToloose[teamId.toString()].battlePoint > maxBattlePoints)
+        return false
+    
+    return true
+}
+
 export const fightDistanceDistribution = async (
     hre: HardhatRuntimeEnvironment, blockstoanalyze: number, teamsThatPlayToloose: TeamInfoByTeam, 
     maxBattlePoints: number, log = console.log, queryPageSize=3600): Promise<BlockDistanceDistribution> =>{
@@ -616,16 +632,7 @@ export const fightDistanceDistribution = async (
 
         const teamId: BigNumber = e.args[START_GAME_TEAM_ID_ARG_INDEX]
 
-        if (!teamsThatPlayToloose[teamId.toString()])
-            continue
-
-        if (!teamsThatPlayToloose[teamId.toString()].battlePoint)
-            continue
-
-        if (teamsThatPlayToloose[teamId.toString()].battlePoint < MIN_VALID_BATTLE_POINTS)
-            continue
-
-        if (teamsThatPlayToloose[teamId.toString()].battlePoint > maxBattlePoints)
+        if (!isPossibleTarget(teamsThatPlayToloose, teamId, maxBattlePoints))
             continue
 
         const gameId: BigNumber = e.args[START_GAME_GAME_ID_ARG_INDEX]
@@ -644,13 +651,7 @@ export const fightDistanceDistribution = async (
 
         const teamId: BigNumber = e.args[FIGHT_DEFENSE_TEAM_ID]
 
-        if (!teamsThatPlayToloose[teamId.toString()])
-            continue
-
-        if (!teamsThatPlayToloose[teamId.toString()].battlePoint)
-            continue
-
-        if (teamsThatPlayToloose[teamId.toString()].battlePoint > maxBattlePoints)
+        if (!isPossibleTarget(teamsThatPlayToloose, teamId, maxBattlePoints))
             continue
 
         const gameId: BigNumber = e.args[FIGHT_GAME_ID_ARG_INDEX]
@@ -678,6 +679,125 @@ export const fightDistanceDistribution = async (
     }
 
     return blockDistanceDistribution
+
+}
+
+export type StartGameDistances = number[]
+
+export const closeGameToStartGameDistances = async (
+    hre: HardhatRuntimeEnvironment, blockstoanalyze: number, teamsThatPlayToloose: TeamInfoByTeam, 
+    maxBattlePoints: number, log = console.log, queryPageSize=3600): Promise<StartGameDistances> =>{
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    hre.ethers.provider.blockNumber
+
+    const fromBlock = hre.ethers.provider.blockNumber-blockstoanalyze
+
+    const startGameEventsPromise = queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, hre.ethers.provider.blockNumber, log)
+    // gameId uint256
+    // teamId uint256
+    // duration uint256
+    // craReward uint256
+    // tusReward uint256
+
+    const closeGameEvents: ethers.Event[] = await queryFilterByPage(hre, idleGame, idleGame.filters.CloseGame(), fromBlock, hre.ethers.provider.blockNumber, log, queryPageSize)
+    // gameId uint256
+
+    const startGameEvents: ethers.Event[] = await startGameEventsPromise
+
+    console.log('closeGameEvents', closeGameEvents.length);
+    console.log('startGameEvents', startGameEvents.length);
+    
+
+    interface BlockNumbersByEventKind{
+        startGameBlockNumbers: number[],
+        closeGameBlockNumbers: number[]
+    }
+
+    interface EventsBlockNumbersByTeam{
+        [teamId: string]: BlockNumbersByEventKind
+    }
+
+    const eventsBlockNumbersByTeam: EventsBlockNumbersByTeam = {}
+
+    const CLOSE_GAME_GAME_ID_ARG_INDEX=0
+
+    await Promise.all(closeGameEvents.map( async(e) => {
+
+        const gameId: BigNumber = e.args[CLOSE_GAME_GAME_ID_ARG_INDEX]
+
+        const { teamId } = await idleGame.getGameBasicInfo(gameId)
+
+        if (!isPossibleTarget(teamsThatPlayToloose, teamId, maxBattlePoints))
+            return
+
+        eventsBlockNumbersByTeam[teamId.toString()] = eventsBlockNumbersByTeam[teamId.toString()] || {
+            startGameBlockNumbers: [],
+            closeGameBlockNumbers: []
+        }
+
+        eventsBlockNumbersByTeam[teamId.toString()].closeGameBlockNumbers.push(e.blockNumber)
+
+    }))
+
+    const START_GAME_TEAM_ID_ARG_INDEX=1
+
+    // Sets Fight block number for gameId when turn is zero
+    for (const e of startGameEvents){
+
+        const teamId: BigNumber = e.args[START_GAME_TEAM_ID_ARG_INDEX]
+
+        if (!isPossibleTarget(teamsThatPlayToloose, teamId, maxBattlePoints))
+            continue
+
+        eventsBlockNumbersByTeam[teamId.toString()] = eventsBlockNumbersByTeam[teamId.toString()] || {
+            startGameBlockNumbers: [],
+            closeGameBlockNumbers: []
+        }
+
+        eventsBlockNumbersByTeam[teamId.toString()].startGameBlockNumbers.push(e.blockNumber)
+
+    }
+    
+    const compareNumberAsc = (a,b) => a<b ? -1 : b<a ? 1 : 0
+
+    return Object.keys(eventsBlockNumbersByTeam)
+        .map( teamId => eventsBlockNumbersByTeam[teamId] )
+        .map( eventsBlockNumbersForTeam => {
+
+            eventsBlockNumbersForTeam.startGameBlockNumbers.sort(compareNumberAsc)
+            eventsBlockNumbersForTeam.closeGameBlockNumbers.sort(compareNumberAsc)
+    
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length==0 || 
+                eventsBlockNumbersForTeam.closeGameBlockNumbers.length==0)
+                return []
+            
+            // If first StartGame event blocknumber is lower than first CloseGame event 
+            // blocknumber, then we discard the first StartGame event.
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers[0] < eventsBlockNumbersForTeam.closeGameBlockNumbers[0] )
+                eventsBlockNumbersForTeam.startGameBlockNumbers.shift()
+    
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length==0 || 
+                eventsBlockNumbersForTeam.closeGameBlockNumbers.length==0)
+                return []
+    
+            // If last StartGame event blocknumber is lower than last CloseGame event 
+            // blocknumber, then we discard the last CloseGame event.
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers[eventsBlockNumbersForTeam.startGameBlockNumbers.length-1] 
+                < eventsBlockNumbersForTeam.closeGameBlockNumbers[eventsBlockNumbersForTeam.closeGameBlockNumbers.length-1] )
+                eventsBlockNumbersForTeam.closeGameBlockNumbers.pop()
+    
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length != eventsBlockNumbersForTeam.closeGameBlockNumbers.length)
+                throw new Error("There is a difference between startGameBlockNumbers and closeGameBlockNumbers quantities");
+
+            const distances: StartGameDistances = []
+
+            return eventsBlockNumbersForTeam.closeGameBlockNumbers.map( (closeGameBlockNumber, index) => 
+                eventsBlockNumbersForTeam.startGameBlockNumbers[index]-closeGameBlockNumber)
+    
+        })
+        .flat().sort(compareNumberAsc)
 
 }
 
