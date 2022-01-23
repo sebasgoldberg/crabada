@@ -962,3 +962,46 @@ task(
  *   a) Reverted transactions that attack teams already looted in other block.
  *   b) Gas price distance from winner attack and its distribution (requires to attack same team).
  */
+
+ task(
+    "successgasdiff",
+    "Get the diference between successful Attack transactions for the specified looter teams, and other failed attack transactions with the same target.",
+    async ({ fromblock, toblock, blocksquan, teams }, hre: HardhatRuntimeEnvironment) => {
+
+        const { fromBlock, toBlock } = await getBlocksInterval(hre, fromblock, toblock, blocksquan)
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        const fightEvents = await queryFilterByPage(hre, idleGame, idleGame.filters.Fight(), fromBlock, toBlock)
+
+        const looterTeams = (teams as string).split(',').map(x=>Number(x))
+
+        await Promise.all(fightEvents.map(async (e: ethers.Event) =>{
+           
+            const { attackTeamId, gameId } = e.args
+
+            if (!looterTeams.includes(attackTeamId.toNumber()))
+                return
+            
+            const block = await e.getBlock()
+            const transactionReceipt = await e.getTransactionReceipt()
+
+            const blockTransactions = await hre.ethers.provider.getBlockWithTransactions(e.blockHash)
+            blockTransactions.transactions
+                .filter( t => {
+                    // TODO Check if it is an attack transaction for the same gameId
+                    t.data
+                })
+                .map( async(t) => {
+                    const failedTransactionReceipt = await hre.ethers.provider.getTransactionReceipt(t.hash)
+                    // TODO Check difference between gas prices
+                    failedTransactionReceipt.effectiveGasPrice
+                })
+        }))
+
+    })
+    .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)
+    .addOptionalParam("toblock", "To from.", undefined , types.int)
+    .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
+    .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355,5357,6152" , types.string)
+    .addOptionalParam("nodesquan", "Nodes quantity", 10, types.int)
