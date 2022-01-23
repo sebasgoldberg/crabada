@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther, parseUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, deployPlayer, fightDistanceDistribution, gasPrice, getCrabadaContracts, getOverride, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, ONE_GWEI, queryFilterByPage, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
+import { attachPlayer, baseFee, compareBigNumbersDescending, deployPlayer, fightDistanceDistribution, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -685,12 +685,18 @@ task(
 
         const possibleTargetsByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
 
+        console.log('Teams that play to loose', Object.keys(possibleTargetsByTeamId)
+            .filter( teamId => possibleTargetsByTeamId[teamId].battlePoint>=MIN_VALID_BATTLE_POINTS)
+            .filter( teamId => possibleTargetsByTeamId[teamId].battlePoint<=maxbattlepoints)
+            .length, 'below', maxbattlepoints, 'battle points'
+            );
+
         const fightDistanceDist = await fightDistanceDistribution(hre, blockstoanalyze, possibleTargetsByTeamId, maxbattlepoints)
         
         console.log('fightDistanceDist', fightDistanceDist)
 
     })
-    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 3600 /*2 hours*/ , types.int)
+    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*2 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 621, types.int)
 
@@ -963,7 +969,7 @@ task(
  *   b) Gas price distance from winner attack and its distribution (requires to attack same team).
  */
 
- task(
+task(
     "successgasdiff",
     "Get the diference between successful Attack transactions for the specified looter teams, and other failed attack transactions with the same target.",
     async ({ fromblock, toblock, blocksquan, teams, steps }, hre: HardhatRuntimeEnvironment) => {
@@ -1042,55 +1048,15 @@ task(
         if (withCompetition.length == 0)
             return
 
-        const compareBigNumbers = (a: BigNumber, b: BigNumber) => {
-            return a.lt(b) ? -1 : b.lt(a) ? 1 : 0
-        }
-
-        const compareBigNumbersDescending = (a: BigNumber, b: BigNumber) => {
-            return -1*compareBigNumbers(a, b)
-        }
-
         const withCompetitionSortedDescending = withCompetition.sort(compareBigNumbersDescending)
 
         const withCompetitionSortedInGwey = withCompetitionSortedDescending.map(x => x.div(ONE_GWEI).toNumber())
 
 
-        interface StepsDistributionForHigherDistance {
-            [distanceUpTo: number]: number // percentual
-        }
-        const stepsDistributionForHigherDistance: StepsDistributionForHigherDistance = {}
-
-        const minSteps = Math.min(withCompetitionSortedInGwey.length, steps)
-
-        for (let i=0; i<minSteps; i++){
-            const percentual = Math.floor((i+1)*100/minSteps)
-            const indexDistanceUpTo = Math.max(Math.floor(withCompetitionSortedInGwey.length*percentual/100)-1,0)
-            const distance = withCompetitionSortedInGwey[indexDistanceUpTo]
-            stepsDistributionForHigherDistance[distance] = percentual
-        }
+        const stepsDistributionForHigherDistance: StepMaxValuesByPercentage = getPercentualStepDistribution(
+            withCompetitionSortedInGwey, steps)
 
         console.log('stepsDistributionForHigherDistance', stepsDistributionForHigherDistance);
-
-        // const average = withCompetition
-        //     .reduce( (previous, current) => previous.add(current), ethers.constants.Zero)
-        //     .div(withCompetition.length)
-
-        // const variance = withCompetition
-        //     .map( x => {
-        //         const diff = average.sub(x)
-        //         return diff.mul(diff).div(ethers.constants.WeiPerEther)
-        //     })
-        //     .reduce( (previous, current) => previous.add(current), ethers.constants.Zero)
-        //     .div(withCompetition.length)
-
-        // const averageInGwei = average.div(parseUnits('1', 9))
-
-        // const varianceInGwei = variance.div(parseUnits('1', 9))
-        
-        // const standardDeviationInGwei = Math.sqrt(varianceInGwei.toNumber())
-
-        // console.log('Gas price distance average', averageInGwei.toNumber(), 'gwei');
-        // console.log('Gas price distance standard deviation', standardDeviationInGwei, 'gwei');
 
     })
     .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)

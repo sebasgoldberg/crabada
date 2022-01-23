@@ -14,6 +14,49 @@ export const ATTACK_MAX_GAS_PRICE = BigNumber.from(ONE_GWEI*600)
 export const ATTACK_MAX_PRIORITY_GAS_PRICE = BigNumber.from(ONE_GWEI*325)
 export const ATTACK_MAX_PRIORITY_GAS_PRICE_ELITE_TEAM = BigNumber.from(ONE_GWEI*325)
 
+export const compareBigNumbers = (a: BigNumber, b: BigNumber) => {
+    return a.lt(b) ? -1 : b.lt(a) ? 1 : 0
+}
+
+export const compareBigNumbersDescending = (a: BigNumber, b: BigNumber) => {
+    return -1*compareBigNumbers(a, b)
+}
+
+export const bigNumberAverage = (values: BigNumber[]) => values
+    .reduce( (previous, current) => previous.add(current), ethers.constants.Zero)
+    .div(values.length)
+
+export const bigNumberVariance = (values: BigNumber[], average: BigNumber, weiPerUnit = ethers.constants.WeiPerEther) => values
+    .map( x => {
+            const diff = average.sub(x)
+            return diff.mul(diff)// TODO .div(weiPerUnit)
+    })
+    .reduce( (previous, current) => previous.add(current), ethers.constants.Zero)
+    .div(values.length)
+
+export const bigNumberStandardDeviation = (variance: BigNumber): number => 
+    Math.sqrt(variance.toNumber())
+
+export interface StepMaxValuesByPercentage {
+    [percentual: number]: number // maxValueForPercentage
+}
+
+export const getPercentualStepDistribution = (sortedValues: Array<any>, steps): StepMaxValuesByPercentage => {
+
+    const minSteps = Math.min(sortedValues.length, steps)
+
+    const stepMaxValuesByPercentage: StepMaxValuesByPercentage = {}
+
+    for (let i=0; i<minSteps; i++){
+        const percentual = Math.floor((i+1)*100/minSteps)
+        const indexValueUpTo = Math.max(Math.floor(sortedValues.length*percentual/100)-1,0)
+        const distance = sortedValues[indexValueUpTo]
+        stepMaxValuesByPercentage[percentual] = distance
+    }
+
+    return stepMaxValuesByPercentage
+}
+
 export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
     const blockNumber = await hre.ethers.provider.getBlockNumber()
     const timestamp = (await hre.ethers.provider.getBlock(blockNumber)).timestamp;
@@ -579,6 +622,9 @@ export const fightDistanceDistribution = async (
         if (!teamsThatPlayToloose[teamId.toString()].battlePoint)
             continue
 
+        if (teamsThatPlayToloose[teamId.toString()].battlePoint < MIN_VALID_BATTLE_POINTS)
+            continue
+
         if (teamsThatPlayToloose[teamId.toString()].battlePoint > maxBattlePoints)
             continue
 
@@ -747,6 +793,9 @@ const createAttackStrategy = async (
     }
 
 
+export const MIN_VALID_BATTLE_POINTS = 564
+export const MIN_BATTLE_POINTS_FOR_ELITE_TEAM = 655
+
 export const loot = async (
     hre: HardhatRuntimeEnvironment, teamsThatPlayToLooseByTeamId: TeamInfoByTeam, 
     looterteamid: number, signer: SignerWithAddress, 
@@ -756,7 +805,7 @@ export const loot = async (
 
     const { lockTo: looterLockTo, currentGameId: looterCurrentGameId, battlePoint: looterBattlePoint } = await idleGame.getTeamInfo(looterteamid)
 
-    const attackStrategy = await createAttackStrategy(hre, looterteamid, signer, looterBattlePoint>655, playerAddress)
+    const attackStrategy = await createAttackStrategy(hre, looterteamid, signer, looterBattlePoint>MIN_BATTLE_POINTS_FOR_ELITE_TEAM, playerAddress)
 
     const timestamp = await currentBlockTimeStamp(hre)
 
