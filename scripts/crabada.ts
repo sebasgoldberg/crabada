@@ -719,34 +719,26 @@ export const closeGameToStartGameDistances = async (
         [teamId: string]: BlockNumbersByEventKind
     }
 
+    interface TeamIdByGameId{
+        [gameId: string]: BigNumber
+    }
+
+    // Necessary for performance issues when calling idleGame.getGameBasicInfo
+    // to get the teamId in CloseGame events.
+    const teamIdByGameId: TeamIdByGameId = {}
+
     const eventsBlockNumbersByTeam: EventsBlockNumbersByTeam = {}
 
-    const CLOSE_GAME_GAME_ID_ARG_INDEX=0
-
-    await Promise.all(closeGameEvents.map( async(e) => {
-
-        const gameId: BigNumber = e.args[CLOSE_GAME_GAME_ID_ARG_INDEX]
-
-        const { teamId } = await idleGame.getGameBasicInfo(gameId)
-
-        if (!isPossibleTarget(teamsThatPlayToloose, teamId, maxBattlePoints))
-            return
-
-        eventsBlockNumbersByTeam[teamId.toString()] = eventsBlockNumbersByTeam[teamId.toString()] || {
-            startGameBlockNumbers: [],
-            closeGameBlockNumbers: []
-        }
-
-        eventsBlockNumbersByTeam[teamId.toString()].closeGameBlockNumbers.push(e.blockNumber)
-
-    }))
-
+    const START_GAME_GAME_ID_ARG_INDEX=0
     const START_GAME_TEAM_ID_ARG_INDEX=1
 
     // Sets Fight block number for gameId when turn is zero
     for (const e of startGameEvents){
 
+        const gameId: BigNumber = e.args[START_GAME_GAME_ID_ARG_INDEX]
         const teamId: BigNumber = e.args[START_GAME_TEAM_ID_ARG_INDEX]
+
+        teamIdByGameId[gameId.toString()] = teamId
 
         if (!isPossibleTarget(teamsThatPlayToloose, teamId, maxBattlePoints))
             continue
@@ -759,7 +751,30 @@ export const closeGameToStartGameDistances = async (
         eventsBlockNumbersByTeam[teamId.toString()].startGameBlockNumbers.push(e.blockNumber)
 
     }
-    
+
+    const CLOSE_GAME_GAME_ID_ARG_INDEX=0
+
+    closeGameEvents.forEach( (e) => {
+
+        const gameId: BigNumber = e.args[CLOSE_GAME_GAME_ID_ARG_INDEX]
+
+        const teamId = teamIdByGameId[gameId.toString()]
+
+        if (!teamId)
+            return
+
+        if (!isPossibleTarget(teamsThatPlayToloose, teamId, maxBattlePoints))
+            return
+
+        eventsBlockNumbersByTeam[teamId.toString()] = eventsBlockNumbersByTeam[teamId.toString()] || {
+            startGameBlockNumbers: [],
+            closeGameBlockNumbers: []
+        }
+
+        eventsBlockNumbersByTeam[teamId.toString()].closeGameBlockNumbers.push(e.blockNumber)
+
+    })
+
     const compareNumberAsc = (a,b) => a<b ? -1 : b<a ? 1 : 0
 
     return Object.keys(eventsBlockNumbersByTeam)
