@@ -715,6 +715,9 @@ task(
 
         const distances = await closeGameToStartGameDistances(hre, blockstoanalyze, possibleTargetsByTeamId, maxbattlepoints)
         
+        console.log('Distances found', distances.length);
+        
+
         const stepsDistributionDistances: StepMaxValuesByPercentage = getPercentualStepDistribution(
             distances, steps)
 
