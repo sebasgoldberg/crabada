@@ -966,7 +966,7 @@ task(
  task(
     "successgasdiff",
     "Get the diference between successful Attack transactions for the specified looter teams, and other failed attack transactions with the same target.",
-    async ({ fromblock, toblock, blocksquan, teams }, hre: HardhatRuntimeEnvironment) => {
+    async ({ fromblock, toblock, blocksquan, teams, steps }, hre: HardhatRuntimeEnvironment) => {
 
         const { fromBlock, toBlock } = await getBlocksInterval(hre, fromblock, toblock, blocksquan)
 
@@ -974,34 +974,127 @@ task(
 
         const fightEvents = await queryFilterByPage(hre, idleGame, idleGame.filters.Fight(), fromBlock, toBlock)
 
+        console.log('fightEvents', fightEvents.length);
+
         const looterTeams = (teams as string).split(',').map(x=>Number(x))
 
-        await Promise.all(fightEvents.map(async (e: ethers.Event) =>{
+        const fightEventsForLooterTeams = fightEvents
+            .filter((e: ethers.Event) =>{
+                const { attackTeamId } = e.args
+                return looterTeams.includes(attackTeamId.toNumber())
+            })
+
+        console.log('fightEventsForLooterTeams', fightEventsForLooterTeams.length);
+
+        const gasPriceDistances: BigNumber[] = await Promise.all(fightEventsForLooterTeams
+            .map(async (e: ethers.Event) =>{
            
-            const { attackTeamId, gameId } = e.args
+                const { gameId } = e.args
 
-            if (!looterTeams.includes(attackTeamId.toNumber()))
-                return
-            
-            const block = await e.getBlock()
-            const transactionReceipt = await e.getTransactionReceipt()
+                const transactionReceipt = await e.getTransactionReceipt()
 
-            const blockTransactions = await hre.ethers.provider.getBlockWithTransactions(e.blockHash)
-            blockTransactions.transactions
-                .filter( t => {
-                    // TODO Check if it is an attack transaction for the same gameId
-                    t.data
-                })
-                .map( async(t) => {
-                    const failedTransactionReceipt = await hre.ethers.provider.getTransactionReceipt(t.hash)
-                    // TODO Check difference between gas prices
-                    failedTransactionReceipt.effectiveGasPrice
-                })
-        }))
+                const blockTransactions = await hre.ethers.provider.getBlockWithTransactions(e.blockHash)
+
+                const gameIdParameterForAttackTransaction = 
+                    (t: ethers.Transaction) => BigNumber.from(`0x${t.data.slice(10,74)}`)
+
+                const gasPriceDifferences: BigNumber[] = await Promise.all(
+                    blockTransactions.transactions
+                        .filter( t => {
+                            
+                            const ATTACK_ENCODED_OPERATION = '0xe1fa7638'
+                            
+
+                            return (
+                                t.hash !== e.transactionHash
+                                // Checks if it is an attack transaction for the same gameId
+                                && t.data.slice(0,10) == ATTACK_ENCODED_OPERATION 
+                                // Checks it is attacked the same gameId
+                                && gameId.eq(gameIdParameterForAttackTransaction(t))
+                            )
+                        })
+                        .map( async(t) => {
+                            const failedTransactionReceipt = await hre.ethers.provider.getTransactionReceipt(t.hash)
+                            return transactionReceipt.effectiveGasPrice.sub(failedTransactionReceipt.effectiveGasPrice)
+                        })
+                )
+
+                if (gasPriceDifferences.length == 0)
+                    return hre.ethers.constants.Zero.sub(1)
+                
+                // It is returned the lowest difference: the distance.
+                return gasPriceDifferences.reduce( (prev, current) => {
+                    return prev.lt(current) ? prev : current
+                }, gasPriceDifferences[0])
+
+            }
+        ))
+
+        const noCompetitionCount = gasPriceDistances.filter( x => x.isNegative() ).length
+
+        console.log('Transactions without competition', noCompetitionCount);
+        
+        const withCompetition = gasPriceDistances.flat().filter( x => !x.isNegative() )
+
+        console.log('Transactions with competition', withCompetition.length);
+
+
+        if (withCompetition.length == 0)
+            return
+
+        const compareBigNumbers = (a: BigNumber, b: BigNumber) => {
+            return a.lt(b) ? -1 : b.lt(a) ? 1 : 0
+        }
+
+        const compareBigNumbersDescending = (a: BigNumber, b: BigNumber) => {
+            return -1*compareBigNumbers(a, b)
+        }
+
+        const withCompetitionSortedDescending = withCompetition.sort(compareBigNumbersDescending)
+
+        const withCompetitionSortedInGwey = withCompetitionSortedDescending.map(x => x.div(ONE_GWEI).toNumber())
+
+
+        interface StepsDistributionForHigherDistance {
+            [distanceUpTo: number]: number // percentual
+        }
+        const stepsDistributionForHigherDistance: StepsDistributionForHigherDistance = {}
+
+        const minSteps = Math.min(withCompetitionSortedInGwey.length, steps)
+
+        for (let i=0; i<minSteps; i++){
+            const percentual = Math.floor((i+1)*100/minSteps)
+            const indexDistanceUpTo = Math.max(Math.floor(withCompetitionSortedInGwey.length*percentual/100)-1,0)
+            const distance = withCompetitionSortedInGwey[indexDistanceUpTo]
+            stepsDistributionForHigherDistance[distance] = percentual
+        }
+
+        console.log('stepsDistributionForHigherDistance', stepsDistributionForHigherDistance);
+
+        // const average = withCompetition
+        //     .reduce( (previous, current) => previous.add(current), ethers.constants.Zero)
+        //     .div(withCompetition.length)
+
+        // const variance = withCompetition
+        //     .map( x => {
+        //         const diff = average.sub(x)
+        //         return diff.mul(diff).div(ethers.constants.WeiPerEther)
+        //     })
+        //     .reduce( (previous, current) => previous.add(current), ethers.constants.Zero)
+        //     .div(withCompetition.length)
+
+        // const averageInGwei = average.div(parseUnits('1', 9))
+
+        // const varianceInGwei = variance.div(parseUnits('1', 9))
+        
+        // const standardDeviationInGwei = Math.sqrt(varianceInGwei.toNumber())
+
+        // console.log('Gas price distance average', averageInGwei.toNumber(), 'gwei');
+        // console.log('Gas price distance standard deviation', standardDeviationInGwei, 'gwei');
 
     })
     .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)
     .addOptionalParam("toblock", "To from.", undefined , types.int)
     .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
     .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355,5357,6152" , types.string)
-    .addOptionalParam("nodesquan", "Nodes quantity", 10, types.int)
+    .addOptionalParam("steps", "Step to consider in the distance analysis.", 10 , types.int)
