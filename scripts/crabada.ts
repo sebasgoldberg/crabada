@@ -685,7 +685,7 @@ export const fightDistanceDistribution = async (
 export type StartGameDistances = number[]
 
 export const closeGameToStartGameDistances = async (
-    hre: HardhatRuntimeEnvironment, blockstoanalyze: number, teamsThatPlayToloose: TeamInfoByTeam, 
+    hre: HardhatRuntimeEnvironment, blockstoanalyze: number, teamsThatPlayToLoose: TeamInfoByTeam, 
     maxBattlePoints: number, log = console.log, queryPageSize=3600): Promise<StartGameDistances> =>{
 
     const { idleGame } = getCrabadaContracts(hre)
@@ -740,7 +740,7 @@ export const closeGameToStartGameDistances = async (
 
         teamIdByGameId[gameId.toString()] = teamId
 
-        if (!isPossibleTarget(teamsThatPlayToloose, teamId, maxBattlePoints))
+        if (!isPossibleTarget(teamsThatPlayToLoose, teamId, maxBattlePoints))
             continue
 
         eventsBlockNumbersByTeam[teamId.toString()] = eventsBlockNumbersByTeam[teamId.toString()] || {
@@ -763,7 +763,7 @@ export const closeGameToStartGameDistances = async (
         if (!teamId)
             return
 
-        if (!isPossibleTarget(teamsThatPlayToloose, teamId, maxBattlePoints))
+        if (!isPossibleTarget(teamsThatPlayToLoose, teamId, maxBattlePoints))
             return
 
         eventsBlockNumbersByTeam[teamId.toString()] = eventsBlockNumbersByTeam[teamId.toString()] || {
@@ -778,8 +778,9 @@ export const closeGameToStartGameDistances = async (
     const compareNumberAsc = (a,b) => a<b ? -1 : b<a ? 1 : 0
 
     return Object.keys(eventsBlockNumbersByTeam)
-        .map( teamId => eventsBlockNumbersByTeam[teamId] )
-        .map( eventsBlockNumbersForTeam => {
+        .map( teamId => {
+            
+            const eventsBlockNumbersForTeam = eventsBlockNumbersByTeam[teamId]
 
             eventsBlockNumbersForTeam.startGameBlockNumbers.sort(compareNumberAsc)
             eventsBlockNumbersForTeam.closeGameBlockNumbers.sort(compareNumberAsc)
@@ -804,7 +805,7 @@ export const closeGameToStartGameDistances = async (
                 eventsBlockNumbersForTeam.closeGameBlockNumbers.pop()
     
             if (eventsBlockNumbersForTeam.startGameBlockNumbers.length != eventsBlockNumbersForTeam.closeGameBlockNumbers.length)
-                throw new Error("There is a difference between startGameBlockNumbers and closeGameBlockNumbers quantities");
+                throw new Error(`There is a difference between startGameBlockNumbers and closeGameBlockNumbers quantities for team ${ teamId.toString() }: ${ eventsBlockNumbersForTeam }`);
 
             const distances: StartGameDistances = []
 
