@@ -804,8 +804,12 @@ export const closeGameToStartGameDistances = async (
                 < eventsBlockNumbersForTeam.closeGameBlockNumbers[eventsBlockNumbersForTeam.closeGameBlockNumbers.length-1] )
                 eventsBlockNumbersForTeam.closeGameBlockNumbers.pop()
     
-            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length != eventsBlockNumbersForTeam.closeGameBlockNumbers.length)
-                throw new Error(`There is a difference between startGameBlockNumbers and closeGameBlockNumbers quantities for team ${ teamId.toString() }: ${ eventsBlockNumbersForTeam }`);
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length != eventsBlockNumbersForTeam.closeGameBlockNumbers.length){
+                //throw new Error(`There is a difference between startGameBlockNumbers and closeGameBlockNumbers quantities for team ${ teamId.toString() }: ${ eventsBlockNumbersForTeam }`);
+                console.error(`There is a difference between startGameBlockNumbers and closeGameBlockNumbers quantities for team ${ teamId.toString() }: ${ eventsBlockNumbersForTeam }`);
+                return []
+
+            }
 
             const distances: StartGameDistances = []
 
