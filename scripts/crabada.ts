@@ -684,6 +684,165 @@ export const fightDistanceDistribution = async (
 
 export type StartGameDistances = number[]
 
+export interface CloseDistanceToStart {
+    minBlocks: number,
+    averageBlocks: number,
+    standardDeviationBlocks: number
+}
+
+export interface CloseDistanceToStartByTeamId{
+    [teamId: string]: CloseDistanceToStart
+}
+
+
+export const getCloseDistanceToStartByTeamId = async (
+    hre: HardhatRuntimeEnvironment, blockstoanalyze: number, teamsThatPlayToLoose: TeamInfoByTeam, 
+    log = console.log, queryPageSize=3600): Promise<CloseDistanceToStartByTeamId> => {
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    hre.ethers.provider.blockNumber
+
+    const fromBlock = hre.ethers.provider.blockNumber-blockstoanalyze
+
+    const startGameEventsPromise = queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, hre.ethers.provider.blockNumber, log)
+    // gameId uint256
+    // teamId uint256
+    // duration uint256
+    // craReward uint256
+    // tusReward uint256
+
+    const closeGameEvents: ethers.Event[] = await queryFilterByPage(hre, idleGame, idleGame.filters.CloseGame(), fromBlock, hre.ethers.provider.blockNumber, log, queryPageSize)
+    // gameId uint256
+
+    const startGameEvents: ethers.Event[] = await startGameEventsPromise
+
+    console.log('closeGameEvents', closeGameEvents.length);
+    console.log('startGameEvents', startGameEvents.length);
+    
+
+    interface BlockNumbersByEventKind{
+        startGameBlockNumbers: number[],
+        closeGameBlockNumbers: number[]
+    }
+
+    interface EventsBlockNumbersByTeam{
+        [teamId: string]: BlockNumbersByEventKind
+    }
+
+    interface TeamIdByGameId{
+        [gameId: string]: BigNumber
+    }
+
+    // Necessary for performance issues when calling idleGame.getGameBasicInfo
+    // to get the teamId in CloseGame events.
+    const teamIdByGameId: TeamIdByGameId = {}
+
+    const eventsBlockNumbersByTeam: EventsBlockNumbersByTeam = {}
+
+    const START_GAME_GAME_ID_ARG_INDEX=0
+    const START_GAME_TEAM_ID_ARG_INDEX=1
+
+    // Sets Fight block number for gameId when turn is zero
+    for (const e of startGameEvents){
+
+        const gameId: BigNumber = e.args[START_GAME_GAME_ID_ARG_INDEX]
+        const teamId: BigNumber = e.args[START_GAME_TEAM_ID_ARG_INDEX]
+
+        teamIdByGameId[gameId.toString()] = teamId
+
+        eventsBlockNumbersByTeam[teamId.toString()] = eventsBlockNumbersByTeam[teamId.toString()] || {
+            startGameBlockNumbers: [],
+            closeGameBlockNumbers: []
+        }
+
+        eventsBlockNumbersByTeam[teamId.toString()].startGameBlockNumbers.push(e.blockNumber)
+
+    }
+
+    const CLOSE_GAME_GAME_ID_ARG_INDEX=0
+
+    await Promise.all(closeGameEvents.map( async(e) => {
+
+        const gameId: BigNumber = e.args[CLOSE_GAME_GAME_ID_ARG_INDEX]
+
+        let teamId = teamIdByGameId[gameId.toString()]
+
+        if (!teamId){
+            const { teamId: _teamId } = await idleGame.getGameBasicInfo(gameId)
+            teamId = _teamId
+        }
+
+        eventsBlockNumbersByTeam[teamId.toString()] = eventsBlockNumbersByTeam[teamId.toString()] || {
+            startGameBlockNumbers: [],
+            closeGameBlockNumbers: []
+        }
+
+        eventsBlockNumbersByTeam[teamId.toString()].closeGameBlockNumbers.push(e.blockNumber)
+
+    }))
+
+    const compareNumberAsc = (a,b) => a<b ? -1 : b<a ? 1 : 0
+
+    const closeDistanceToStartByTeamId: CloseDistanceToStartByTeamId = {}
+
+    Object.keys(eventsBlockNumbersByTeam)
+        .forEach( teamId => {
+            
+            const eventsBlockNumbersForTeam = eventsBlockNumbersByTeam[teamId]
+
+            eventsBlockNumbersForTeam.startGameBlockNumbers.sort(compareNumberAsc)
+            eventsBlockNumbersForTeam.closeGameBlockNumbers.sort(compareNumberAsc)
+    
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length==0 || 
+                eventsBlockNumbersForTeam.closeGameBlockNumbers.length==0)
+                return
+            
+            // If first StartGame event blocknumber is lower than first CloseGame event 
+            // blocknumber, then we discard the first StartGame event.
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers[0] < eventsBlockNumbersForTeam.closeGameBlockNumbers[0] )
+                eventsBlockNumbersForTeam.startGameBlockNumbers.shift()
+    
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length==0 || 
+                eventsBlockNumbersForTeam.closeGameBlockNumbers.length==0)
+                return
+    
+            // If last StartGame event blocknumber is lower than last CloseGame event 
+            // blocknumber, then we discard the last CloseGame event.
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers[eventsBlockNumbersForTeam.startGameBlockNumbers.length-1] 
+                < eventsBlockNumbersForTeam.closeGameBlockNumbers[eventsBlockNumbersForTeam.closeGameBlockNumbers.length-1] )
+                eventsBlockNumbersForTeam.closeGameBlockNumbers.pop()
+    
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length != eventsBlockNumbersForTeam.closeGameBlockNumbers.length){
+                //throw new Error(`There is a difference between startGameBlockNumbers and closeGameBlockNumbers quantities for team ${ teamId.toString() }: ${ eventsBlockNumbersForTeam }`);
+                console.error(`There is a difference between startGameBlockNumbers and closeGameBlockNumbers quantities for team ${ teamId.toString() }: ${ eventsBlockNumbersForTeam }`);
+                return
+
+            }
+
+            const distances: StartGameDistances = eventsBlockNumbersForTeam.closeGameBlockNumbers.map( (closeGameBlockNumber, index) => 
+                eventsBlockNumbersForTeam.startGameBlockNumbers[index]-closeGameBlockNumber)
+
+
+            const minBlocks = Math.min(...distances)
+            const averageBlocks = distances
+                .reduce( (prev, current) => prev+current, 0)/distances.length
+            const varianceBlocks = distances
+                .reduce( (prev, current) => prev+Math.pow(averageBlocks-current, 2), 0)/distances.length
+            const standardDeviationBlocks = Math.sqrt(varianceBlocks)
+
+            closeDistanceToStartByTeamId[teamId] = {
+                minBlocks,
+                averageBlocks,
+                standardDeviationBlocks,
+            }
+    
+        })
+    
+    return closeDistanceToStartByTeamId
+
+}
+
 export const closeGameToStartGameDistances = async (
     hre: HardhatRuntimeEnvironment, blockstoanalyze: number, teamsThatPlayToLoose: TeamInfoByTeam, 
     maxBattlePoints: number, log = console.log, queryPageSize=3600): Promise<StartGameDistances> =>{
@@ -832,9 +991,11 @@ export const isTeamLocked = async (
     hre: HardhatRuntimeEnvironment, idleGame: Contract, teamId: number,
     log: (typeof console.log) = console.log) => {
 
-    const { lockTo } = await idleGame.getTeamInfo(teamId)
+    const teamInfoPromise = idleGame.getTeamInfo(teamId)
 
     const timestamp = await currentBlockTimeStamp(hre)
+
+    const { lockTo } = await teamInfoPromise
 
     return await locked(teamId, lockTo, timestamp, log)
 

@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther, parseUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, closeGameToStartGameDistances, compareBigNumbersDescending, deployPlayer, fightDistanceDistribution, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
+import { attachPlayer, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbersDescending, deployPlayer, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -798,11 +798,327 @@ task(
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
-    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", undefined , types.int)
     .addOptionalParam("lootersteamsbyaccount", "JSON (array of arrays) with the looters teams ids by account. Example: '[[0,1,2],[4,5],[6]]'.", undefined, types.string)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
+
+interface LootGuessConfig {
+    players: {
+        address: string,
+        teams: number[]
+    }[],
+    maxBlocksPerTeams: number,
+}
+
+task(
+    "lootguess",
+    "Loot process based on predict of startGame transactions using the CloseGame events and analyses on teams behaviours.",
+    async ({ blockstoanalyze, firstdefendwindow, lootersteamsbyaccount, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+
+        const lootGuessConfig: LootGuessConfig = {
+            maxBlocksPerTeams: 55,
+            players: [
+                {
+                    address: 'P1',
+                    teams: [3286, 3759, 5032]
+                },
+                {
+                    address: 'P2',
+                    teams: [5355, 5357, 6152]
+                },
+                {
+                    address: 'P3',
+                    teams: [7449]
+                },
+            ]
+        }
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        // Verify there are teams in the config.
+
+        const lootersTeams = lootGuessConfig.players.map( p => p.teams ).flat()
+
+        if (lootersTeams.length == 0)
+            return
+
+        // Initialize Player/Team data structure
+
+        interface PlayerTeamPair {
+            playerAddress: string,
+            teamId: number,
+            locked: boolean,
+            battlePoint: number,
+        }
+
+        // TODO Verify that works
+        const playerTeamPairs: PlayerTeamPair[] = await Promise.all(lootGuessConfig.players
+            .map( p => p.teams
+                .map( async(teamId) => {
+                    const { battlePoint } = await idleGame.getTeamInfo(teamId)
+                    return ({
+                        playerAddress: p.address,
+                        teamId,
+                        locked: true,
+                        battlePoint,
+                    })
+                })
+            )
+            .flat())
+        
+        // await Promise.all(playerTeamPairs.map( async(pair) => {
+        //     const { battlePoint } = await idleGame.getTeamInfo(pair.teamId)
+        //     pair.battlePoint = battlePoint
+        // }))
+        
+        // Initialize teams' lock status
+
+        const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, playerTeamPairs: PlayerTeamPair[]) => {
+            return (await Promise.all(
+                playerTeamPairs.map( async(playerTeamPair): Promise<any> => {
+                    playerTeamPair.locked = !testmode || await isTeamLocked(hre, idleGame, playerTeamPair.teamId)
+                }) 
+            ))
+        }
+
+        await updateLockStatus(hre, idleGame, playerTeamPairs)
+
+        // Verify if all teams are locked.
+
+        const areAllPlayerTeamPairsLocked = (playerTeamPairs: PlayerTeamPair[]): boolean => {
+            return playerTeamPairs.map( ({ locked }) => locked ).every( locked => locked )
+        }
+
+        if ( !testmode && (areAllPlayerTeamPairsLocked(playerTeamPairs)) )
+            return
+
+        
+        // Teams that play to loose...
+
+        const teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+
+
+        // Update teams thar were changed and set interval to update regularly...
+
+        await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, blockstoanalyze)
+
+        const updateTeamBattlePointListener = async (teamId: BigNumber)=>{
+            if (!teamsThatPlayToLooseByTeamId[teamId.toString()])
+                return
+            const { battlePoint } = await idleGame.getTeamInfo(teamId)
+            console.log('Team', teamId.toString(), 'updated battlePoint, from', 
+                teamsThatPlayToLooseByTeamId[teamId.toString()].battlePoint, 'to', battlePoint);
+            teamsThatPlayToLooseByTeamId[teamId.toString()].battlePoint = battlePoint
+        }
+
+        idleGame.on(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
+
+        // Get teams with their minCloseDistanceToStart, averageCloseDistanceToStart and
+        // deviationCloseDistanceToStart
+        const closeDistanceToStartByTeamId: CloseDistanceToStartByTeamId = await getCloseDistanceToStartByTeamId(hre, blockstoanalyze, teamsThatPlayToLooseByTeamId)
+
+        // Set interval for updating teams' lock status.
+
+        const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs), 2000);
+
+        // Listen for CloseGame events to register team for looting
+
+        interface ClosedGameTargets {
+            teamId: BigNumber,
+            closeGameBlocknumber: number,
+            gameId: BigNumber
+        }
+
+        interface ClosedGameTargetsByTeamId {
+            [teamId:string]: ClosedGameTargets
+        }
+
+        const closedGameTargetsByTeamId: ClosedGameTargetsByTeamId = {}
+
+        const addTeamToLootTargets = async (gameId: BigNumber, { transactionHash, blockNumber, getBlock }) => {
+
+            const { teamId } = await idleGame.getGameBasicInfo(gameId)
+
+            if (!teamsThatPlayToLooseByTeamId[teamId.toString()])
+                return
+
+            const targetTeamInfo = teamsThatPlayToLooseByTeamId[teamId.toString()]
+
+            if (!targetTeamInfo.battlePoint)
+                return
+
+            const pairsStrongerThanTarget = playerTeamPairs.filter( p => p.battlePoint > targetTeamInfo.battlePoint)
+
+            if (pairsStrongerThanTarget.length == 0)
+                return
+
+            closedGameTargetsByTeamId[teamId.toString()] = {
+                teamId,
+                closeGameBlocknumber: blockNumber,
+                gameId
+            }
+
+            console.log('CloseGame', transactionHash, 
+                'Added team to loot targets (teamId, blockNumber, gameId)', 
+                teamId.toNumber(), blockNumber, gameId.toNumber()
+            );
+            
+        }
+
+        idleGame.on(idleGame.filters.CloseGame(), addTeamToLootTargets)
+
+        // // Listen for StartGame events to remove the team from the possible target
+        // // with delay applied
+
+        // const removeTeamFromLootTargets = (gameId: BigNumber, teamId: BigNumber) => {
+        //     setTimeout(()=>{
+        //         delete closedGameTargetsByTeamId[teamId.toString()]
+        //     },3000)
+        // }
+
+        // idleGame.on(idleGame.filters.StartGame(), removeTeamFromLootTargets)
+
+        
+        // Set interval to verify if a possible target should be removed considering
+        // the following conditions are met:
+        // 1) game is already looted (use getGameBattleInfo and get status)
+        // 2) currentBlock-closeGameBlock > maxBlocksPerTarget
+        // 3) ?
+
+        const removeCloseGameTargetsInterval = setInterval(() => {
+
+            Object.keys(closedGameTargetsByTeamId).forEach( async(teamId) => {
+
+                const closedGameTarget = closedGameTargetsByTeamId[teamId]
+
+                const { attackTeamId } = await idleGame.getGameBattleInfo(closedGameTarget.gameId)
+
+                // Validate if game is already looted
+                if (!(attackTeamId as BigNumber).isZero()){
+                    console.log(
+                        'Game Looted. Removed team from loot targets (teamId, blockNumber, gameId)', 
+                        teamId, closedGameTarget.closeGameBlocknumber, closedGameTarget.gameId
+                    );
     
+                    delete closedGameTargetsByTeamId[teamId]
+                    return
+                }
+
+                if ((hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber) 
+                    > lootGuessConfig.maxBlocksPerTeams){
+
+                    console.log(
+                        'Max block difference from CloseGame achived. Removed team from loot targets (teamId, blockNumber, gameId)', 
+                        teamId, closedGameTarget.closeGameBlocknumber, closedGameTarget.gameId
+                    );
+    
+                    delete closedGameTargetsByTeamId[teamId]
+                    return
+                }
+
+            })
+
+        }, 3000)
+
+        // Main interval to perform attacks considering the following conditions:
+        // 1) Apply only for looter teams are unlocked
+        // 2) Targets should have battlePoint lower than the maximum looterTeam target battlePoint.
+        // 3) For targets currentBlockNumber-closeGameBlockNumber >= minBlocknumberDistance-2
+        // 4) Apply only for looter teams that have battlePoint higher than minimum target battlePoint.
+
+        const attackTeamsInterval = setInterval(() => {
+
+            // 1) Apply only for looter teams are unlocked
+            const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => !p.locked || testmode )
+
+            if (unlockedPlayerTeamPairs.length == 0)
+                return
+
+            const maxUnlockedLooterBattlePoint = Math.max(
+                ...unlockedPlayerTeamPairs
+                    .map( playerTeamPair => playerTeamPair.battlePoint )
+            )
+
+            const currentBlockNumber = hre.ethers.provider.blockNumber
+
+            const teamIdTargets = Object.keys(closedGameTargetsByTeamId)
+                // 2) Targets should have battlePoint lower than the maximum looterTeam target battlePoint.
+                .filter(teamId => 
+                    teamsThatPlayToLooseByTeamId[teamId] &&
+                    teamsThatPlayToLooseByTeamId[teamId].battlePoint &&
+                    teamsThatPlayToLooseByTeamId[teamId].battlePoint < maxUnlockedLooterBattlePoint )
+                // 3) For targets currentBlockNumber-closeGameBlockNumber >= minBlocknumberDistance-2
+                .filter(teamId => {
+                    const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
+                    const closedGameTarget = closedGameTargetsByTeamId[teamId]
+                    return ((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
+                        >= (closeDistanceToStart.minBlocks-2))
+                })
+            
+            if (teamIdTargets.length == 0)
+                return
+
+            const minTargetBattlePoint = Math.min(
+                ...teamIdTargets.map( teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint )
+            )
+
+            // 4) Apply only for looter teams that have battlePoint higher than minimum target battlePoint.
+            const unlockedPlayerTeamPairsWithEnoughBattlePoint =
+                unlockedPlayerTeamPairs.filter( p => p.battlePoint > minTargetBattlePoint )
+
+            if (unlockedPlayerTeamPairsWithEnoughBattlePoint.length == 0)
+                return
+
+            const unlockedPlayerTeamPairsWithEnoughBattlePointSorted =
+                unlockedPlayerTeamPairsWithEnoughBattlePoint.sort( (a,b) => 
+                    a.battlePoint < b.battlePoint ? -1 : a.battlePoint > b.battlePoint ? 1 : 0
+                )
+
+            interface attackOption {
+                playerAddress: string,
+                looterTeam: BigNumber,
+                targetTeam: BigNumber
+            }
+
+            const attackOption: attackOption[] = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map( p => {
+                return teamIdTargets
+                    .filter( teamId => p.battlePoint > teamsThatPlayToLooseByTeamId[teamId].battlePoint )
+                    .map( teamId => {
+                        return ({
+                            playerAddress: p.playerAddress,
+                            looterTeam: BigNumber.from(p.teamId),
+                            targetTeam: BigNumber.from(teamId),
+                        })
+                    })
+            }).flat()
+
+            console.log(
+                'attackTeams(', 
+                'players=', attackOption.map(x=>x.playerAddress),
+                'looterTeams=', attackOption.map(x=>x.looterTeam),
+                'targetTeams=', attackOption.map(x=>x.targetTeam),
+                ')'
+            )
+
+            // TODO player.attackTeams
+
+        }, 1000)
+
+        // Never finish
+        await new Promise(() => {})
+
+        clearInterval(attackTeamsInterval)
+        idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
+        clearInterval(updateLockStatusInterval)
+        clearInterval(removeCloseGameTargetsInterval)
+
+    })
+    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
+    .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
+    .addOptionalParam("lootersteamsbyaccount", "JSON (array of arrays) with the looters teams ids by account. Example: '[[0,1,2],[4,5],[6]]'.", undefined, types.string)
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+    .addOptionalParam("testmode", "Test mode", true, types.boolean)
+
     
 export const START_GAME_ENCODED_OPERATION = '0xe5ed1d59'
 
