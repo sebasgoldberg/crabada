@@ -935,7 +935,7 @@ task(
 
         const closedGameTargetsByTeamId: ClosedGameTargetsByTeamId = {}
 
-        const addTeamToLootTargets = async (gameId: BigNumber, transactionHash: string, blockNumber: number) => {
+        const addTeamToLootTargets = async (gameId: BigNumber, { transactionHash, blockNumber, getBlock }) => {
 
             const { teamId } = await idleGame.getGameBasicInfo(gameId)
 
@@ -965,26 +965,7 @@ task(
             
         }
 
-        // idleGame.on(idleGame.filters.CloseGame(), addTeamToLootTargets)
-
-        const CLOSE_GAME_FILTER = {
-            fromBlock: 'pending',
-            toBlock: 'pending',
-            address: idleGame.address,
-            topics: [ '0x827e8bff9f46048f8351964d2c871d09e4f4231513cf2fcb786649c68732e24f' ]
-        };
-        
-        const provider = hre.ethers.provider
-        const filterId = await provider.send("eth_newFilter", [CLOSE_GAME_FILTER]);
-
-        const closeGameInterval = setInterval(async () => {
-            const logs = await provider.send("eth_getFilterChanges", [filterId]);
-            for (const log of logs){
-                const gameId = BigNumber.from((log.data as string).slice(0,66))
-                const blockNumber = Number(log.blockNumber)
-                /* no await */ addTeamToLootTargets(gameId, log.transactionHash, blockNumber )
-            }
-        }, 50)
+        idleGame.on(idleGame.filters.CloseGame(), addTeamToLootTargets)
 
         // // Listen for StartGame events to remove the team from the possible target
         // // with delay applied
@@ -1161,7 +1142,6 @@ task(
         await new Promise(() => {})
 
         clearInterval(attackTeamsInterval)
-        clearInterval(closeGameInterval)
         idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
         clearInterval(updateLockStatusInterval)
         clearInterval(removeCloseGameTargetsInterval)
