@@ -815,6 +815,8 @@ task(
     "Loot process based on predict of startGame transactions using the CloseGame events and analyses on teams behaviours.",
     async ({ blockstoanalyze, firstdefendwindow, lootersteamsbyaccount, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
+        const signer = await getSigner(hre, testaccount)
+
         const lootGuessConfig: LootGuessConfig = {
             maxBlocksPerTeams: 55,
             players: [
@@ -883,6 +885,20 @@ task(
 
         await updateLockStatus(hre, idleGame, playerTeamPairs)
 
+        // Sets interval to settleGame for unlocked teams.
+        
+        const settleGameInterval = !testmode && setInterval(async()=>{
+
+            playerTeamPairs
+                .filter(p=>!p.locked)
+                .forEach(async(p)=>{
+                    const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
+                    settleGame(idleGame.connect(signer), currentGameId, 1, ()=>{})
+                })
+
+        }, 2000)
+
+
         // Verify if all teams are locked.
 
         const areAllPlayerTeamPairsLocked = (playerTeamPairs: PlayerTeamPair[]): boolean => {
@@ -916,6 +932,13 @@ task(
         // Get teams with their minCloseDistanceToStart, averageCloseDistanceToStart and
         // deviationCloseDistanceToStart
         const closeDistanceToStartByTeamId: CloseDistanceToStartByTeamId = await getCloseDistanceToStartByTeamId(hre, blockstoanalyze, teamsThatPlayToLooseByTeamId)
+
+        const stepsDistributionForDistanceDeviation: StepMaxValuesByPercentage = getPercentualStepDistribution(
+            Object.keys(closeDistanceToStartByTeamId)
+                .map(teamId => closeDistanceToStartByTeamId[teamId].standardDeviationBlocks)
+                .sort((a,b) => a<b?-1:a>b?1:0),
+            20)
+        console.log('stepsDistributionForDistanceDeviation', stepsDistributionForDistanceDeviation);
 
         // Set interval for updating teams' lock status.
 
@@ -965,23 +988,11 @@ task(
 
         idleGame.on(idleGame.filters.CloseGame(), addTeamToLootTargets)
 
-        // // Listen for StartGame events to remove the team from the possible target
-        // // with delay applied
 
-        // const removeTeamFromLootTargets = (gameId: BigNumber, teamId: BigNumber) => {
-        //     setTimeout(()=>{
-        //         delete closedGameTargetsByTeamId[teamId.toString()]
-        //     },3000)
-        // }
-
-        // idleGame.on(idleGame.filters.StartGame(), removeTeamFromLootTargets)
-
-        
         // Set interval to verify if a possible target should be removed considering
         // the following conditions are met:
         // 1) game is already looted (use getGameBattleInfo and get status)
         // 2) currentBlock-closeGameBlock > maxBlocksPerTarget
-        // 3) ?
 
         const removeCloseGameTargetsInterval = setInterval(() => {
 
@@ -1048,8 +1059,6 @@ task(
 
             const currentBlockNumber = hre.ethers.provider.blockNumber
 
-            console.log('Attack Interval', 'Target teams before filter', Object.keys(closedGameTargetsByTeamId).length);
-
             const teamIdTargets = Object.keys(closedGameTargetsByTeamId)
                 // 2) Targets should have battlePoint lower than the maximum looterTeam target battlePoint.
                 .filter(teamId => {
@@ -1089,7 +1098,6 @@ task(
                 })
             
             if (teamIdTargets.length == 0){
-                console.log('Attack Interval', 'No target teams');
                 return
             }
 
@@ -1112,35 +1120,37 @@ task(
                     a.battlePoint < b.battlePoint ? -1 : a.battlePoint > b.battlePoint ? 1 : 0
                 )
 
-            interface attackOption {
-                playerAddress: string,
-                looterTeam: BigNumber,
-                targetTeam: BigNumber
-            }
+            // interface attackOption {
+            //     playerAddress: string,
+            //     looterTeam: BigNumber,
+            //     targetTeam: BigNumber
+            // }
 
-            const attackOption: attackOption[] = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map( p => {
-                return teamIdTargets
-                    .filter( teamId => p.battlePoint > teamsThatPlayToLooseByTeamId[teamId].battlePoint )
-                    .map( teamId => {
-                        return ({
-                            playerAddress: p.playerAddress,
-                            looterTeam: BigNumber.from(p.teamId),
-                            targetTeam: BigNumber.from(teamId),
-                        })
-                    })
-            }).flat()
+            // const attackOption: attackOption[] = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map( p => {
+            //     return teamIdTargets
+            //         .filter( teamId => p.battlePoint > teamsThatPlayToLooseByTeamId[teamId].battlePoint )
+            //         .map( teamId => {
+            //             return ({
+            //                 playerAddress: p.playerAddress,
+            //                 looterTeam: BigNumber.from(p.teamId),
+            //                 targetTeam: BigNumber.from(teamId),
+            //             })
+            //         })
+            // }).flat()
 
             console.log(
                 'attackTeams(', 
-                'players=', attackOption.map(x=>x.playerAddress),
-                'looterTeams=', attackOption.map(x=>x.looterTeam),
-                'targetTeams=', attackOption.map(x=>x.targetTeam),
+                'players=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.playerAddress),
+                'looterTeams=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.teamId),
+                'looterBattlePoint=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.battlePoint),
+                'targetTeams=', teamIdTargets,
+                'targetBattlePoint=', teamIdTargets.map(teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint),
                 ')'
             )
 
             // TODO player.attackTeams
 
-        }, 1000)
+        }, 2000)
 
         // Never finish
         await new Promise(() => {})
@@ -1149,6 +1159,7 @@ task(
         idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
         idleGame.off(idleGame.filters.CloseGame(), addTeamToLootTargets)
         clearInterval(updateLockStatusInterval)
+        settleGameInterval && clearInterval(settleGameInterval)
         clearInterval(removeCloseGameTargetsInterval)
 
     })
