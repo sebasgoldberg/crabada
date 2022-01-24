@@ -926,7 +926,6 @@ task(
         interface ClosedGameTargets {
             teamId: BigNumber,
             closeGameBlocknumber: number,
-            gameId: BigNumber
         }
 
         interface ClosedGameTargetsByTeamId {
@@ -955,7 +954,6 @@ task(
             closedGameTargetsByTeamId[teamId.toString()] = {
                 teamId,
                 closeGameBlocknumber: blockNumber,
-                gameId
             }
 
             console.log('CloseGame', transactionHash, 
@@ -991,17 +989,23 @@ task(
 
                 const closedGameTarget = closedGameTargetsByTeamId[teamId]
 
-                const { attackTeamId } = await idleGame.getGameBattleInfo(closedGameTarget.gameId)
+                const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(teamId))
 
-                // Validate if game is already looted
-                if (!(attackTeamId as BigNumber).isZero()){
-                    console.log(
-                        'Game Looted. Removed team from loot targets (teamId, blockNumber, gameId)', 
-                        teamId, closedGameTarget.closeGameBlocknumber, closedGameTarget.gameId
-                    );
-    
-                    delete closedGameTargetsByTeamId[teamId]
-                    return
+                if (!(currentGameId as BigNumber).isZero()){
+
+                    const { attackTeamId } = await idleGame.getGameBattleInfo(currentGameId)
+
+                    // Validate if game is already looted
+                    if (!(attackTeamId as BigNumber).isZero()){
+                        console.log(
+                            'Game Looted. Removed team from loot targets (teamId, blockNumber, currentGameId)', 
+                            teamId, closedGameTarget.closeGameBlocknumber, currentGameId.toNumber()
+                        );
+        
+                        delete closedGameTargetsByTeamId[teamId]
+                        return
+                    }
+
                 }
 
                 if ((hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber) 
@@ -1009,7 +1013,7 @@ task(
 
                     console.log(
                         'Max block difference from CloseGame achived. Removed team from loot targets (teamId, blockNumber, gameId)', 
-                        teamId, closedGameTarget.closeGameBlocknumber, closedGameTarget.gameId
+                        teamId, closedGameTarget.closeGameBlocknumber, currentGameId.toNumber()
                     );
     
                     delete closedGameTargetsByTeamId[teamId]
@@ -1143,6 +1147,7 @@ task(
 
         clearInterval(attackTeamsInterval)
         idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
+        idleGame.off(idleGame.filters.CloseGame(), addTeamToLootTargets)
         clearInterval(updateLockStatusInterval)
         clearInterval(removeCloseGameTargetsInterval)
 
