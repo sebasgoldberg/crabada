@@ -876,7 +876,7 @@ task(
         const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, playerTeamPairs: PlayerTeamPair[]) => {
             return (await Promise.all(
                 playerTeamPairs.map( async(playerTeamPair): Promise<any> => {
-                    playerTeamPair.locked = !testmode || await isTeamLocked(hre, idleGame, playerTeamPair.teamId)
+                    playerTeamPair.locked = !testmode || await isTeamLocked(hre, idleGame, playerTeamPair.teamId, ()=>{})
                 }) 
             ))
         }
@@ -1031,8 +1031,11 @@ task(
             // 1) Apply only for looter teams are unlocked
             const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => !p.locked || testmode )
 
-            if (unlockedPlayerTeamPairs.length == 0)
+            if (unlockedPlayerTeamPairs.length == 0){
+                console.log('Attack Interval', 'No unlocked looter teams');
                 return
+            }
+
 
             const maxUnlockedLooterBattlePoint = Math.max(
                 ...unlockedPlayerTeamPairs
@@ -1040,6 +1043,8 @@ task(
             )
 
             const currentBlockNumber = hre.ethers.provider.blockNumber
+
+            console.log('Attack Interval', 'Target teams before filter', Object.keys(closedGameTargetsByTeamId).length);
 
             const teamIdTargets = Object.keys(closedGameTargetsByTeamId)
                 // 2) Targets should have battlePoint lower than the maximum looterTeam target battlePoint.
@@ -1055,8 +1060,10 @@ task(
                         >= (closeDistanceToStart.minBlocks-2))
                 })
             
-            if (teamIdTargets.length == 0)
+            if (teamIdTargets.length == 0){
+                console.log('Attack Interval', 'No target teams');
                 return
+            }
 
             const minTargetBattlePoint = Math.min(
                 ...teamIdTargets.map( teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint )
@@ -1066,8 +1073,11 @@ task(
             const unlockedPlayerTeamPairsWithEnoughBattlePoint =
                 unlockedPlayerTeamPairs.filter( p => p.battlePoint > minTargetBattlePoint )
 
-            if (unlockedPlayerTeamPairsWithEnoughBattlePoint.length == 0)
+            if (unlockedPlayerTeamPairsWithEnoughBattlePoint.length == 0){
+                console.log('Attack Interval', 'No unlocked looter teams with enough battle points', 
+                    unlockedPlayerTeamPairs.map( p => p.battlePoint), '<=', minTargetBattlePoint)
                 return
+            }
 
             const unlockedPlayerTeamPairsWithEnoughBattlePointSorted =
                 unlockedPlayerTeamPairsWithEnoughBattlePoint.sort( (a,b) => 
