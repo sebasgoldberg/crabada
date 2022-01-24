@@ -808,6 +808,7 @@ interface LootGuessConfig {
         teams: number[]
     }[],
     maxBlocksPerTeams: number,
+    maxStandardDeviation: number
 }
 
 task(
@@ -819,6 +820,7 @@ task(
 
         const lootGuessConfig: LootGuessConfig = {
             maxBlocksPerTeams: 55,
+            maxStandardDeviation: 10,
             players: [
                 {
                     address: 'P1',
@@ -974,6 +976,20 @@ task(
             if (pairsStrongerThanTarget.length == 0)
                 return
 
+            const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
+
+            if (!closeDistanceToStart){
+                return
+            }
+
+            if (closeDistanceToStart.standardDeviationBlocks>lootGuessConfig.maxStandardDeviation){
+                console.log('CloseGame:', transactionHash, 
+                    'Discarded:', 'Deviation', 
+                    closeDistanceToStart.standardDeviationBlocks, '>', lootGuessConfig.maxStandardDeviation,
+                )
+                return
+            }
+
             closedGameTargetsByTeamId[teamId.toString()] = {
                 teamId,
                 closeGameBlocknumber: blockNumber,
@@ -1019,11 +1035,18 @@ task(
 
                 }
 
+                const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
+
+                const deviationToUse = Math.min(5, closeDistanceToStart.standardDeviationBlocks)
+
                 if ((hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber) 
-                    > lootGuessConfig.maxBlocksPerTeams){
+                    > (closeDistanceToStart.averageBlocks+deviationToUse)){
 
                     console.log(
-                        'Max block difference from CloseGame achived. Removed team from loot targets (teamId, blockNumber, gameId)', 
+                        'Max block difference from CloseGame achived', 
+                        hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber, '>',
+                        closeDistanceToStart.averageBlocks+deviationToUse,
+                        'Removed team from loot targets (teamId, blockNumber, gameId)', 
                         teamId, closedGameTarget.closeGameBlocknumber, currentGameId.toNumber()
                     );
     
@@ -1080,21 +1103,23 @@ task(
                     teamsThatPlayToLooseByTeamId[teamId].battlePoint < maxUnlockedLooterBattlePoint
                 })
 
-                // 3) For targets currentBlockNumber-closeGameBlockNumber >= minBlocknumberDistance-2
+                // 3) For targets currentBlockNumber-closeGameBlockNumber >= average-deviation
                 .filter(teamId => {
                     
                     const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
                     const closedGameTarget = closedGameTargetsByTeamId[teamId]
+
+                    const deviationToUse = Math.min(5, closeDistanceToStart.standardDeviationBlocks)
                     
                     if (((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
-                        < (closeDistanceToStart.minBlocks-2))){
+                        < (closeDistanceToStart.averageBlocks-deviationToUse))){
                         console.log('Attack Interval', 'Actual distance', 
                             currentBlockNumber-closedGameTarget.closeGameBlocknumber, 'lower than min distance',
-                            closeDistanceToStart.minBlocks-2)
+                            closeDistanceToStart.averageBlocks-deviationToUse)
                     }
                     
                     return ((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
-                        >= (closeDistanceToStart.minBlocks-2))
+                        >= (closeDistanceToStart.averageBlocks-deviationToUse))
                 })
             
             if (teamIdTargets.length == 0){
