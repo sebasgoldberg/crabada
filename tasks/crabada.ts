@@ -1048,14 +1048,38 @@ task(
 
             const teamIdTargets = Object.keys(closedGameTargetsByTeamId)
                 // 2) Targets should have battlePoint lower than the maximum looterTeam target battlePoint.
-                .filter(teamId => 
-                    teamsThatPlayToLooseByTeamId[teamId] &&
+                .filter(teamId => {
+                    if (!teamsThatPlayToLooseByTeamId[teamId]){
+                        console.log('Attack Interval', 'Team', Number(teamId), 'does not play to loose.');
+                    }
+
+                    if (!teamsThatPlayToLooseByTeamId[teamId].battlePoint){
+                        console.log('Attack Interval', 'Team', Number(teamId), 'does not has battlePoint defined.');
+                    }
+                    
+                    if (teamsThatPlayToLooseByTeamId[teamId].battlePoint >= maxUnlockedLooterBattlePoint){
+                        console.log('Attack Interval', 'Team', Number(teamId), 'has higher battlePoint', 
+                            teamsThatPlayToLooseByTeamId[teamId].battlePoint, 'than', maxUnlockedLooterBattlePoint);
+                    }
+                    
+                    return teamsThatPlayToLooseByTeamId[teamId] &&
                     teamsThatPlayToLooseByTeamId[teamId].battlePoint &&
-                    teamsThatPlayToLooseByTeamId[teamId].battlePoint < maxUnlockedLooterBattlePoint )
+                    teamsThatPlayToLooseByTeamId[teamId].battlePoint < maxUnlockedLooterBattlePoint
+                })
+
                 // 3) For targets currentBlockNumber-closeGameBlockNumber >= minBlocknumberDistance-2
                 .filter(teamId => {
+                    
                     const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
                     const closedGameTarget = closedGameTargetsByTeamId[teamId]
+                    
+                    if (((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
+                        < (closeDistanceToStart.minBlocks-2))){
+                        console.log('Attack Interval', 'Actual distance', 
+                            currentBlockNumber-closedGameTarget.closeGameBlocknumber, 'lower than min distance',
+                            closeDistanceToStart.minBlocks-2)
+                    }
+                    
                     return ((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
                         >= (closeDistanceToStart.minBlocks-2))
                 })
