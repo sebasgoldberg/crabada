@@ -1165,11 +1165,11 @@ task(
 
             console.log(
                 'attackTeams(', 
-                'players=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.playerAddress),
-                'looterTeams=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.teamId),
-                'looterBattlePoint=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.battlePoint),
-                'targetTeams=', teamIdTargets,
-                'targetBattlePoint=', teamIdTargets.map(teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint),
+                'players=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.playerAddress).toString(),
+                'looterTeams=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.teamId).toString(),
+                'looterBattlePoint=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.battlePoint).toString(),
+                'targetTeams=', teamIdTargets.toString(),
+                'targetBattlePoint=', teamIdTargets.map(teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint).toString(),
                 ')'
             )
 
