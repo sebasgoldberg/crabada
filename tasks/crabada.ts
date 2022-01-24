@@ -1482,3 +1482,29 @@ task(
     .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
     .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355,5357,6152" , types.string)
     .addOptionalParam("steps", "Step to consider in the distance analysis.", 10 , types.int)
+
+task(
+    "pendingtransactions",
+    "Test retrieve of pending transactions.",
+    async ({ }, hre: HardhatRuntimeEnvironment) => {
+        
+        await (new Promise(async () => {
+            const { idleGame } = getCrabadaContracts(hre)
+
+            const provider = hre.ethers.provider
+            const filterId = await provider.send("eth_newPendingTransactionFilter", []);
+            console.log(filterId);
+    
+            await (new Promise(() => {
+    
+                setInterval(async () => {
+                    const pendingTransactions: string[] = await provider.send("eth_getFilterChanges", [filterId]);
+                    console.log('pendingTransactions', pendingTransactions.length);
+                    pendingTransactions.slice(0,3).forEach( async(t) => console.log(await provider.getTransaction(t)))
+                }, 1000)
+    
+            }))
+    
+        }))
+
+    })
