@@ -1508,3 +1508,45 @@ task(
         }))
 
     })
+
+
+task(
+    "iswinner",
+    "Checks quantity of won games for teams with the specified battlepoints.",
+    async ({ fromblock, toblock, blocksquan, battlepoints }, hre: HardhatRuntimeEnvironment) => {
+
+        const provider = hre.ethers.provider
+        const { fromBlock, toBlock } = await getBlocksInterval(hre, fromblock, toblock ? toblock-1800*5 : provider.blockNumber-1800*5, blocksquan)
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        const startGameEvents = await queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, toBlock)
+
+        let win = 0
+        let loose = 0
+
+        await Promise.all(startGameEvents.map(async(e) =>{
+
+            const { gameId, teamId } = e.args
+
+            const { battlePoint } = await idleGame.getTeamInfo(teamId)
+
+            if (battlePoint != battlepoints)
+                return
+            
+            const { attackTeamId } = await idleGame.getGameBattleInfo(gameId);
+
+            if ((attackTeamId as BigNumber).isZero())
+                win++
+            else
+                loose++
+        }))
+
+        console.log('Win', win)
+        console.log('Loose', loose)
+
+    })
+    .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)
+    .addOptionalParam("toblock", "To from.", undefined , types.int)
+    .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
+    .addOptionalParam("battlepoints", "Battle points.", 235*3 , types.int)
