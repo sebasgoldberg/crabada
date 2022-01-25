@@ -1529,17 +1529,26 @@ task(
 
             const { gameId, teamId } = e.args
 
+            const gameBattleInfoPromise = idleGame.getGameBattleInfo(gameId)
+
             const { battlePoint } = await idleGame.getTeamInfo(teamId)
 
             if (battlePoint != battlepoints)
                 return
             
-            const { attackTeamId } = await idleGame.getGameBattleInfo(gameId);
+            const { attackTeamId } = await gameBattleInfoPromise
 
             if ((attackTeamId as BigNumber).isZero())
                 win++
-            else
-                loose++
+            else{
+                const { battlePoint: attackBattlePoint } = await idleGame.getTeamInfo(attackTeamId)
+
+                if (battlePoint >= attackBattlePoint)
+                    win++
+                else
+                    loose++
+            }
+                
         }))
 
         console.log('Win', win)
