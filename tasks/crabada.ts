@@ -1026,16 +1026,20 @@ task(
                 teamIds.forEach( teamId => {
                     if (!this.gameInfoByGameId[teamId]){
                         this.gameInfoByGameId[teamId] = { attackTransactions: 0 }
-                        this.failedGameAttacks++
                     }
                     this.gameInfoByGameId[teamId].attackTransactions++    
                 })
             }
 
-            lootTeam(teamId){
+            lootTeam(teamId: string){
                 if (this.gameInfoByGameId[teamId] && this.gameInfoByGameId[teamId].attackTransactions>0){
-                    this.failedGameAttacks--
                     this.effectiveGameAttacks++
+                }
+            }
+
+            maxAttacksAchivedForTeam(teamId: string){
+                if (this.gameInfoByGameId[teamId] && this.gameInfoByGameId[teamId].attackTransactions>0){
+                    this.failedGameAttacks++
                 }
             }
 
@@ -1092,6 +1096,8 @@ task(
                 if ((hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber) 
                     > (closeDistanceToStart.averageBlocks+deviationToUse)){
 
+                    metrics.maxAttacksAchivedForTeam(teamId)
+                    
                     console.log(
                         'Max block difference from CloseGame achived', 
                         hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber, '>',
