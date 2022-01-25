@@ -1019,6 +1019,7 @@ task(
             attackTransactions: number = 0
             effectiveGameAttacks: number = 0 // Attack until looted
             failedGameAttacks: number = 0 // Attack but no loot
+            startTime: number = +new Date()
             gameInfoByGameId: GameInfoByGameId = {}
 
             attackTeams(teamIds: string[]){
@@ -1048,6 +1049,7 @@ task(
                     attackTransactions: this.attackTransactions,
                     effectiveGameAttacks: this.effectiveGameAttacks,
                     failedGameAttacks: this.failedGameAttacks,
+                    timeElapsedInSeconds: (+new Date() - this.startTime)/1000
                 });    
             }
 
