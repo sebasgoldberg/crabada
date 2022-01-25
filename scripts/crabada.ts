@@ -685,7 +685,6 @@ export const fightDistanceDistribution = async (
 export type StartGameDistances = number[]
 
 export interface CloseDistanceToStart {
-    minBlocks: number,
     averageBlocks: number,
     standardDeviationBlocks: number
 }
@@ -824,17 +823,37 @@ export const getCloseDistanceToStartByTeamId = async (
                 eventsBlockNumbersForTeam.startGameBlockNumbers[index]-closeGameBlockNumber)
 
 
-            const minBlocks = Math.min(...distances)
             const averageBlocks = distances
                 .reduce( (prev, current) => prev+current, 0)/distances.length
             const varianceBlocks = distances
                 .reduce( (prev, current) => prev+Math.pow(averageBlocks-current, 2), 0)/distances.length
             const standardDeviationBlocks = Math.sqrt(varianceBlocks)
 
-            closeDistanceToStartByTeamId[teamId] = {
-                minBlocks,
-                averageBlocks,
-                standardDeviationBlocks,
+            const farFromAverage = distances.map( (distance) => Math.abs(distance-averageBlocks) > 3*standardDeviationBlocks )
+
+            const countFarFromAverage = farFromAverage.reduce((prev, current) => current ? prev+1 : prev, 0)
+
+            if (countFarFromAverage == 1){
+
+                // Discard the value far from average and recalculate
+
+                const farFromAverageValue = farFromAverage.reduce((prev, current, currentIdex )=> current ? distances[currentIdex] : prev, distances[0])
+
+                const newAverage = ((averageBlocks*distances.length)-farFromAverageValue)/(distances.length-1)
+                const newVariance = ((varianceBlocks*distances.length)-Math.pow(averageBlocks-farFromAverageValue, 2))/(distances.length-1)
+
+                closeDistanceToStartByTeamId[teamId] = {
+                    averageBlocks: newAverage,
+                    standardDeviationBlocks: Math.sqrt(newVariance),
+                }
+
+            }else{
+
+                closeDistanceToStartByTeamId[teamId] = {
+                    averageBlocks,
+                    standardDeviationBlocks,
+                }
+    
             }
     
         })

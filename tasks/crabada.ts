@@ -1004,6 +1004,53 @@ task(
 
         idleGame.on(idleGame.filters.CloseGame(), addTeamToLootTargets)
 
+        // Metrics implementation
+
+        interface GameInfo {
+            attackTransactions: number,
+        }
+
+        interface GameInfoByGameId {
+            [teamId: string]: GameInfo
+        }
+
+        class Metrics {
+
+            attackTransactions: number = 0
+            effectiveGameAttacks: number = 0 // Attack until looted
+            failedGameAttacks: number = 0 // Attack but no loot
+            gameInfoByGameId: GameInfoByGameId = {}
+
+            attackTeams(teamIds: string[]){
+                this.attackTransactions++
+                teamIds.forEach( teamId => {
+                    if (!this.gameInfoByGameId[teamId]){
+                        this.gameInfoByGameId[teamId] = { attackTransactions: 0 }
+                        this.failedGameAttacks++
+                    }
+                    this.gameInfoByGameId[teamId].attackTransactions++    
+                })
+            }
+
+            lootTeam(teamId){
+                if (this.gameInfoByGameId[teamId] && this.gameInfoByGameId[teamId].attackTransactions>0){
+                    this.failedGameAttacks--
+                    this.effectiveGameAttacks++
+                }
+            }
+
+            log(){
+                console.log('Metrics', {
+                    attackTransactions: this.attackTransactions,
+                    effectiveGameAttacks: this.effectiveGameAttacks,
+                    failedGameAttacks: this.failedGameAttacks,
+                });    
+            }
+
+        }
+
+        const metrics = new Metrics()
+
 
         // Set interval to verify if a possible target should be removed considering
         // the following conditions are met:
@@ -1024,6 +1071,9 @@ task(
 
                     // Validate if game is already looted
                     if (!(attackTeamId as BigNumber).isZero()){
+
+                        metrics.lootTeam(teamId)
+
                         console.log(
                             'Game Looted. Removed team from loot targets (teamId, blockNumber, currentGameId)', 
                             teamId, closedGameTarget.closeGameBlocknumber, currentGameId.toNumber()
@@ -1057,6 +1107,10 @@ task(
             })
 
         }, 3000)
+
+        setInterval( () => {
+            metrics.log()
+        }, 15000)
 
         // Main interval to perform attacks considering the following conditions:
         // 1) Apply only for looter teams are unlocked
@@ -1162,6 +1216,8 @@ task(
             //             })
             //         })
             // }).flat()
+
+            metrics.attackTeams(teamIdTargets)
 
             console.log(
                 'attackTeams(', 
