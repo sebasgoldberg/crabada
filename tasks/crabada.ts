@@ -820,7 +820,7 @@ task(
 
         const lootGuessConfig: LootGuessConfig = {
             maxBlocksPerTeams: 55,
-            maxStandardDeviation: 10,
+            maxStandardDeviation: 14,
             players: [
                 {
                     address: 'P1',
