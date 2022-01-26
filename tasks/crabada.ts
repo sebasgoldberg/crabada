@@ -8,7 +8,7 @@ import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
 import { format } from "path/posix";
-import { CONFIG_BY_NODE_ID, LootersTeamsByAccountIndex } from "../config/nodes";
+import { CONFIG_BY_NODE_ID, NodeConfig,  } from "../config/nodes";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -744,12 +744,12 @@ task(
         if (!(hre.config.nodeId in CONFIG_BY_NODE_ID))
             return
 
-        const lootersTeamsByAccountIndex: LootersTeamsByAccountIndex = lootersteamsbyaccount ? 
+        const nodeConfig: NodeConfig = lootersteamsbyaccount ? 
             JSON.parse(lootersteamsbyaccount) : CONFIG_BY_NODE_ID[hre.config.nodeId]
 
         const { idleGame } = getCrabadaContracts(hre)
 
-        const lootersTeams = lootersTeamsByAccountIndex.flat()
+        const lootersTeams = nodeConfig.accountsConfigs.map(c=>c.teams).flat()
 
         if (lootersTeams.length == 0)
             return
@@ -774,13 +774,13 @@ task(
 
         while (testmode || !(await areAllTeamsLocked(hre, idleGame, lootersTeams))){
 
-            for (let accountIndex=0; accountIndex<lootersTeamsByAccountIndex.length; accountIndex++){
+            for (const accountConfig of nodeConfig.accountsConfigs){
 
-                const signer = await getSigner(hre, testaccount, accountIndex)
+                const signer = await getSigner(hre, testaccount, accountConfig.accountIndex)
     
                 console.log('Looting with signer', signer.address);
     
-                for (const looterTeamId of lootersTeamsByAccountIndex[accountIndex]){
+                for (const looterTeamId of accountConfig.teams){
     
                     console.log('Looting with team id', looterTeamId);
     
