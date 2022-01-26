@@ -98,13 +98,13 @@ export const waitTransaction = async (trx: TransactionResponse, blocksToWait: nu
     await trx.wait(blocksToWait)
 }
 
-const abi = {
+export const abi = {
     IdleGame: IdleGameAbi,
     ERC20: ERC20Abi,
     Crabada: CrabadaAbi,
 }
   
-const contractAddress = {
+export const contractAddress = {
     IdleGame: '0x82a85407BD612f52577909F4A58bfC6873f14DA8',
     tusToken: '0xf693248F96Fe03422FEa95aC0aFbBBc4a8FdD172',
     craToken: '0xa32608e873f9ddef944b24798db69d80bbb4d1ed',
