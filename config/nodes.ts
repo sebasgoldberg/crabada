@@ -32,7 +32,7 @@ export const CONFIG_BY_NODE_ID: ConfigByNodeId = {
     1: { accountsConfigs: [looter1] },
     2: { accountsConfigs: [main, looter2, looter1] },
     4: { accountsConfigs: [looter1]},
-    5: { accountsConfigs: [main, looter2, looter1] },
-    9: { accountsConfigs: [main, looter2, looter1] },
+    5: { accountsConfigs: [main, looter2, ] },
+    9: { accountsConfigs: [main, looter2, ] },
     //10: [[], [5355, 5357, 6152], []],
 }
