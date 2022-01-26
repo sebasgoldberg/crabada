@@ -1165,7 +1165,13 @@ export const loot = async (
         }, 60*1000)
 
         const attackStartedGameInterval = setInterval(async () => {
-            const logs = await provider.send("eth_getFilterChanges", [filterId]);
+            const logs: any[] = (await provider.send("eth_getFilterChanges", [filterId]))
+                .sort((a, b) =>
+                ( a.blockNumber < b.blockNumber ? -1 
+                : a.blockNumber > b.blockNumber ? 1
+                : 0 ) * -1 // Sorted descending by blocknumber
+            )
+
             for (const log of logs){
                 const gameId = BigNumber.from((log.data as string).slice(0,66))
                 const teamId = BigNumber.from('0x'+(log.data as string).slice(66,130))
