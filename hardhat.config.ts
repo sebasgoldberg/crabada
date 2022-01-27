@@ -84,9 +84,6 @@ extendConfig(
 );
 
 export default {
-  gasReporter: {
-    enabled: true,
-  },
   solidity: {
     compilers: [
       {
@@ -139,5 +136,8 @@ export default {
       timeout: 60000,
     }
   },
-  nodeId: NODE_ID
+  nodeId: NODE_ID,
+  gasReporter: {
+    enabled: false,
+  },
 }

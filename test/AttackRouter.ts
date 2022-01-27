@@ -355,6 +355,54 @@ describe.only('AttackRouter', function () {
 
   });
 
+  it('Should be possible to attack with one looter if another looter is busy.', async function () {
+
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
+
+    const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
+
+    let battlePoints: number[] = await Promise.all(
+      [team1p1, team1p2, target1, target2]
+        .map( async(teamId) => {
+          const { battlePoint } = await idleGame.getTeamInfo(teamId)
+          return battlePoint
+        })
+    )
+
+    await Promise.all(
+      [target1, target2]
+        .map( async(targetTeamId) => await idleGame.connect(looter1).startGame(targetTeamId))
+    )
+
+    const { currentGameId: target1CurrentGameId } = await idleGame.getTeamInfo(target1)
+    await player1.connect(owner).attack(target1CurrentGameId, team1p1)
+
+    await attackRouter.connect(owner).attackTeams(
+      idleGame.address, 
+      battlePoints[0] <= battlePoints[1] ? [player1.address, player2.address] : [player2.address, player1.address], 
+      battlePoints[0] <= battlePoints[1] ? [team1p1, team1p2] : [team1p2, team1p1], 
+      battlePoints[0] <= battlePoints[1] ? [battlePoints[0], battlePoints[1]] : [battlePoints[1], battlePoints[0]],
+      [target2],
+      [battlePoints[3]]
+    )
+
+    const attackTeamsIds = await Promise.all(
+      [target2]
+        .map( async(targetTeamId) => {
+          const { currentGameId: targetCurrentGameId } = await idleGame.getTeamInfo(targetTeamId)
+          const { attackTeamId } = await idleGame.getGameBattleInfo(targetCurrentGameId)
+          return attackTeamId
+        })
+    )
+
+    const sAttackTeamsIds = attackTeamsIds.map(x=>x.toString())
+    expect(
+      sAttackTeamsIds.includes(team1p2.toString())
+      ).to.be.true
+
+  });
+
   it('Should revert when target are not mining.', async function () {
 
     const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
