@@ -1469,14 +1469,17 @@ task(
 
         console.log('fightEvents', fightEvents.length);
 
-        const gasPrices = await Promise.all(
+        const gasPrices = (await Promise.all(
             fightEvents
                 .filter((e: ethers.Event) =>{
                     const { turn, defensePoint } = e.args
                     return (turn == 0) && (defensePoint >= battlepointfrom) && (defensePoint <= battlepointto)
                 })
-                .map( async(e: ethers.Event) => (await e.getTransactionReceipt()).effectiveGasPrice )
-        )
+                .map( async(e: ethers.Event) => {
+                    const tr = await e.getTransactionReceipt()
+                    return tr ? tr.effectiveGasPrice : undefined
+                })
+        )).filter(undefined)
 
         const gasPricesSortedAsc = gasPrices.sort(compareBigNumbers)
 
