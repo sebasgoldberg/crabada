@@ -1027,6 +1027,37 @@ interface StartGameEvent {
     blockNumber: BigNumber,
 }
 
+/*
+<610: 318-25
+<620: 318-25
+<630: 297-25
+<640: 281-25
+<650: 159-25
+<660: 159-25
+<670: 86-25
+*/
+const GAS_PERCENTUAL_PROBABILITY_TO_USE = 90
+
+interface GasPriceScale {
+    battlePointUpTo: number
+    gasPricesByProbability: {
+        70: number,
+        80: number,
+        90: number,
+    }
+}
+
+const gasPriceScale: GasPriceScale[] = [
+    { battlePointUpTo: 610, gasPricesByProbability: { 70: 176, 80: 296, 90: 326 } },
+    { battlePointUpTo: 620, gasPricesByProbability: { 70: 183, 80: 317, 90: 341 } },
+    { battlePointUpTo: 630, gasPricesByProbability: { 70: 155, 80: 236, 90: 318 } },
+    { battlePointUpTo: 640, gasPricesByProbability: { 70: 154, 80: 238, 90: 320 } },
+    { battlePointUpTo: 650, gasPricesByProbability: { 70: 154, 80: 238, 90: 319 } },
+    { battlePointUpTo: 660, gasPricesByProbability: { 70: 130, 80: 183, 90: 318 } },
+    { battlePointUpTo: 670, gasPricesByProbability: { 70: 92, 80: 137, 90: 204 } },
+]
+
+
 abstract class AttackStrategy{
 
     connectedContract: Contract
@@ -1041,32 +1072,49 @@ abstract class AttackStrategy{
         this.isEliteTeam = isEliteTeam
     }
 
-    abstract attack(e: StartGameEvent): Promise<TransactionResponse>
+    abstract attack(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>
 
-    abstract attackCallStatic(e: StartGameEvent): Promise<TransactionResponse>
+    abstract attackCallStatic(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>
 
-    getOverride(){
+    getAttackMaxPriorityFee(targetBattlePoint: number): BigNumber{
+
+        for(const gasPrice of gasPriceScale){
+            if (targetBattlePoint <= gasPrice.battlePointUpTo)
+                return (BigNumber
+                    .from(ONE_GWEI)
+                    .mul(gasPrice.gasPricesByProbability[GAS_PERCENTUAL_PROBABILITY_TO_USE]-25)
+                    .add(this.nodeId))
+        }
+
+        return (BigNumber
+            .from(ONE_GWEI)
+            .mul(gasPriceScale[gasPriceScale.length-1].gasPricesByProbability[GAS_PERCENTUAL_PROBABILITY_TO_USE]-25)
+            .add(this.nodeId))
+
+    }
+
+    getOverride(targetBattlePoint: number){
+
+
         return ({
             gasLimit: GAS_LIMIT,
             maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-            maxPriorityFeePerGas: this.isEliteTeam ?
-                ATTACK_MAX_PRIORITY_GAS_PRICE_ELITE_TEAM.add(this.nodeId)
-                : ATTACK_MAX_PRIORITY_GAS_PRICE.add(this.nodeId)
+            maxPriorityFeePerGas: this.getAttackMaxPriorityFee(targetBattlePoint)
         })
     }
 }
 
 class IddleGameAttackStrategy extends AttackStrategy{
 
-    async attack(e: StartGameEvent): Promise<TransactionResponse>{
+    async attack(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>{
 
-        return await this.connectedContract.attack(e.gameId, this.looterTeamId, this.getOverride())
+        return await this.connectedContract.attack(e.gameId, this.looterTeamId, this.getOverride(targetBattlePoint))
 
     }
 
-    async attackCallStatic(e: StartGameEvent): Promise<TransactionResponse>{
+    async attackCallStatic(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>{
 
-        return await this.connectedContract.callStatic.attack(e.gameId, this.looterTeamId, this.getOverride())
+        return await this.connectedContract.callStatic.attack(e.gameId, this.looterTeamId, this.getOverride(targetBattlePoint))
 
     }
 
@@ -1074,15 +1122,15 @@ class IddleGameAttackStrategy extends AttackStrategy{
 
 class PlayerAttackStrategy extends AttackStrategy{
 
-    async attack(e: StartGameEvent): Promise<TransactionResponse>{
+    async attack(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>{
 
-        return await this.connectedContract.attackTeam(e.teamId, this.looterTeamId, this.getOverride())
+        return await this.connectedContract.attackTeam(e.teamId, this.looterTeamId, this.getOverride(targetBattlePoint))
 
     }
 
-    async attackCallStatic(e: StartGameEvent): Promise<TransactionResponse>{
+    async attackCallStatic(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>{
 
-        return await this.connectedContract.callStatic.attackTeam(e.teamId, this.looterTeamId, this.getOverride())
+        return await this.connectedContract.callStatic.attackTeam(e.teamId, this.looterTeamId, this.getOverride(targetBattlePoint))
 
     }
 
@@ -1165,7 +1213,13 @@ export const loot = async (
         }, 60*1000)
 
         const attackStartedGameInterval = setInterval(async () => {
-            const logs = await provider.send("eth_getFilterChanges", [filterId]);
+            const logs: any[] = (await provider.send("eth_getFilterChanges", [filterId]))
+                .sort((a, b) =>
+                ( a.blockNumber < b.blockNumber ? -1 
+                : a.blockNumber > b.blockNumber ? 1
+                : 0 ) * -1 // Sorted descending by blocknumber
+            )
+
             for (const log of logs){
                 const gameId = BigNumber.from((log.data as string).slice(0,66))
                 const teamId = BigNumber.from('0x'+(log.data as string).slice(66,130))
@@ -1220,12 +1274,12 @@ export const loot = async (
 
                 if (!testMode){
 
-                    transactionResponse = await attackStrategy.attack(e)
+                    transactionResponse = await attackStrategy.attack(e, possibleTarget.battlePoint)
 
                 }
                 else{
 
-                    transactionResponse = await attackStrategy.attackCallStatic(e)
+                    transactionResponse = await attackStrategy.attackCallStatic(e, possibleTarget.battlePoint)
 
                 }
 

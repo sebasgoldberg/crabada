@@ -2,13 +2,13 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther, parseUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbersDescending, deployPlayer, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
+import { attachPlayer, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, deployPlayer, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
 import { format } from "path/posix";
-import { CONFIG_BY_NODE_ID, LootersTeamsByAccountIndex } from "../config/nodes";
+import { CONFIG_BY_NODE_ID, NodeConfig,  } from "../config/nodes";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -744,12 +744,12 @@ task(
         if (!(hre.config.nodeId in CONFIG_BY_NODE_ID))
             return
 
-        const lootersTeamsByAccountIndex: LootersTeamsByAccountIndex = lootersteamsbyaccount ? 
+        const nodeConfig: NodeConfig = lootersteamsbyaccount ? 
             JSON.parse(lootersteamsbyaccount) : CONFIG_BY_NODE_ID[hre.config.nodeId]
 
         const { idleGame } = getCrabadaContracts(hre)
 
-        const lootersTeams = lootersTeamsByAccountIndex.flat()
+        const lootersTeams = nodeConfig.accountsConfigs.map(c=>c.teams).flat()
 
         if (lootersTeams.length == 0)
             return
@@ -774,13 +774,13 @@ task(
 
         while (testmode || !(await areAllTeamsLocked(hre, idleGame, lootersTeams))){
 
-            for (let accountIndex=0; accountIndex<lootersTeamsByAccountIndex.length; accountIndex++){
+            for (const accountConfig of nodeConfig.accountsConfigs){
 
-                const signer = await getSigner(hre, testaccount, accountIndex)
+                const signer = await getSigner(hre, testaccount, accountConfig.accountIndex)
     
                 console.log('Looting with signer', signer.address);
     
-                for (const looterTeamId of lootersTeamsByAccountIndex[accountIndex]){
+                for (const looterTeamId of accountConfig.teams){
     
                     console.log('Looting with team id', looterTeamId);
     
@@ -1450,6 +1450,53 @@ task(
  *   a) Reverted transactions that attack teams already looted in other block.
  *   b) Gas price distance from winner attack and its distribution (requires to attack same team).
  */
+
+ task(
+    "attackgasdist",
+    "Get the distribution of gas prices for attack transactions for targets between the battle point limits.",
+    async ({ blockstoanalyze, firstdefendwindow, battlepointfrom, battlepointto, steps }, hre: HardhatRuntimeEnvironment) => {
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        const fightEventsPromise = queryFilterByPage(hre, idleGame, idleGame.filters.Fight(), 
+            hre.ethers.provider.blockNumber-blockstoanalyze, hre.ethers.provider.blockNumber)
+
+        const teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+
+        await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, blockstoanalyze)
+
+        const fightEvents = await fightEventsPromise
+
+        console.log('fightEvents', fightEvents.length);
+
+        const gasPrices = (await Promise.all(
+            fightEvents
+                .filter((e: ethers.Event) =>{
+                    const { turn, defensePoint } = e.args
+                    return (turn == 0) && (defensePoint >= battlepointfrom) && (defensePoint <= battlepointto)
+                })
+                .map( async(e: ethers.Event) => {
+                    const tr = await e.getTransactionReceipt()
+                    return tr ? tr.effectiveGasPrice : undefined
+                })
+        )).filter(undefined)
+
+        const gasPricesSortedAsc = gasPrices.sort(compareBigNumbers)
+
+        const gasPricesSortedInGwei = gasPricesSortedAsc.map(x => x.div(ONE_GWEI).toNumber())
+
+
+        const stepsDistributionForGasPrices: StepMaxValuesByPercentage = getPercentualStepDistribution(
+            gasPricesSortedInGwei, steps)
+
+        console.log('stepsDistributionForGasPrices', stepsDistributionForGasPrices);
+
+    })
+    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
+    .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
+    .addOptionalParam("battlepointfrom", "Battle point from for the target teams to be included in the analisys.", 0, types.int)
+    .addOptionalParam("battlepointto", "Battle point from for the target teams to be included in the analisys.", 711, types.int)
+    .addOptionalParam("steps", "Step to consider in the gas price analysis.", 10 , types.int)
 
 task(
     "successgasdiff",
