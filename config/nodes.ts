@@ -19,7 +19,7 @@ const main: AccountConfig = {
 
 const looter1: AccountConfig = {
     accountIndex: 1,
-    teams: [5355, 5357, 6152]
+    teams: [/*5355,*/ 5357/*, 6152*/]
 }
 
 const looter2: AccountConfig = {
