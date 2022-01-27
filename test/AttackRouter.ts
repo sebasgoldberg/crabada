@@ -431,4 +431,41 @@ describe.only('AttackRouter', function () {
 
   });
 
+  it('Should revert if all looters are busy.', async function () {
+
+    await player1.connect(owner).addOwner(attackRouter.address)
+    await player2.connect(owner).addOwner(attackRouter.address)
+
+    const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
+
+    let battlePoints: number[] = await Promise.all(
+      [team1p1, target1]
+        .map( async(teamId) => {
+          const { battlePoint } = await idleGame.getTeamInfo(teamId)
+          return battlePoint
+        })
+    )
+
+    await Promise.all(
+      [target1, target2]
+        .map( async(targetTeamId) => await idleGame.connect(looter1).startGame(targetTeamId))
+    )
+
+    const { currentGameId } = await idleGame.getTeamInfo(target2)
+    await player1.connect(owner).attack(currentGameId, team1p1)
+
+    await 
+    expect(
+      attackRouter.connect(owner).attackTeams(
+        idleGame.address, 
+        [player1.address], 
+        [team1p1],
+        [battlePoints[0]],
+        [target1],
+        [battlePoints[1]]
+      )
+    ).to.be.revertedWith('ROUTER: NO ATTACK PERFORMED')
+
+  });
+
 });
