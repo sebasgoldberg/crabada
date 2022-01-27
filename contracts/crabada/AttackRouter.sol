@@ -57,7 +57,7 @@ contract AttackRouter is MultiOwnable{
             ) = idleGame.getTeamInfo(targetTeamIds[targetIndex]);
 
             // To avoid GAME OUT OF TIME
-            if (lockTo-block.timestamp==14400)
+            if (lockTo == block.timestamp + 14400)
                 continue;
 
             // Verifies that the target it is mining.

@@ -9,7 +9,7 @@ import { JsonRpcSigner } from "@ethersproject/providers";
 import { TransactionResponse } from "@ethersproject/abstract-provider";
 
 const AVALANCHE_NODE_URL: string = process.env.AVALANCHE_MAINNET_URL as string || "https://api.avax.network/ext/bc/C/rpc";
-const FORK_BLOCKNUMBER: number = Number(process.env.AVALANCHE_FORK_BLOCKNUMBER || "10052453")
+const FORK_BLOCKNUMBER: number = Number(process.env.AVALANCHE_FORK_BLOCKNUMBER || "10123251") //10052453
 
 interface TestConfigAccount {
   address: string,
@@ -27,12 +27,12 @@ const testConfig: TestConfigAccount[] = [
   },
   {
     address: "0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2",
-    teams: [ 7449 ],
+    teams: [ 7449, 8157 ],
   },
 ]
 
 // Start test block
-describe('AttackRouter', function () {
+describe.only('AttackRouter', function () {
 
   const { idleGame, tusToken, craToken, crabada } = getCrabadaContracts(hre)
   let attackRouter: Contract
@@ -141,137 +141,243 @@ describe('AttackRouter', function () {
 
   });
 
-  describe('AttackRouter', function () {
+  it('Should be 14400 the difference between block.timestamp and lockTo after startGame.', async function () {
 
-    it('Should be 14400 the difference between block.timestamp and lockTo after startGame.', async function () {
+    const TestLockToAfterStartGame = (await ethers.getContractFactory("TestLockToAfterStartGame")).connect(owner)
+    const testLockToAfterStartGame = await TestLockToAfterStartGame.deploy()
 
-      const TestLockToAfterStartGame = (await ethers.getContractFactory("TestLockToAfterStartGame")).connect(owner)
-      const testLockToAfterStartGame = await TestLockToAfterStartGame.deploy()
+    await player1.connect(owner).addOwner(testLockToAfterStartGame.address)
 
-      await player1.connect(owner).addOwner(testLockToAfterStartGame.address)
+    await testLockToAfterStartGame.connect(owner).test(idleGame.address, player1.address, team1p1)
 
-      await testLockToAfterStartGame.connect(owner).test(idleGame.address, player1.address, team1p1)
+  })
 
-    })
+  it('Should be zero the current game after closing a mining game.', async function () {
 
-    it('Should be zero the current game after closing a mining game.', async function () {
+    await player1.connect(owner).startGame(team1p1)
 
-      await player1.connect(owner).startGame(team1p1)
+    await evm_increaseTime(hre, 14401)
 
-      await evm_increaseTime(hre, 14401)
+    const teamInfo = await idleGame.getTeamInfo(team1p1)
+    const { currentGameId, } = teamInfo
 
-      const teamInfo = await idleGame.getTeamInfo(team1p1)
-      const { currentGameId, } = teamInfo
+    expect((currentGameId as BigNumber).isZero()).to.be.false
 
-      expect((currentGameId as BigNumber).isZero()).to.be.false
+    await idleGame.connect(owner).closeGame(currentGameId)
 
-      await idleGame.connect(owner).closeGame(currentGameId)
+    const teamInfo2 = await idleGame.getTeamInfo(team1p1)
+    const { currentGameId: currentGameId2, } = teamInfo2
 
-      const teamInfo2 = await idleGame.getTeamInfo(team1p1)
-      const { currentGameId: currentGameId2, } = teamInfo2
+    expect((currentGameId2 as BigNumber).isZero()).to.be.true
 
-      expect((currentGameId2 as BigNumber).isZero()).to.be.true
+  })
 
-    })
+  it('Should be zero the attackTeamId if game is not looted.', async function () {
 
-    it('Should be zero the attackTeamId if game is not looted.', async function () {
+    await player1.connect(owner).startGame(team1p1)
 
-      await player1.connect(owner).startGame(team1p1)
+    const teamInfo = await idleGame.getTeamInfo(team1p1)
+    const { currentGameId, } = teamInfo
 
-      const teamInfo = await idleGame.getTeamInfo(team1p1)
-      const { currentGameId, } = teamInfo
+    const battleInfo = await idleGame.getGameBattleInfo(currentGameId)
+    const { attackTeamId, } = battleInfo
 
-      const battleInfo = await idleGame.getGameBattleInfo(currentGameId)
-      const { attackTeamId, } = battleInfo
+    expect((attackTeamId as BigNumber).isZero()).to.be.true
 
-      expect((attackTeamId as BigNumber).isZero()).to.be.true
+    await player2.connect(owner).attack(currentGameId, team1p2)
 
-      await player2.connect(owner).attack(currentGameId, team1p2)
+    const battleInfo2 = await idleGame.getGameBattleInfo(currentGameId)
+    const { attackTeamId: attackTeamId2, } = battleInfo2
 
-      const battleInfo2 = await idleGame.getGameBattleInfo(currentGameId)
-      const { attackTeamId: attackTeamId2, } = battleInfo2
+    expect((attackTeamId2 as BigNumber).isZero()).to.be.false
 
-      expect((attackTeamId2 as BigNumber).isZero()).to.be.false
+  })
 
-    })
+  it('Should be zero the currentGameId when game is settled.', async function () {
 
-    it('Should be zero the currentGameId when game is settled.', async function () {
+    await player1.connect(owner).startGame(team1p1)
 
-      await player1.connect(owner).startGame(team1p1)
+    const teamInfo = await idleGame.getTeamInfo(team1p1)
+    const { currentGameId, } = teamInfo
 
-      const teamInfo = await idleGame.getTeamInfo(team1p1)
-      const { currentGameId, } = teamInfo
+    await player2.connect(owner).attack(currentGameId, team1p2)
 
-      await player2.connect(owner).attack(currentGameId, team1p2)
+    const teamInfo2 = await idleGame.getTeamInfo(team1p2)
+    const { currentGameId: currentGameId2, } = teamInfo2
 
-      const teamInfo2 = await idleGame.getTeamInfo(team1p2)
-      const { currentGameId: currentGameId2, } = teamInfo2
+    expect((currentGameId2 as BigNumber).isZero()).to.be.false
 
-      expect((currentGameId2 as BigNumber).isZero()).to.be.false
+    await evm_increaseTime(hre, 3601)
 
-      await evm_increaseTime(hre, 3601)
+    await idleGame.connect(owner).settleGame(currentGameId)
 
-      await idleGame.connect(owner).settleGame(currentGameId)
+    const teamInfo3 = await idleGame.getTeamInfo(team1p2)
+    const { currentGameId: currentGameId3, } = teamInfo3
 
-      const teamInfo3 = await idleGame.getTeamInfo(team1p2)
-      const { currentGameId: currentGameId3, } = teamInfo3
+    expect((currentGameId3 as BigNumber).isZero()).to.be.true
 
-      expect((currentGameId3 as BigNumber).isZero()).to.be.true
-
-    })
+  })
 
 
-    it('Should be possible to attack one miner.', async function () {
+  it('Should be possible to attack one miner.', async function () {
 
-      await player1.connect(owner).addOwner(attackRouter.address)
-      await player2.connect(owner).addOwner(attackRouter.address)
+    await player1.connect(owner).addOwner(attackRouter.address)
+    await player2.connect(owner).addOwner(attackRouter.address)
 
-      const { battlePoint: t1BattlePoint } = await idleGame.getTeamInfo(team1p1)
+    const { battlePoint: t1BattlePoint } = await idleGame.getTeamInfo(team1p1)
 
-      const targetTeamId = testConfig[1].teams[0]
-      const { battlePoint: targetBattlePoint } = await idleGame.getTeamInfo(targetTeamId)
+    const targetTeamId = testConfig[1].teams[0]
+    const { battlePoint: targetBattlePoint } = await idleGame.getTeamInfo(targetTeamId)
 
-      await idleGame.connect(looter1).startGame(targetTeamId)
+    await idleGame.connect(looter1).startGame(targetTeamId)
 
-      const transactionResponse: TransactionResponse = await attackRouter.connect(owner).attackTeams(
+    await attackRouter.connect(owner).attackTeams(
+      idleGame.address, 
+      [player1.address], [team1p1], [t1BattlePoint],
+      [targetTeamId], [targetBattlePoint]
+    )
+
+    const { currentGameId: targetCurrentGameId } = await idleGame.getTeamInfo(targetTeamId)
+
+    const { attackTeamId } = await idleGame.getGameBattleInfo(targetCurrentGameId)
+    
+    expect(attackTeamId.toString()).to.eq(team1p1)
+
+  });
+
+  it('Should be possible to attack two miners.', async function () {
+
+    await player1.connect(owner).addOwner(attackRouter.address)
+    await player2.connect(owner).addOwner(attackRouter.address)
+
+    const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
+
+    let battlePoints: number[] = await Promise.all(
+      [team1p1, team1p2, target1, target2]
+        .map( async(teamId) => {
+          const { battlePoint } = await idleGame.getTeamInfo(teamId)
+          return battlePoint
+        })
+    )
+
+    await Promise.all(
+      [target1, target2]
+        .map( async(targetTeamId) => await idleGame.connect(looter1).startGame(targetTeamId))
+    )
+
+    await attackRouter.connect(owner).attackTeams(
+      idleGame.address, 
+      battlePoints[0] <= battlePoints[1] ? [player1.address, player2.address] : [player2.address, player1.address], 
+      battlePoints[0] <= battlePoints[1] ? [team1p1, team1p2] : [team1p2, team1p1], 
+      battlePoints[0] <= battlePoints[1] ? [battlePoints[0], battlePoints[1]] : [battlePoints[1], battlePoints[0]],
+      battlePoints[2] <= battlePoints[3] ? [target1, target2] : [target2, target1],
+      battlePoints[2] <= battlePoints[3] ? [battlePoints[2], battlePoints[3]] : [battlePoints[3], battlePoints[2]]
+    )
+
+    await Promise.all(
+      [target1, target2]
+        .map( async(targetTeamId) => {
+          const { currentGameId: targetCurrentGameId } = await idleGame.getTeamInfo(targetTeamId)
+
+          const { attackTeamId } = await idleGame.getGameBattleInfo(targetCurrentGameId)
+          
+          expect([team1p1, team1p2].map(x=>x.toString())).to.include(attackTeamId.toString())
+        })
+    )
+
+  });
+
+  it('Should be possible to attack only one target if the other is already looted.', async function () {
+
+    await player1.connect(owner).addOwner(attackRouter.address)
+    await player2.connect(owner).addOwner(attackRouter.address)
+
+    const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
+
+    let battlePoints: number[] = await Promise.all(
+      [team1p1, team1p2, target1, target2]
+        .map( async(teamId) => {
+          const { battlePoint } = await idleGame.getTeamInfo(teamId)
+          return battlePoint
+        })
+    )
+
+    await Promise.all(
+      [target1, target2]
+        .map( async(targetTeamId) => await idleGame.connect(looter1).startGame(targetTeamId))
+    )
+
+    const externalLooter = testConfig[2].teams[0]
+    const { currentGameId: target1CurrentGameId } = await idleGame.getTeamInfo(target1)
+    await idleGame.connect(looter2).attack(target1CurrentGameId, externalLooter)
+
+    await attackRouter.connect(owner).attackTeams(
+      idleGame.address, 
+      battlePoints[0] <= battlePoints[1] ? [player1.address, player2.address] : [player2.address, player1.address], 
+      battlePoints[0] <= battlePoints[1] ? [team1p1, team1p2] : [team1p2, team1p1], 
+      battlePoints[0] <= battlePoints[1] ? [battlePoints[0], battlePoints[1]] : [battlePoints[1], battlePoints[0]],
+      battlePoints[2] <= battlePoints[3] ? [target1, target2] : [target2, target1],
+      battlePoints[2] <= battlePoints[3] ? [battlePoints[2], battlePoints[3]] : [battlePoints[3], battlePoints[2]]
+    )
+
+    const attackTeamsIds = await Promise.all(
+      [target1, target2]
+        .map( async(targetTeamId) => {
+          const { currentGameId: targetCurrentGameId } = await idleGame.getTeamInfo(targetTeamId)
+          const { attackTeamId } = await idleGame.getGameBattleInfo(targetCurrentGameId)
+          return attackTeamId
+        })
+    )
+
+    const sAttackTeamsIds = attackTeamsIds.map(x=>x.toString())
+    expect(
+      sAttackTeamsIds.includes(externalLooter.toString()) && (
+        sAttackTeamsIds.includes(team1p1.toString()) ||
+        sAttackTeamsIds.includes(team1p2.toString())
+      )
+      ).to.be.true
+
+  });
+
+  it('Should revert when target are not mining.', async function () {
+
+    await player1.connect(owner).addOwner(attackRouter.address)
+    await player2.connect(owner).addOwner(attackRouter.address)
+
+    const { battlePoint: t1BattlePoint } = await idleGame.getTeamInfo(team1p1)
+
+    const targetTeamId = testConfig[1].teams[0]
+    const { battlePoint: targetBattlePoint } = await idleGame.getTeamInfo(targetTeamId)
+
+    await 
+    expect(
+      attackRouter.connect(owner).attackTeams(
         idleGame.address, 
         [player1.address], [team1p1], [t1BattlePoint],
         [targetTeamId], [targetBattlePoint]
       )
+    ).to.be.revertedWith('ROUTER: NO TARGET MINING')
 
-      const transactionReceipt = await hre.ethers.provider.getTransactionReceipt(transactionResponse.hash)
+  });
 
-      console.log('transactionReceipt.gasUsed', transactionReceipt.gasUsed.toNumber());
+  it('Should revert when multiple targets are not mining.', async function () {
 
-      const { currentGameId: targetCurrentGameId } = await idleGame.getTeamInfo(targetTeamId)
+    await player1.connect(owner).addOwner(attackRouter.address)
+    await player2.connect(owner).addOwner(attackRouter.address)
 
-      const { attackTeamId } = await idleGame.getGameBattleInfo(targetCurrentGameId)
-      
-      expect(attackTeamId.toString()).to.eq(team1p1)
+    const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
 
-    });
-  
-    it('Should be possible to attack two miners.', async function () {
+    let battlePoints: number[] = await Promise.all(
+      [team1p1, team1p2, target1, target2]
+        .map( async(teamId) => {
+          const { battlePoint } = await idleGame.getTeamInfo(teamId)
+          return battlePoint
+        })
+    )
 
-      await player1.connect(owner).addOwner(attackRouter.address)
-      await player2.connect(owner).addOwner(attackRouter.address)
-
-      const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
-
-      let battlePoints: number[] = await Promise.all(
-        [team1p1, team1p2, target1, target2]
-          .map( async(teamId) => {
-            const { battlePoint } = await idleGame.getTeamInfo(teamId)
-            return battlePoint
-          })
-      )
-
-      await Promise.all(
-        [target1, target2]
-          .map( async(targetTeamId) => await idleGame.connect(looter1).startGame(targetTeamId))
-      )
-
-      await attackRouter.connect(owner).attackTeams(
+    await 
+    expect(
+      attackRouter.connect(owner).attackTeams(
         idleGame.address, 
         battlePoints[0] <= battlePoints[1] ? [player1.address, player2.address] : [player2.address, player1.address], 
         battlePoints[0] <= battlePoints[1] ? [team1p1, team1p2] : [team1p2, team1p1], 
@@ -279,45 +385,41 @@ describe('AttackRouter', function () {
         battlePoints[2] <= battlePoints[3] ? [target1, target2] : [target2, target1],
         battlePoints[2] <= battlePoints[3] ? [battlePoints[2], battlePoints[3]] : [battlePoints[3], battlePoints[2]]
       )
+    ).to.be.revertedWith('ROUTER: NO TARGET MINING')
 
-      await Promise.all(
-        [target1, target2]
-          .map( async(targetTeamId) => {
-            const { currentGameId: targetCurrentGameId } = await idleGame.getTeamInfo(targetTeamId)
+  });
 
-            const { attackTeamId } = await idleGame.getGameBattleInfo(targetCurrentGameId)
-            
-            expect([team1p1, team1p2].map(x=>x.toString())).to.include(attackTeamId.toString())
-          })
-      )
+  it('Should revert if all targets are already looted.', async function () {
 
-    });
+    await player1.connect(owner).addOwner(attackRouter.address)
+    await player2.connect(owner).addOwner(attackRouter.address)
 
-    it('Should be possible to attack only one target if the other is already looted.', async function () {
+    const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
 
-      await player1.connect(owner).addOwner(attackRouter.address)
-      await player2.connect(owner).addOwner(attackRouter.address)
+    let battlePoints: number[] = await Promise.all(
+      [team1p1, team1p2, target1, target2]
+        .map( async(teamId) => {
+          const { battlePoint } = await idleGame.getTeamInfo(teamId)
+          return battlePoint
+        })
+    )
 
-      const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
+    await Promise.all(
+      [target1, target2]
+        .map( async(targetTeamId) => await idleGame.connect(looter1).startGame(targetTeamId))
+    )
 
-      let battlePoints: number[] = await Promise.all(
-        [team1p1, team1p2, target1, target2]
-          .map( async(teamId) => {
-            const { battlePoint } = await idleGame.getTeamInfo(teamId)
-            return battlePoint
-          })
-      )
+    const externalLooter1 = testConfig[2].teams[0]
+    const { currentGameId: target1CurrentGameId } = await idleGame.getTeamInfo(target1)
+    await idleGame.connect(looter2).attack(target1CurrentGameId, externalLooter1)
 
-      await Promise.all(
-        [target1, target2]
-          .map( async(targetTeamId) => await idleGame.connect(looter1).startGame(targetTeamId))
-      )
+    const externalLooter2 = testConfig[2].teams[1]
+    const { currentGameId: target2CurrentGameId } = await idleGame.getTeamInfo(target2)
+    await idleGame.connect(looter2).attack(target2CurrentGameId, externalLooter2)
 
-      const externalLooter = testConfig[2].teams[0]
-      const { currentGameId: target1CurrentGameId } = await idleGame.getTeamInfo(target1)
-      await idleGame.connect(looter2).attack(target1CurrentGameId, externalLooter)
-
-      await attackRouter.connect(owner).attackTeams(
+    await 
+    expect(
+      attackRouter.connect(owner).attackTeams(
         idleGame.address, 
         battlePoints[0] <= battlePoints[1] ? [player1.address, player2.address] : [player2.address, player1.address], 
         battlePoints[0] <= battlePoints[1] ? [team1p1, team1p2] : [team1p2, team1p1], 
@@ -325,26 +427,8 @@ describe('AttackRouter', function () {
         battlePoints[2] <= battlePoints[3] ? [target1, target2] : [target2, target1],
         battlePoints[2] <= battlePoints[3] ? [battlePoints[2], battlePoints[3]] : [battlePoints[3], battlePoints[2]]
       )
+    ).to.be.revertedWith('ROUTER: NO TARGET AVAILABLE')
 
-      const attackTeamsIds = await Promise.all(
-        [target1, target2]
-          .map( async(targetTeamId) => {
-            const { currentGameId: targetCurrentGameId } = await idleGame.getTeamInfo(targetTeamId)
-            const { attackTeamId } = await idleGame.getGameBattleInfo(targetCurrentGameId)
-            return attackTeamId
-          })
-      )
-
-      const sAttackTeamsIds = attackTeamsIds.map(x=>x.toString())
-      expect(
-        sAttackTeamsIds.includes(externalLooter.toString()) && (
-          sAttackTeamsIds.includes(team1p1.toString()) ||
-          sAttackTeamsIds.includes(team1p2.toString())
-        )
-        ).to.be.true
-
-    });
-
-  })
+  });
 
 });
