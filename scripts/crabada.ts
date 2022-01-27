@@ -336,6 +336,13 @@ export const attachPlayer = async (hre: HardhatRuntimeEnvironment, contractAddre
     return Player.attach(contractAddress)
 }
 
+export const attachAttackRouter = async (hre: HardhatRuntimeEnvironment, contractAddress: string): Promise<Contract> => {
+
+    const Router = (await hre.ethers.getContractFactory("AttackRouter"));
+
+    return Router.attach(contractAddress)
+}
+
 export const deployPlayer = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress | undefined): Promise<Contract> => {
 
     if (!signer){

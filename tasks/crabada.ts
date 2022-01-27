@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther, parseUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachPlayer, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, deployPlayer, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
+import { attachAttackRouter, attachPlayer, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, deployPlayer, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -807,37 +807,55 @@ interface LootGuessConfig {
         address: string,
         teams: number[]
     }[],
+    router: {
+        address: string,
+    }
     maxBlocksPerTeams: number,
-    maxStandardDeviation: number
+    maxStandardDeviation: number,
+    attackTransaction: {
+        override: {
+            gasLimit: number,
+            maxFeePerGas: BigNumber,
+            maxPriorityFeePerGas: BigNumber
+        }
+    }
 }
 
 task(
     "lootguess",
     "Loot process based on predict of startGame transactions using the CloseGame events and analyses on teams behaviours.",
-    async ({ blockstoanalyze, firstdefendwindow, lootersteamsbyaccount, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
-        const signer = await getSigner(hre, testaccount)
+        // signer used to settle
+        const settleSigner = await getSigner(hre, testaccount)
+
+        const lootersSigners = (await hre.ethers.getSigners()).slice(1)
 
         const lootGuessConfig: LootGuessConfig = {
             maxBlocksPerTeams: 55,
             maxStandardDeviation: 14,
+            router: {
+                // TODO
+                address: ''
+            },
+            attackTransaction: {
+                override: {
+                    gasLimit: 1000000,
+                    maxFeePerGas: BigNumber.from(ONE_GWEI*400),
+                    maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*75)
+                }
+            },        
             players: [
                 {
-                    address: 'P1',
+                    address: '0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd',
+                    // TODO
                     teams: [3286, 3759, 5032]
-                },
-                {
-                    address: 'P2',
-                    teams: [5355, 5357, 6152]
-                },
-                {
-                    address: 'P3',
-                    teams: [7449]
                 },
             ]
         }
 
         const { idleGame } = getCrabadaContracts(hre)
+        const router: Contract = await attachAttackRouter(hre, lootGuessConfig.router.address)
 
         // Verify there are teams in the config.
 
@@ -895,7 +913,7 @@ task(
                 .filter(p=>!p.locked)
                 .forEach(async(p)=>{
                     const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
-                    settleGame(idleGame.connect(signer), currentGameId, 1, ()=>{})
+                    settleGame(idleGame.connect(settleSigner), currentGameId, 1, ()=>{})
                 })
 
         }, 2000)
@@ -1126,7 +1144,9 @@ task(
         // 3) For targets currentBlockNumber-closeGameBlockNumber >= minBlocknumberDistance-2
         // 4) Apply only for looter teams that have battlePoint higher than minimum target battlePoint.
 
-        const attackTeamsInterval = setInterval(() => {
+        let attackIteration = 0
+
+        const attackTeamsInterval = setInterval(async () => {
 
             // 1) Apply only for looter teams are unlocked
             const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => !p.locked || testmode )
@@ -1225,19 +1245,51 @@ task(
             //         })
             // }).flat()
 
-            metrics.attackTeams(teamIdTargets)
+            const looterSignerIndex = attackIteration % lootersSigners.length
+            attackIteration++
+
+            const playerAddresses = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.playerAddress)
+            const looterTeams = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.teamId)
+            const looterBattlePoint = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.battlePoint)
+            const targetBattlePoint = teamIdTargets.map(teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint)
 
             console.log(
                 'attackTeams(', 
-                'players=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.playerAddress).toString(),
-                'looterTeams=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.teamId).toString(),
-                'looterBattlePoint=', unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.battlePoint).toString(),
+                'players=', playerAddresses.toString(),
+                'looterTeams=', looterTeams.toString(),
+                'looterBattlePoint=', looterBattlePoint.toString(),
                 'targetTeams=', teamIdTargets.toString(),
-                'targetBattlePoint=', teamIdTargets.map(teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint).toString(),
+                'targetBattlePoint=', targetBattlePoint.toString(),
                 ')'
             )
 
-            // TODO player.attackTeams
+            try {
+
+                // for test mode we perform a static call.
+                const attackTeams = testmode ?
+                    router.connect(lootersSigners[looterSignerIndex]).callStatic.attackTeams
+                    : router.connect(lootersSigners[looterSignerIndex]).attackTeams
+
+                const transactionResponse: ethers.providers.TransactionResponse = await attackTeams(
+                    idleGame.address,
+                    playerAddresses,
+                    looterTeams,
+                    looterBattlePoint,
+                    teamIdTargets,
+                    targetBattlePoint,
+                    lootGuessConfig.attackTransaction.override
+                )
+
+                if (transactionResponse && (transactionResponse.hash || transactionResponse.blockNumber))
+                    console.log('router.attackTeams', 'transaction hash', transactionResponse.hash, 'blocknumber', transactionResponse.blockNumber);
+    
+            } catch (error) {
+
+                console.error('ERROR', 'router.attackTeams', String(error));
+                
+            }
+
+            metrics.attackTeams(teamIdTargets)
 
         }, 2000)
 
