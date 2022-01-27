@@ -34,5 +34,5 @@ export const CONFIG_BY_NODE_ID: ConfigByNodeId = {
     4: { accountsConfigs: [looter2, looter1]},
     5: { accountsConfigs: [main, looter2, ] },
     9: { accountsConfigs: [main, looter2, ] },
-    //10: [[], [5355, 5357, 6152], []],
+    11: { accountsConfigs: [looter2, looter1]},
 }
