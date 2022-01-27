@@ -1,12 +1,13 @@
 import * as hre from "hardhat"
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, waffle } from "hardhat";
 import { BigNumber } from "@ethersproject/bignumber";
 import { Contract } from "ethers";
 import { evm_increaseTime } from "./utils";
 import { getCrabadaContracts } from "../scripts/crabada";
 import { JsonRpcSigner } from "@ethersproject/providers";
 import { TransactionResponse } from "@ethersproject/abstract-provider";
+const { loadFixture } = waffle;
 
 const AVALANCHE_NODE_URL: string = process.env.AVALANCHE_MAINNET_URL as string || "https://api.avax.network/ext/bc/C/rpc";
 const FORK_BLOCKNUMBER: number = Number(process.env.AVALANCHE_FORK_BLOCKNUMBER || "10123251") //10052453
@@ -31,117 +32,123 @@ const testConfig: TestConfigAccount[] = [
   },
 ]
 
+
+export async function fixture(signers: any, provider: any) {
+
+  const { idleGame, tusToken, craToken, crabada } = getCrabadaContracts(hre)
+  const teamId1 = testConfig[0].teams[0]
+  const teamId2 = testConfig[0].teams[1]
+
+  await ethers.provider.send(
+    "hardhat_reset",
+    [
+        {
+            forking: {
+                jsonRpcUrl: AVALANCHE_NODE_URL,
+                blockNumber: FORK_BLOCKNUMBER,
+            },
+        },
+    ],
+  );
+
+  await evm_increaseTime(hre, 7 * 24 * 60 * 60)
+
+  await ethers.provider.send('hardhat_impersonateAccount', [testConfig[0].address] );
+  const owner = await ethers.provider.getSigner(testConfig[0].address)
+
+  await ethers.provider.send('hardhat_impersonateAccount', [testConfig[1].address] );
+  const looter1 = await ethers.provider.getSigner(testConfig[1].address)
+
+  await ethers.provider.send('hardhat_impersonateAccount', [testConfig[2].address] );
+  const looter2 = await ethers.provider.getSigner(testConfig[2].address)
+
+
+  const AttackRouter = (await ethers.getContractFactory("AttackRouter")).connect(owner);
+  const attackRouter = await AttackRouter.deploy()
+
+  const Player = (await ethers.getContractFactory("Player")).connect(owner)
+  const player1 = await Player.connect(owner).deploy(idleGame.address, crabada.address)
+  const player2 = await Player.connect(owner).deploy(idleGame.address, crabada.address)
+  
+  // Getting teams info
+  const teamInfo = await idleGame.getTeamInfo(teamId1)
+  const { currentGameId, crabadaId1: c1t1, crabadaId2: c2t1, crabadaId3: c3t1 } = teamInfo
+  const team1Members = [c1t1, c2t1, c3t1]
+
+  const teamInfo2 = await idleGame.getTeamInfo(teamId2)
+  const { currentGameId: gameId2, crabadaId1: c1t2, crabadaId2: c2t2, crabadaId3: c3t2 } = teamInfo2
+  const team2Members = [c1t2, c2t2, c3t2]
+
+  // Ending games
+
+  await Promise.all(
+    testConfig.map( (account) => {
+
+      return account.teams.map( async(teamId) => {
+
+        const teamInfo = await idleGame.getTeamInfo(teamId)
+        const { currentGameId } = teamInfo
+
+        if ((currentGameId as BigNumber).isZero())
+          return
+          
+        await idleGame.connect(owner).settleGame(currentGameId)
+  
+      })
+  
+    }).flat())
+
+
+  // Removing crabadas from teams
+
+  await Promise.all(
+    [0, 1, 2].map(
+      index => idleGame.connect(owner).removeCrabadaFromTeam(teamId1, index)
+    )
+  );
+
+  await Promise.all(
+    [0, 1, 2].map(
+      index => idleGame.connect(owner).removeCrabadaFromTeam(teamId2, index)
+    )
+  );
+
+  // Withdrawing crabadas from game
+  await idleGame.connect(owner).withdraw(testConfig[0].address, team1Members)
+  await idleGame.connect(owner).withdraw(testConfig[0].address, team2Members)
+
+  await crabada.connect(owner).setApprovalForAll(player1.address, true)
+  await crabada.connect(owner).setApprovalForAll(player2.address, true)
+
+  await player1.connect(owner).deposit(testConfig[0].address, team1Members)
+  await player1.connect(owner).createTeam(...team1Members)
+  const team1p1 = await player1.teams(0)
+
+  await player2.connect(owner).deposit(testConfig[0].address, team2Members)
+  await player2.connect(owner).createTeam(...team2Members)
+  const team1p2 = await player2.teams(0)
+
+  await player1.connect(owner).addOwner(attackRouter.address)
+  await player2.connect(owner).addOwner(attackRouter.address)
+
+  return { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+    player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 }
+
+}
+
 // Start test block
 describe.only('AttackRouter', function () {
 
-  const { idleGame, tusToken, craToken, crabada } = getCrabadaContracts(hre)
-  let attackRouter: Contract
-  const teamId1 = testConfig[0].teams[0]
-  const teamId2 = testConfig[0].teams[1]
-  let player1: Contract
-  let player2: Contract
-  let team1Members: BigNumber[]
-  let team2Members: BigNumber[]
-  let team1p1: BigNumber
-  let team1p2: BigNumber
-  let owner, looter1, looter2: JsonRpcSigner
+  this.timeout(60*1000)
 
   beforeEach(async function () {
-
-    this.timeout(60*1000)
-
-    await ethers.provider.send(
-      "hardhat_reset",
-      [
-          {
-              forking: {
-                  jsonRpcUrl: AVALANCHE_NODE_URL,
-                  blockNumber: FORK_BLOCKNUMBER,
-              },
-          },
-      ],
-    );
-
-    await evm_increaseTime(hre, 7 * 24 * 60 * 60)
-
-    await ethers.provider.send('hardhat_impersonateAccount', [testConfig[0].address] );
-    owner = await ethers.provider.getSigner(testConfig[0].address)
-
-    await ethers.provider.send('hardhat_impersonateAccount', [testConfig[1].address] );
-    looter1 = await ethers.provider.getSigner(testConfig[1].address)
-
-    await ethers.provider.send('hardhat_impersonateAccount', [testConfig[2].address] );
-    looter2 = await ethers.provider.getSigner(testConfig[2].address)
-
-
-    const AttackRouter = (await ethers.getContractFactory("AttackRouter")).connect(owner);
-    attackRouter = await AttackRouter.deploy()
-
-    const Player = (await ethers.getContractFactory("Player")).connect(owner)
-    player1 = await Player.connect(owner).deploy(idleGame.address, crabada.address)
-    player2 = await Player.connect(owner).deploy(idleGame.address, crabada.address)
-    
-    // Getting teams info
-    const teamInfo = await idleGame.getTeamInfo(teamId1)
-    const { currentGameId, crabadaId1: c1t1, crabadaId2: c2t1, crabadaId3: c3t1 } = teamInfo
-    team1Members = [c1t1, c2t1, c3t1]
-
-    const teamInfo2 = await idleGame.getTeamInfo(teamId2)
-    const { currentGameId: gameId2, crabadaId1: c1t2, crabadaId2: c2t2, crabadaId3: c3t2 } = teamInfo2
-    team2Members = [c1t2, c2t2, c3t2]
-
-    // Ending games
-
-    await Promise.all(
-      testConfig.map( (account) => {
-
-        return account.teams.map( async(teamId) => {
-
-          const teamInfo = await idleGame.getTeamInfo(teamId)
-          const { currentGameId } = teamInfo
-
-          if ((currentGameId as BigNumber).isZero())
-            return
-            
-          await idleGame.connect(owner).settleGame(currentGameId)
-    
-        })
-    
-      }).flat())
-
-
-    // Removing crabadas from teams
-
-    await Promise.all(
-      [0, 1, 2].map(
-        index => idleGame.connect(owner).removeCrabadaFromTeam(teamId1, index)
-      )
-    );
-
-    await Promise.all(
-      [0, 1, 2].map(
-        index => idleGame.connect(owner).removeCrabadaFromTeam(teamId2, index)
-      )
-    );
-
-    // Withdrawing crabadas from game
-    await idleGame.connect(owner).withdraw(testConfig[0].address, team1Members)
-    await idleGame.connect(owner).withdraw(testConfig[0].address, team2Members)
-
-    await crabada.connect(owner).setApprovalForAll(player1.address, true)
-    await crabada.connect(owner).setApprovalForAll(player2.address, true)
-
-    await player1.connect(owner).deposit(testConfig[0].address, team1Members)
-    await player1.connect(owner).createTeam(...team1Members)
-    team1p1 = await player1.teams(0)
-
-    await player2.connect(owner).deposit(testConfig[0].address, team2Members)
-    await player2.connect(owner).createTeam(...team2Members)
-    team1p2 = await player2.teams(0)
 
   });
 
   it('Should be 14400 the difference between block.timestamp and lockTo after startGame.', async function () {
+
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
 
     const TestLockToAfterStartGame = (await ethers.getContractFactory("TestLockToAfterStartGame")).connect(owner)
     const testLockToAfterStartGame = await TestLockToAfterStartGame.deploy()
@@ -153,6 +160,9 @@ describe.only('AttackRouter', function () {
   })
 
   it('Should be zero the current game after closing a mining game.', async function () {
+
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
 
     await player1.connect(owner).startGame(team1p1)
 
@@ -174,6 +184,9 @@ describe.only('AttackRouter', function () {
 
   it('Should be zero the attackTeamId if game is not looted.', async function () {
 
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
+
     await player1.connect(owner).startGame(team1p1)
 
     const teamInfo = await idleGame.getTeamInfo(team1p1)
@@ -194,6 +207,9 @@ describe.only('AttackRouter', function () {
   })
 
   it('Should be zero the currentGameId when game is settled.', async function () {
+
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
 
     await player1.connect(owner).startGame(team1p1)
 
@@ -221,8 +237,8 @@ describe.only('AttackRouter', function () {
 
   it('Should be possible to attack one miner.', async function () {
 
-    await player1.connect(owner).addOwner(attackRouter.address)
-    await player2.connect(owner).addOwner(attackRouter.address)
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
 
     const { battlePoint: t1BattlePoint } = await idleGame.getTeamInfo(team1p1)
 
@@ -247,8 +263,8 @@ describe.only('AttackRouter', function () {
 
   it('Should be possible to attack two miners.', async function () {
 
-    await player1.connect(owner).addOwner(attackRouter.address)
-    await player2.connect(owner).addOwner(attackRouter.address)
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
 
     const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
 
@@ -289,8 +305,8 @@ describe.only('AttackRouter', function () {
 
   it('Should be possible to attack only one target if the other is already looted.', async function () {
 
-    await player1.connect(owner).addOwner(attackRouter.address)
-    await player2.connect(owner).addOwner(attackRouter.address)
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
 
     const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
 
@@ -341,8 +357,8 @@ describe.only('AttackRouter', function () {
 
   it('Should revert when target are not mining.', async function () {
 
-    await player1.connect(owner).addOwner(attackRouter.address)
-    await player2.connect(owner).addOwner(attackRouter.address)
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
 
     const { battlePoint: t1BattlePoint } = await idleGame.getTeamInfo(team1p1)
 
@@ -362,8 +378,8 @@ describe.only('AttackRouter', function () {
 
   it('Should revert when multiple targets are not mining.', async function () {
 
-    await player1.connect(owner).addOwner(attackRouter.address)
-    await player2.connect(owner).addOwner(attackRouter.address)
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
 
     const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
 
@@ -391,8 +407,8 @@ describe.only('AttackRouter', function () {
 
   it('Should revert if all targets are already looted.', async function () {
 
-    await player1.connect(owner).addOwner(attackRouter.address)
-    await player2.connect(owner).addOwner(attackRouter.address)
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
 
     const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
 
@@ -433,8 +449,8 @@ describe.only('AttackRouter', function () {
 
   it('Should revert if all looters are busy.', async function () {
 
-    await player1.connect(owner).addOwner(attackRouter.address)
-    await player2.connect(owner).addOwner(attackRouter.address)
+    const { idleGame, tusToken, craToken, crabada, attackRouter, teamId1, teamId2,
+      player1, player2, team1Members, team2Members, team1p1, team1p2, owner, looter1, looter2 } = await loadFixture(fixture);
 
     const [target1, target2] = [testConfig[1].teams[0], testConfig[1].teams[1]]
 
