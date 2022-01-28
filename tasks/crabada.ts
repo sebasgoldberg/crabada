@@ -855,7 +855,10 @@ task(
         }
 
         const { idleGame } = getCrabadaContracts(hre)
-        const router: Contract = await attachAttackRouter(hre, lootGuessConfig.router.address)
+        const router: Contract | undefined = 
+            lootGuessConfig.router.address ? 
+                await attachAttackRouter(hre, lootGuessConfig.router.address)
+                : undefined
 
         // Verify there are teams in the config.
 
@@ -1265,23 +1268,27 @@ task(
 
             try {
 
-                // for test mode we perform a static call.
-                const attackTeams = testmode ?
-                    router.connect(lootersSigners[looterSignerIndex]).callStatic.attackTeams
-                    : router.connect(lootersSigners[looterSignerIndex]).attackTeams
+                if (router){
 
-                const transactionResponse: ethers.providers.TransactionResponse = await attackTeams(
-                    idleGame.address,
-                    playerAddresses,
-                    looterTeams,
-                    looterBattlePoint,
-                    teamIdTargets,
-                    targetBattlePoint,
-                    lootGuessConfig.attackTransaction.override
-                )
+                    // for test mode we perform a static call.
+                    const attackTeams = testmode ?
+                        router.connect(lootersSigners[looterSignerIndex]).callStatic.attackTeams
+                        : router.connect(lootersSigners[looterSignerIndex]).attackTeams
 
-                if (transactionResponse && (transactionResponse.hash || transactionResponse.blockNumber))
-                    console.log('router.attackTeams', 'transaction hash', transactionResponse.hash, 'blocknumber', transactionResponse.blockNumber);
+                    const transactionResponse: ethers.providers.TransactionResponse = await attackTeams(
+                        idleGame.address,
+                        playerAddresses,
+                        looterTeams,
+                        looterBattlePoint,
+                        teamIdTargets,
+                        targetBattlePoint,
+                        lootGuessConfig.attackTransaction.override
+                    )
+
+                    if (transactionResponse && (transactionResponse.hash || transactionResponse.blockNumber))
+                        console.log('router.attackTeams', 'transaction hash', transactionResponse.hash, 'blocknumber', transactionResponse.blockNumber);
+
+                }
     
             } catch (error) {
 
@@ -1291,7 +1298,7 @@ task(
 
             metrics.attackTeams(teamIdTargets)
 
-        }, 2000)
+        }, 1000)
 
         // Never finish
         await new Promise(() => {})
