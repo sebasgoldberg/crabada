@@ -943,7 +943,7 @@ task(
         const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, playerTeamPairs: PlayerTeamPair[]) => {
             return (await Promise.all(
                 playerTeamPairs.map( async(playerTeamPair): Promise<any> => {
-                    playerTeamPair.locked = !testmode || await isTeamLocked(hre, idleGame, playerTeamPair.teamId, ()=>{})
+                    playerTeamPair.locked = !testmode && await isTeamLocked(hre, idleGame, playerTeamPair.teamId, ()=>{})
                 }) 
             ))
         }
