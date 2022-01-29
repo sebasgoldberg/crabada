@@ -116,7 +116,7 @@ contract AttackRouter is MultiOwnable{
                 if (looterBattlePoints[looterIndex] <= targetBattlePoints[targetIndex])
                     break;
                 
-                // TODO Should not revert!!!
+                // Should not revert!!!
                 looters[looterIndex].attack(localData.targetsGameIds[targetIndex], looterTeamId);
 
                 // After looting we mark it as not available.

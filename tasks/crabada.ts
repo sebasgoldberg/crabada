@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther, parseUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachAttackRouter, attachPlayer, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, deployPlayer, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
+import { attachAttackRouter, attachPlayer, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, deployAttackRouter, deployPlayer, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -258,6 +258,22 @@ task(
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
 task(
+    "routerdeploy",
+    "Deploy of AttackRouter contract.",
+    async ({ testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const router = await deployAttackRouter(hre, signer)
+        console.log(`AttackRouter created: ${router.address}`);
+        console.log(router.deployTransaction.hash);
+
+        await router.deployed()
+    
+    })
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
     "playersetapproval",
     "Team creation for player.",
     async ({ player, testaccount }, hre: HardhatRuntimeEnvironment) => {
@@ -266,7 +282,7 @@ task(
 
         const { crabada } = getCrabadaContracts(hre)
 
-        const isApprovedForAll = await crabada.isApprovedForAll(signer.address, player)
+        const isApprovedForAll = await crabada.connect(signer).isApprovedForAll(signer.address, player)
         if (!isApprovedForAll){
             console.log('crabada.callStatic.setApprovalForAll(_playerTo.address, true)', player);
             await crabada.connect(signer).callStatic.setApprovalForAll(player, true, await getOverride(hre))
@@ -640,6 +656,25 @@ task(
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
 
+task(
+    "routeraddowner",
+    "Add a new owner for AttackRouter.",
+    async ({ router, newowner, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const routerC = await attachAttackRouter(hre, router)
+
+        await routerC.connect(signer).callStatic.addOwner(newowner)
+
+        await routerC.connect(signer).addOwner(newowner, await getOverride(hre))
+
+    })
+    .addParam("router", "AttackRouter contract for which will be added a new owner.")
+    .addParam("newowner", "New owner of the AttackRouter contract.")
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+
     const MIN_BATTLE_POINTS = 564
     const MAX_BATTLE_POINTS = 712
     const STEP_BATTLE_POINTS = (MAX_BATTLE_POINTS-MIN_BATTLE_POINTS)/10
@@ -838,8 +873,7 @@ task(
             maxBlocksPerTeams: 55,
             maxStandardDeviation: 14,
             router: {
-                // TODO
-                address: ''
+                address: '0x524Ba539123784d404aD3756815B3d46eF2A6430'
             },
             behaviour: {
                 deviationToUse: (startStandardDeviationInBlocks: number): number => 

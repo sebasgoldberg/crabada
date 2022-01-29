@@ -345,10 +345,6 @@ export const attachAttackRouter = async (hre: HardhatRuntimeEnvironment, contrac
 
 export const deployPlayer = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress | undefined): Promise<Contract> => {
 
-    if (!signer){
-        signer = (await hre.ethers.getSigners())[0]
-    }
-
     const { idleGame, crabada } = getCrabadaContracts(hre)
 
     const Player = (await hre.ethers.getContractFactory("Player")).connect(signer);
@@ -357,6 +353,18 @@ export const deployPlayer = async (hre: HardhatRuntimeEnvironment, signer: Signe
     const player = await Player.deploy(idleGame.address, crabada.address, override)
 
     return player
+}
+
+export const deployAttackRouter = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress | undefined): Promise<Contract> => {
+
+    const { idleGame, crabada } = getCrabadaContracts(hre)
+
+    const AttackRouter = (await hre.ethers.getContractFactory("AttackRouter")).connect(signer);
+    const override = await getOverride(hre)
+    override.gasLimit = 2500000
+    const router = await AttackRouter.deploy(override)
+
+    return router
 }
 
 export const getOverride = async (hre: HardhatRuntimeEnvironment) => {
