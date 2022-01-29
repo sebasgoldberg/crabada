@@ -275,7 +275,7 @@ task(
 
 task(
     "playersetapproval",
-    "Team creation for player.",
+    "Signer sets approval to manage all Crabada NFTs to Player contract.",
     async ({ player, testaccount }, hre: HardhatRuntimeEnvironment) => {
         
         const signer = await getSigner(hre, testaccount)
@@ -853,8 +853,9 @@ interface LootGuessConfig {
     attackTransaction: {
         override: {
             gasLimit: number,
-            maxFeePerGas: BigNumber,
-            maxPriorityFeePerGas: BigNumber
+            gasPrice: BigNumber,
+            // maxFeePerGas: BigNumber,
+            // maxPriorityFeePerGas: BigNumber,
         }
     }
 }
@@ -882,15 +883,15 @@ task(
             attackTransaction: {
                 override: {
                     gasLimit: 1000000,
-                    maxFeePerGas: BigNumber.from(ONE_GWEI*400),
-                    maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*75)
+                    gasPrice: BigNumber.from(ONE_GWEI*75),
+                    // maxFeePerGas: BigNumber.from(ONE_GWEI*400),
+                    // maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*75)
                 }
             },        
             players: [
                 {
                     address: '0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd',
-                    // TODO
-                    teams: [3286, 3759, 5032]
+                    teams: [8700, 8702, 4400]
                 },
             ]
         }
@@ -1280,23 +1281,6 @@ task(
                     a.battlePoint < b.battlePoint ? -1 : a.battlePoint > b.battlePoint ? 1 : 0
                 )
 
-            // interface attackOption {
-            //     playerAddress: string,
-            //     looterTeam: BigNumber,
-            //     targetTeam: BigNumber
-            // }
-
-            // const attackOption: attackOption[] = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map( p => {
-            //     return teamIdTargets
-            //         .filter( teamId => p.battlePoint > teamsThatPlayToLooseByTeamId[teamId].battlePoint )
-            //         .map( teamId => {
-            //             return ({
-            //                 playerAddress: p.playerAddress,
-            //                 looterTeam: BigNumber.from(p.teamId),
-            //                 targetTeam: BigNumber.from(teamId),
-            //             })
-            //         })
-            // }).flat()
 
             const looterSignerIndex = attackIteration % lootersSigners.length
             attackIteration++
