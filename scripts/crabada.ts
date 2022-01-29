@@ -800,8 +800,10 @@ export const getCloseDistanceToStartByTeamId = async (
             eventsBlockNumbersForTeam.startGameBlockNumbers.sort(compareNumberAsc)
             eventsBlockNumbersForTeam.closeGameBlockNumbers.sort(compareNumberAsc)
     
-            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length==0 || 
-                eventsBlockNumbersForTeam.closeGameBlockNumbers.length==0)
+            // We discard the teams that does not have the minimum number of events to
+            // do de analysis.
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length < 2 || 
+                eventsBlockNumbersForTeam.closeGameBlockNumbers.length < 2)
                 return
             
             // If first StartGame event blocknumber is lower than first CloseGame event 
