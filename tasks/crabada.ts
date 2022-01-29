@@ -1086,6 +1086,15 @@ task(
         const metrics = new Metrics()
 
 
+        // Block number update.
+
+        let currentBlockNumber = await hre.ethers.provider.getBlockNumber()
+
+        const blockNumberIntervalUpdate = setInterval(async() => {
+            currentBlockNumber = await hre.ethers.provider.getBlockNumber()
+        }, 1000)
+
+        
         // Set interval to verify if a possible target should be removed considering
         // the following conditions are met:
         // 1) game is already looted (use getGameBattleInfo and get status)
@@ -1101,14 +1110,14 @@ task(
 
                 const deviationToUse = lootGuessConfig.behaviour.deviationToUse(closeDistanceToStart.standardDeviationBlocks)
 
-                if ((hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber) 
+                if ((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
                     > (closeDistanceToStart.averageBlocks+deviationToUse)){
 
                     metrics.maxAttacksAchivedForTeam(teamId)
                     
                     console.log(
                         'Max block difference from CloseGame achived', 
-                        hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber, '>',
+                        currentBlockNumber-closedGameTarget.closeGameBlocknumber, '>',
                         closeDistanceToStart.averageBlocks+deviationToUse,
                         'Removed team from loot targets (teamId, blockNumber)', 
                         teamId, closedGameTarget.closeGameBlocknumber
@@ -1149,6 +1158,7 @@ task(
             metrics.log()
         }, 15000)
 
+
         // Main interval to perform attacks considering the following conditions:
         // 1) Apply only for looter teams are unlocked
         // 2) Targets should have battlePoint lower than the maximum looterTeam target battlePoint.
@@ -1172,8 +1182,6 @@ task(
                 ...unlockedPlayerTeamPairs
                     .map( playerTeamPair => playerTeamPair.battlePoint )
             )
-
-            const currentBlockNumber = hre.ethers.provider.blockNumber
 
             const teamIdTargets = Object.keys(closedGameTargetsByTeamId)
                 // 2) Targets should have battlePoint lower than the maximum looterTeam target battlePoint.
@@ -1317,6 +1325,7 @@ task(
         clearInterval(updateLockStatusInterval)
         settleGameInterval && clearInterval(settleGameInterval)
         clearInterval(removeCloseGameTargetsInterval)
+        clearInterval(blockNumberIntervalUpdate)
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
