@@ -1193,8 +1193,20 @@ export const loot = async (
         topics: [ '0x0eef6f7452b7d2ee11184579c086fb47626e796a83df2b2e16254df60ab761eb' ]
     };
     
+    const FIGHT_FILTER = {
+        fromBlock: 'pending',
+        toBlock: 'pending',
+        address: idleGame.address,
+        topics: [ '0xc9116f8ab51c97fa0f2ebd6cc9f75395464ae81bebc69d2d468b508a460a7136' ]
+    };
+    
     const provider = hre.ethers.provider
-    const filterId = await provider.send("eth_newFilter", [START_GAME_FILTER]);
+    
+    const startGameFilterId = await provider.send("eth_newFilter", [START_GAME_FILTER]);
+
+    const fightFilterId = await provider.send("eth_newFilter", [FIGHT_FILTER]);
+
+    const lootedGame: { [gameId:string]: boolean } = {}
     
     return await (new Promise((resolve) => {
 
@@ -1213,20 +1225,37 @@ export const loot = async (
         }, 60*1000)
 
         const attackStartedGameInterval = setInterval(async () => {
-            const logs: any[] = (await provider.send("eth_getFilterChanges", [filterId]))
+
+            const fightLogsPromise: Promise<any[]> = provider.send("eth_getFilterChanges", [startGameFilterId])
+
+            const startGameLogs: any[] = (await provider.send("eth_getFilterChanges", [startGameFilterId]))
                 .sort((a, b) =>
                 ( a.blockNumber < b.blockNumber ? -1 
                 : a.blockNumber > b.blockNumber ? 1
                 : 0 ) * -1 // Sorted descending by blocknumber
             )
 
-            for (const log of logs){
+            const fightLogs = await fightLogsPromise
+
+            for (const fightLog of fightLogs){
+                const gameId = BigNumber.from((fightLog.data as string).slice(0,66))
+                const turn = BigNumber.from('0x'+(fightLog.data as string).slice(66,130))
+                if (turn.isZero)
+                    lootedGame[gameId.toString()] = true
+            }
+
+            for (const log of startGameLogs){
                 const gameId = BigNumber.from((log.data as string).slice(0,66))
+                if (lootedGame[gameId.toString()]){
+                    console.log('Game already looted', gameId.toString());
+                    //delete lootedGame[gameId.toString()] // TODO Verify if needed for performance improvement.
+                    continue
+                }
                 const teamId = BigNumber.from('0x'+(log.data as string).slice(66,130))
                 const blockNumber = BigNumber.from(log.blockNumber)
                 /* no await */ attackStartedGame({ gameId, teamId, transactionHash: log.transactionHash, blockNumber })
             }
-        }, 5)
+        }, 10)
 
         const exitInterval = setInterval(async () =>{
             if (!testMode && await isTeamLocked(hre, idleGame, looterteamid, ()=>{})){
