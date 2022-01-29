@@ -809,6 +809,9 @@ interface LootGuessConfig {
     }[],
     router: {
         address: string,
+    },
+    behaviour: {
+        deviationToUse: (startStandardDeviationInBlocks: number) => number,
     }
     maxBlocksPerTeams: number,
     maxStandardDeviation: number,
@@ -837,6 +840,10 @@ task(
             router: {
                 // TODO
                 address: ''
+            },
+            behaviour: {
+                deviationToUse: (startStandardDeviationInBlocks: number): number => 
+                    Math.max(5, startStandardDeviationInBlocks)
             },
             attackTransaction: {
                 override: {
@@ -1090,6 +1097,28 @@ task(
 
                 const closedGameTarget = closedGameTargetsByTeamId[teamId]
 
+                const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
+
+                const deviationToUse = lootGuessConfig.behaviour.deviationToUse(closeDistanceToStart.standardDeviationBlocks)
+
+                if ((hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber) 
+                    > (closeDistanceToStart.averageBlocks+deviationToUse)){
+
+                    metrics.maxAttacksAchivedForTeam(teamId)
+                    
+                    console.log(
+                        'Max block difference from CloseGame achived', 
+                        hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber, '>',
+                        closeDistanceToStart.averageBlocks+deviationToUse,
+                        'Removed team from loot targets (teamId, blockNumber)', 
+                        teamId, closedGameTarget.closeGameBlocknumber
+                    );
+    
+                    delete closedGameTargetsByTeamId[teamId]
+                    return
+                }
+
+
                 const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(teamId))
 
                 if (!(currentGameId as BigNumber).isZero()){
@@ -1112,30 +1141,9 @@ task(
 
                 }
 
-                const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
-
-                const deviationToUse = Math.min(5, closeDistanceToStart.standardDeviationBlocks)
-
-                if ((hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber) 
-                    > (closeDistanceToStart.averageBlocks+deviationToUse)){
-
-                    metrics.maxAttacksAchivedForTeam(teamId)
-                    
-                    console.log(
-                        'Max block difference from CloseGame achived', 
-                        hre.ethers.provider.blockNumber-closedGameTarget.closeGameBlocknumber, '>',
-                        closeDistanceToStart.averageBlocks+deviationToUse,
-                        'Removed team from loot targets (teamId, blockNumber, gameId)', 
-                        teamId, closedGameTarget.closeGameBlocknumber, currentGameId.toNumber()
-                    );
-    
-                    delete closedGameTargetsByTeamId[teamId]
-                    return
-                }
-
             })
 
-        }, 3000)
+        }, 1000)
 
         setInterval( () => {
             metrics.log()
@@ -1194,7 +1202,7 @@ task(
                     const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
                     const closedGameTarget = closedGameTargetsByTeamId[teamId]
 
-                    const deviationToUse = Math.max(5, closeDistanceToStart.standardDeviationBlocks)
+                    const deviationToUse = lootGuessConfig.behaviour.deviationToUse(closeDistanceToStart.standardDeviationBlocks)
                     
                     if (((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
                         < (closeDistanceToStart.averageBlocks-deviationToUse))){
