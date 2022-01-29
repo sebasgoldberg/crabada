@@ -191,6 +191,18 @@ npx hardhat playercreateteam --network mainnet --player 0x39A9551C9683d9955ADA8f
 # First checks the teams final status of Player contract.
 npx hardhat playerlistteams --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd
 
+# Remove of crabadas from teams.
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 4400 --position 0
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 4400 --position 1
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 4400 --position 2
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8700 --position 0
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8700 --position 1
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8700 --position 2
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8702 --position 0
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8702 --position 1
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8702 --position 2
+
+npx hardhat playerwithdraw --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --crabadas 12269,12712,9981,18396,9980,12714,9860,12777,18410
 ```
 
 
