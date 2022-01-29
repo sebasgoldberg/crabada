@@ -29,10 +29,10 @@ const looter2: AccountConfig = {
 
 
 export const CONFIG_BY_NODE_ID: ConfigByNodeId = {
-    1: { accountsConfigs: [ looter2, main, looter1] },
-    2: { accountsConfigs: [ looter2, main, looter1 ] },
-    4: { accountsConfigs: [ looter2, main, looter1 ]},
-    5: { accountsConfigs: [ looter2, main, looter1 ] },
-    9: { accountsConfigs: [ looter2, main, looter1 ] },
-    11: { accountsConfigs: [ looter2, main, looter1 ]},
+    1: { accountsConfigs: [ looter2, looter1] },
+    2: { accountsConfigs: [ looter2, looter1 ] },
+    4: { accountsConfigs: [ looter2, looter1 ]},
+    5: { accountsConfigs: [ looter2, looter1 ] },
+    9: { accountsConfigs: [ looter2, looter1 ] },
+    11: { accountsConfigs: [ looter2, looter1 ]},
 }
