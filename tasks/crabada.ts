@@ -1194,7 +1194,7 @@ task(
                     const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
                     const closedGameTarget = closedGameTargetsByTeamId[teamId]
 
-                    const deviationToUse = Math.min(5, closeDistanceToStart.standardDeviationBlocks)
+                    const deviationToUse = Math.max(5, closeDistanceToStart.standardDeviationBlocks)
                     
                     if (((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
                         < (closeDistanceToStart.averageBlocks-deviationToUse))){
