@@ -1106,7 +1106,7 @@ interface StartGameEvent {
 <660: 159-25
 <670: 86-25
 */
-const GAS_PERCENTUAL_PROBABILITY_TO_USE = 90
+const GAS_PERCENTUAL_PROBABILITY_TO_USE = 70
 
 interface GasPriceScale {
     battlePointUpTo: number
