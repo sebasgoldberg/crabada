@@ -579,6 +579,59 @@ export const getTeamsThatPlayToLooseByTeamId = async (
 
 }
 
+export const getTeamsBattlePoint = async (
+    hre: HardhatRuntimeEnvironment, blockstoanalyze: number, 
+    log = console.log, queryPageSize=3600): Promise<TeamInfoByTeam> =>{
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    hre.ethers.provider.blockNumber
+
+    const fromBlock = hre.ethers.provider.blockNumber-blockstoanalyze
+
+    const fightEventsPromise = queryFilterByPage(hre, idleGame, idleGame.filters.Fight(), fromBlock, hre.ethers.provider.blockNumber, log)
+    // gameId uint256
+    // turn uint256
+    // attackTeamId uint256
+    // defenseTeamId uint256
+    // soldierId uint256
+    // attackTime uint256
+    // attackPoint uint16
+    // defensePoint uint16
+
+    const fightEvents = await fightEventsPromise
+
+    log('fightEvents', fightEvents.length);
+
+    const battlePointByTeamId: TeamInfoByTeam = {}
+
+    // It is retrieved the quantity of first defense by team, and battlePoints
+    const FIGHT_DEFENSE_TEAM_ID_ARG_INDEX = 3
+    const FIGHT_TURN_ARG_INDEX = 1
+    const FIGHT_DEFENSE_POINT = 7
+
+    for (const e of fightEvents){
+
+        const turn: BigNumber = e.args[FIGHT_TURN_ARG_INDEX] as any
+
+        if (!turn.isZero())
+            continue
+
+        const defenseTeamId: BigNumber = e.args[FIGHT_DEFENSE_TEAM_ID_ARG_INDEX] as any
+
+        const defensePoint: number = turn.isZero() ? e.args[FIGHT_DEFENSE_POINT] : undefined
+
+        if (defensePoint)
+            battlePointByTeamId[defenseTeamId.toString()] = {
+                battlePoint: defensePoint
+            }
+
+    }
+
+    return battlePointByTeamId
+
+}
+
 export interface BlockDistanceDistribution {
     [distance: number]: number // quantity
 }
