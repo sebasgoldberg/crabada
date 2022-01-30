@@ -771,6 +771,10 @@ export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame
         )).every( locked => locked )
 }
 
+const LOOT_CONFIG = {
+    attackOnlyTeamsThatPlayToLoose: false
+}
+
 task(
     "loot",
     "Loot process.",
@@ -792,7 +796,11 @@ task(
         if ( !testmode && (await areAllTeamsLocked(hre, idleGame, lootersTeams)) )
             return
 
-        const teamsThatPlayToLooseByTeamId = await getTeamsBattlePoint(hre, blockstoanalyze)
+        const teamsThatPlayToLooseByTeamId = await (
+            LOOT_CONFIG.attackOnlyTeamsThatPlayToLoose ? 
+                getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+                : getTeamsBattlePoint(hre, blockstoanalyze)
+        )
 
         await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, blockstoanalyze)
 
@@ -871,8 +879,6 @@ task(
 
                     const tr = await reinforce(hre, looterTeamId, signer, console.log, testmode);
 
-                    await tr?.wait(5)
-    
                 } catch (error) {
                     
                     console.error('ERROR', String(error));

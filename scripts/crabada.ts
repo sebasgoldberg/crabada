@@ -1383,8 +1383,7 @@ export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise
             a.price.lt(b.price) ? -1 : a.price.gt(b.price) ? 1 : 0 // price ascending
             )
 
-    console.log('crabadasToBorrow', crabadasToBorrow);
-    
+    console.log('crabadasToBorrow', crabadasToBorrow.length);
 
     return crabadasToBorrow[0] // To avoid revert with do not return the best option
 
