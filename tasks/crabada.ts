@@ -2,13 +2,13 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther, parseUnits } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachAttackRouter, attachPlayer, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, deployAttackRouter, deployPlayer, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
+import { attachAttackRouter, attachPlayer, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, deployAttackRouter, deployPlayer, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, reinforce, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
 import { format } from "path/posix";
-import { CONFIG_BY_NODE_ID, NodeConfig,  } from "../config/nodes";
+import { AccountConfig, CONFIG_BY_NODE_ID, NodeConfig,  } from "../config/nodes";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -836,6 +836,57 @@ task(
     .addOptionalParam("lootersteamsbyaccount", "JSON (array of arrays) with the looters teams ids by account. Example: '[[0,1,2],[4,5],[6]]'.", undefined, types.string)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
+
+const REINFORCE_CONFIG: AccountConfig[] = [
+    {
+        accountIndex: 0,
+        teams: [3286, 3759, 5032]
+    },
+    {
+        accountIndex: 1,
+        teams: [5355, 5357, 6152]
+    },
+    {
+        accountIndex: 2,
+        teams: [7449, 8157]
+    }
+]
+
+task(
+    "reinforce",
+    "Reinforce process.",
+    async ({ testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+
+        for (const {accountIndex, teams} of REINFORCE_CONFIG){
+
+            const signer = await getSigner(hre, testaccount, accountIndex)
+
+            console.log('Reinforce for signer', signer.address);
+
+            for (const looterTeamId of teams){
+    
+                console.log('Reinforce for team id', looterTeamId);
+
+                try {
+
+                    const tr = await reinforce(hre, looterTeamId, signer, console.log, testmode);
+
+                    await tr?.wait(5)
+    
+                } catch (error) {
+                    
+                    console.error('ERROR', String(error));
+                    
+                }
+
+            }
+
+        }
+
+    })
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+    .addOptionalParam("testmode", "Test mode", true, types.boolean)
+
 
 interface LootGuessConfig {
     players: {

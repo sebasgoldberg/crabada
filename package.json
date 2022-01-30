@@ -45,6 +45,7 @@
     "fund-cchain-addresses": "npx hardhat run scripts/fund-cchain-addresses.js"
   },
   "dependencies": {
+    "axios": "^0.25.0",
     "typescript": "^4.3.5"
   },
   "engines": {

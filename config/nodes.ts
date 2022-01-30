@@ -1,5 +1,5 @@
 
-interface AccountConfig{
+export interface AccountConfig{
     accountIndex: number,
     teams: number[]
 }
@@ -29,7 +29,7 @@ const looter2: AccountConfig = {
 
 
 export const CONFIG_BY_NODE_ID: ConfigByNodeId = {
-    1: { accountsConfigs: [ main] },
+    1: { accountsConfigs: [ main ] },
     2: { accountsConfigs: [  ] },
     4: { accountsConfigs: [ looter2 ]},
     5: { accountsConfigs: [  ] },

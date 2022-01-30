@@ -5,7 +5,7 @@ import * as CrabadaAbi from "../abis/Crabada.json"
 import { BigNumber, Contract, ethers } from "ethers";
 import { TransactionResponse } from "@ethersproject/abstract-provider";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { formatEther, formatUnits } from "ethers/lib/utils";
+import { formatEther, formatUnits, parseEther } from "ethers/lib/utils";
 
 export const ONE_GWEI = 1000000000
 export const GAS_LIMIT = 700000
@@ -1230,6 +1230,241 @@ const createAttackStrategy = async (
         
     }
 
+
+const _shoudReinforce = (attackId1: BigNumber, attackId2: BigNumber, defId1: BigNumber, defId2: BigNumber): boolean => {
+
+    if (defId1.isZero())
+        return false
+
+    if (attackId1.isZero())
+        return true
+
+    if (defId2.isZero())
+        return false
+
+    if (attackId2.isZero())
+        return true
+
+    return false
+}
+
+interface CrabadaAPIInfo{ 
+    hp: number, 
+    damage: number, 
+    armor: number 
+}
+
+export const _battlePoint = ({ hp, damage, armor }: CrabadaAPIInfo): number => {
+    return hp+damage+armor
+}
+
+import axios from "axios";
+
+export class CrabadaAPI{
+
+    async getCrabadaInfo(crabadaId: BigNumber): Promise<CrabadaAPIInfo>{
+
+        const response: { 
+            result: CrabadaAPIInfo 
+        } = (await axios.get(`https://api.crabada.com/public/crabada/info/${ crabadaId.toString() }`))
+            .data
+
+        return response.result
+
+    }
+
+    async getCrabadasInTabernOrderByPrice(): Promise<CrabadaInTabern[]>{
+
+        interface ResponseObject { 
+            id: string,
+            price: string,
+            is_being_borrowed: number,
+            battle_point: number,
+            mine_point: number
+        }
+
+        const response: { 
+            result: { 
+                data: ResponseObject[] 
+            } 
+        } = (await axios.get(`https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=1000`))
+            .data
+
+        return response.result.data.map( o => ({
+            id: BigNumber.from(o.id),
+            price: BigNumber.from(String(o.price)),
+            is_being_borrowed: o.is_being_borrowed ? true : false,
+            battle_point: o.battle_point,
+            mine_point: o.mine_point
+        }))
+
+    }
+
+}
+
+export const API = new CrabadaAPI()
+
+export const getReinforcementMinBattlePoints = async (hre: HardhatRuntimeEnvironment,
+    looterTeamId: BigNumber): Promise<number> => {
+
+    const { idleGame, crabada } = getCrabadaContracts(hre)
+
+    const { currentGameId, battlePoint: looterBattlePoint } = await idleGame.getTeamInfo(looterTeamId)
+
+    const { teamId: minerTeamId } = await idleGame.getGameBasicInfo(currentGameId)
+
+    const { attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId)
+    
+    const { battlePoint: minerBattlePoint } = await idleGame.getTeamInfo(minerTeamId)
+    
+    const crabadaIdToBattlePointPromise = async(crabadaId): Promise<number> => {
+        if (crabadaId.isZero())
+            return 0
+        const crabadaInfo = await API.getCrabadaInfo(crabadaId) // https://api.crabada.com/public/crabada/info/18410 -> const { hp, damage, armor} response.result
+        return _battlePoint(crabadaInfo)
+    }
+
+    const sum = (prev, current) => prev+current
+
+    const attackReinforceBattlePoint = (await Promise.all([ attackId1, attackId2 ].map(crabadaIdToBattlePointPromise)))
+        .reduce(sum,0)
+    
+    const defenseReinforceBattlePoint = (await Promise.all([ defId1, defId2 ].map( crabadaIdToBattlePointPromise )))
+        .reduce(sum,0)
+    
+    const minBattlePointNeeded = minerBattlePoint
+        +defenseReinforceBattlePoint
+        +1
+        -looterBattlePoint
+        -attackReinforceBattlePoint
+    
+    return minBattlePointNeeded
+
+}
+
+export interface CrabadaToBorrow {
+    id: BigNumber,
+    price: BigNumber
+}
+
+export interface CrabadaInTabern{ 
+    id: BigNumber,
+    price: BigNumber,
+    is_being_borrowed: boolean,
+    battle_point: number,
+    mine_point: number
+}
+
+const BORROW_ADDITIONAL_PRICE = parseEther('5')
+const BORROW_MAX_PRICE = parseEther('35')
+
+export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise<CrabadaToBorrow> => {
+
+    const crabadasInTabernOrderByPrice: CrabadaInTabern[] = await API.getCrabadasInTabernOrderByPrice() //https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=100
+
+    console.log('crabadasInTabernOrderByPrice', crabadasInTabernOrderByPrice.length);
+
+    const possibleCrabadasToBorrowOrderByPrice = crabadasInTabernOrderByPrice
+        //.slice(15) // Are removed the first 15 elements to avoid transaction revert
+        .filter( x => x.battle_point >= minBattlePointNeeded)
+
+    console.log('possibleCrabadasToBorrowOrderByPrice', possibleCrabadasToBorrowOrderByPrice.length);
+
+    const basePrice = possibleCrabadasToBorrowOrderByPrice[0].price
+
+    const additionalPrice = basePrice.add(BORROW_ADDITIONAL_PRICE)
+
+    const maxPrice = additionalPrice.lt(BORROW_MAX_PRICE) ? additionalPrice : BORROW_MAX_PRICE
+
+    const crabadasToBorrow = possibleCrabadasToBorrowOrderByPrice
+        .filter( x => x.price.lte(maxPrice))
+        .sort( (a,b) => 
+            a.battle_point<b.battle_point ? 1 : a.battle_point>b.battle_point ? -1 : // battle_point descending
+            a.price.lt(b.price) ? -1 : a.price.gt(b.price) ? 1 : 0 // price ascending
+            )
+
+    console.log('crabadasToBorrow', crabadasToBorrow);
+    
+
+    return crabadasToBorrow[0] // To avoid revert with do not return the best option
+
+}
+
+export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, address: string): Promise<TransactionResponse|undefined> => {
+
+    const { tusToken } = getCrabadaContracts(hre)
+
+    const allowance: BigNumber = await tusToken.allowance(signer.address, address)
+
+    if (allowance.lt(ethers.constants.MaxUint256.div(2))){
+        console.log('tusToken.approve(address, MaxUint256)', address, formatEther(ethers.constants.MaxUint256));
+        await tusToken.connect(signer).callStatic.approve(address, ethers.constants.MaxUint256)
+        const tr: TransactionResponse = await tusToken.connect(signer).approve(address, ethers.constants.MaxUint256, await getOverride(hre))
+        console.log('Transaction hash', tr.hash);
+        return tr
+    }
+
+}
+
+export const doReinforce = async (hre: HardhatRuntimeEnvironment,
+    currentGameId: BigNumber, minBattlePointNeeded: number,
+    signer: SignerWithAddress, testMode=true): Promise<TransactionResponse|undefined> => {
+
+    const { idleGame } = getCrabadaContracts(hre)
+    
+    const { id: crabadaId, price: borrowPrice } = await getCrabadasToBorrow(minBattlePointNeeded)
+    
+    const override = {
+        gasLimit: GAS_LIMIT,
+        maxFeePerGas: MAX_FEE,
+        maxPriorityFeePerGas: ONE_GWEI
+    }
+
+    console.log('idleGame.reinforceAttack(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
+
+    await idleGame.connect(signer).callStatic.reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+
+    if (!testMode){
+        const tr: TransactionResponse = await idleGame.connect(signer).reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+
+        console.log('Transaction hash', tr.hash);
+    
+        return tr
+    }
+
+}
+
+export const reinforce = async (hre: HardhatRuntimeEnvironment,
+    looterTeamId: number, signer: SignerWithAddress, 
+    log: (typeof console.log) = console.log, testMode=true): Promise<TransactionResponse|undefined> => {
+
+    const { idleGame } = getCrabadaContracts(hre);
+
+    if (!(await isTeamLocked(hre, idleGame, looterTeamId)))
+        return
+
+    if (!testMode){
+        const tr = await setMaxAllowanceIfNotApproved(hre, signer, idleGame.address)
+        await tr?.wait(5)
+    }
+
+    const { currentGameId } = await idleGame.getTeamInfo(looterTeamId)
+
+    if (currentGameId.isZero())
+        return
+
+    const { attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId)
+
+    if (!_shoudReinforce(attackId1, attackId2, defId1, defId2))
+        return
+
+    const reinforcementMinBattlePoints: number = await getReinforcementMinBattlePoints(hre, BigNumber.from(looterTeamId))
+    
+    console.log('reinforcementMinBattlePoints', reinforcementMinBattlePoints);
+
+    return await doReinforce(hre, currentGameId, reinforcementMinBattlePoints, signer, testMode)
+
+}
 
 export const MIN_VALID_BATTLE_POINTS = 564
 export const MIN_BATTLE_POINTS_FOR_ELITE_TEAM = 655
