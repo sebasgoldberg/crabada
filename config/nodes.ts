@@ -19,7 +19,7 @@ const main: AccountConfig = {
 
 const looter1: AccountConfig = {
     accountIndex: 1,
-    teams: [/*5355,*/ 5357, 6152]
+    teams: [5355, 5357, 6152]
 }
 
 const looter2: AccountConfig = {
@@ -30,9 +30,9 @@ const looter2: AccountConfig = {
 
 export const CONFIG_BY_NODE_ID: ConfigByNodeId = {
     1: { accountsConfigs: [ main ] },
-    2: { accountsConfigs: [  ] },
-    4: { accountsConfigs: [ looter2 ]},
-    5: { accountsConfigs: [  ] },
-    9: { accountsConfigs: [ looter1 ] },
-    11: { accountsConfigs: [  ]},
+    2: { accountsConfigs: [ looter2, looter1 ] },
+    4: { accountsConfigs: [ main ]},
+    5: { accountsConfigs: [ looter2, looter1 ] },
+    9: { accountsConfigs: [ looter2, looter1 ] },
+    11: { accountsConfigs: [ main ]},
 }
