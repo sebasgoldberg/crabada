@@ -61,7 +61,7 @@ describe('Looting', function () {
 
   });
 
-  describe.only('Looting', function () {
+  describe('Looting', function () {
 
     it('Should loot task end after looting.', async function () {
 

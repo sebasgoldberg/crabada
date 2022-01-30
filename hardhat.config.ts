@@ -2,6 +2,7 @@ import { extendConfig, task } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { BigNumber } from "ethers"
 import "@nomiclabs/hardhat-waffle"
+import "hardhat-gas-reporter"
 
 
 const NODE_ID: number = process.env['BLOCKCHAIN_NODE_ID'] ? Number(process.env['BLOCKCHAIN_NODE_ID']) : 0
@@ -135,5 +136,8 @@ export default {
       timeout: 60000,
     }
   },
-  nodeId: NODE_ID
+  nodeId: NODE_ID,
+  gasReporter: {
+    enabled: false,
+  },
 }

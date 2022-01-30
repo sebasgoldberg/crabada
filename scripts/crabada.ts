@@ -98,13 +98,13 @@ export const waitTransaction = async (trx: TransactionResponse, blocksToWait: nu
     await trx.wait(blocksToWait)
 }
 
-const abi = {
+export const abi = {
     IdleGame: IdleGameAbi,
     ERC20: ERC20Abi,
     Crabada: CrabadaAbi,
 }
   
-const contractAddress = {
+export const contractAddress = {
     IdleGame: '0x82a85407BD612f52577909F4A58bfC6873f14DA8',
     tusToken: '0xf693248F96Fe03422FEa95aC0aFbBBc4a8FdD172',
     craToken: '0xa32608e873f9ddef944b24798db69d80bbb4d1ed',
@@ -336,11 +336,14 @@ export const attachPlayer = async (hre: HardhatRuntimeEnvironment, contractAddre
     return Player.attach(contractAddress)
 }
 
-export const deployPlayer = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress | undefined): Promise<Contract> => {
+export const attachAttackRouter = async (hre: HardhatRuntimeEnvironment, contractAddress: string): Promise<Contract> => {
 
-    if (!signer){
-        signer = (await hre.ethers.getSigners())[0]
-    }
+    const Router = (await hre.ethers.getContractFactory("AttackRouter"));
+
+    return Router.attach(contractAddress)
+}
+
+export const deployPlayer = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress | undefined): Promise<Contract> => {
 
     const { idleGame, crabada } = getCrabadaContracts(hre)
 
@@ -350,6 +353,18 @@ export const deployPlayer = async (hre: HardhatRuntimeEnvironment, signer: Signe
     const player = await Player.deploy(idleGame.address, crabada.address, override)
 
     return player
+}
+
+export const deployAttackRouter = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress | undefined): Promise<Contract> => {
+
+    const { idleGame, crabada } = getCrabadaContracts(hre)
+
+    const AttackRouter = (await hre.ethers.getContractFactory("AttackRouter")).connect(signer);
+    const override = await getOverride(hre)
+    override.gasLimit = 2500000
+    const router = await AttackRouter.deploy(override)
+
+    return router
 }
 
 export const getOverride = async (hre: HardhatRuntimeEnvironment) => {
@@ -793,8 +808,10 @@ export const getCloseDistanceToStartByTeamId = async (
             eventsBlockNumbersForTeam.startGameBlockNumbers.sort(compareNumberAsc)
             eventsBlockNumbersForTeam.closeGameBlockNumbers.sort(compareNumberAsc)
     
-            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length==0 || 
-                eventsBlockNumbersForTeam.closeGameBlockNumbers.length==0)
+            // We discard the teams that does not have the minimum number of events to
+            // do de analysis.
+            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length < 2 || 
+                eventsBlockNumbersForTeam.closeGameBlockNumbers.length < 2)
                 return
             
             // If first StartGame event blocknumber is lower than first CloseGame event 

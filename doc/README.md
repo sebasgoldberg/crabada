@@ -156,6 +156,57 @@ npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0
 
 ## Mainnet
 
+### lootguess Setup
+
+```bash
+# Added router as owner of player, because router calls player.attack
+npx hardhat playeraddowner --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --newowner 0x524Ba539123784d404aD3756815B3d46eF2A6430
+
+# Added the looters external accounts as owners of router, because they will be calling router.attackTeams
+npx hardhat routeraddowner --network mainnet --router 0x524Ba539123784d404aD3756815B3d46eF2A6430  --newowner 0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4
+npx hardhat routeraddowner --network mainnet --router 0x524Ba539123784d404aD3756815B3d46eF2A6430  --newowner 0xbfca579D0eB8e294DeAe8C8a94cD3eF3c4836634
+npx hardhat routeraddowner --network mainnet --router 0x524Ba539123784d404aD3756815B3d46eF2A6430  --newowner 0xf597AC540730B2c99A31aE1e1362867C4675de2C
+npx hardhat routeraddowner --network mainnet --router 0x524Ba539123784d404aD3756815B3d46eF2A6430  --newowner 0x83Ff016a2e574b2c35d17Fe4302188b192b64344
+npx hardhat routeraddowner --network mainnet --router 0x524Ba539123784d404aD3756815B3d46eF2A6430  --newowner 0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8
+
+# Signer sets approval to manage all Crabada NFTs to Player contract.
+npx hardhat playersetapproval --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd
+
+# First checks the teams status of Player contract.
+npx hardhat playerlistteams --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd
+# 4400: 0,0,0
+
+# Are moved the crabadas from signer's inventory to IddleGame in favor of Player contract.
+npx hardhat playerdeposit --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --crabadas 12269,12712,9981,18396,9980,12714,9860,12777,18410
+
+# Are added the crabadas to the existing team
+npx hardhat playeraddtoteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 4400 --position 0 --crabada 12269
+npx hardhat playeraddtoteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 4400 --position 1 --crabada 12712
+npx hardhat playeraddtoteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 4400 --position 2 --crabada 9981
+
+# Are created the new teams.
+npx hardhat playercreateteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --c1 18396 --c2 9980 --c3 12714
+npx hardhat playercreateteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --c1 9860 --c2 12777 --c3 18410
+
+# First checks the teams final status of Player contract.
+npx hardhat playerlistteams --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd
+
+# Remove of crabadas from teams.
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 4400 --position 0
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 4400 --position 1
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 4400 --position 2
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8700 --position 0
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8700 --position 1
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8700 --position 2
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8702 --position 0
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8702 --position 1
+npx hardhat playerremovefromteam --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --teamid 8702 --position 2
+
+npx hardhat playerwithdraw --network mainnet --player 0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd --crabadas 12269,12712,9981,18396,9980,12714,9860,12777,18410
+```
+
+
+
 ### Create Player
 ```bash
 npx hardhat playerdeploy --network mainnet
@@ -172,6 +223,7 @@ npx hardhat playerwithdrawerc20 --network mainnet --player 0x019e96438ed58C7F18D
 npx hardhat playerclosegame --network mainnet --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --teamid 3785 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 npx hardhat playerremovefromteam --network mainnet --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --teamid 3785 --position 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 npx hardhat playerwithdraw --network mainnet --player 0x71C9F079C03bEe608fF19c26B943E599DF115093 --crabadas 7939,7224 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
+
 ```
 
 ### Player: Change Crabada
