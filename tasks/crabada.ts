@@ -1821,3 +1821,77 @@ task(
     .addOptionalParam("toblock", "To from.", undefined , types.int)
     .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
     .addOptionalParam("battlepoints", "Battle points.", 235*3 , types.int)
+
+task(
+    "approveoperation",
+    "Approve account that will transfer the rewards.",
+    async ({ operationaddress }, hre: HardhatRuntimeEnvironment) => {
+        
+        const { tusToken, craToken } = getCrabadaContracts(hre)
+
+        const signers = await hre.ethers.getSigners()
+
+        const override = await getOverride(hre)
+
+        for (const signer of signers){
+
+            for (const erc20 of [tusToken, craToken]){
+
+                const allowance: BigNumber = await erc20.allowance(signer.address, operationaddress)
+
+                if (allowance.lt(hre.ethers.constants.MaxUint256.div(2))){
+
+                    await erc20.connect(signer).callStatic.approve(operationaddress, hre.ethers.constants.MaxUint256, override)
+                    await erc20.connect(signer).approve(operationaddress, hre.ethers.constants.MaxUint256, override)
+
+                }
+
+            }
+
+        }
+
+    })
+    .addOptionalParam("operationaddress", "Operation account address.", "0xf597AC540730B2c99A31aE1e1362867C4675de2C", types.string)
+
+task(
+    "withdrawrewards",
+    "Withdraw rewards to deposit.",
+    async ({ rewardsfrom, rewardsto }, hre: HardhatRuntimeEnvironment) => {
+        
+        const { tusToken, craToken } = getCrabadaContracts(hre)
+
+        const signer = (await hre.ethers.getSigners())[0]
+
+        const override = await getOverride(hre)
+
+        const fromAddresses = rewardsfrom.split(',')
+
+        for (const from of fromAddresses){
+
+            for (const erc20 of [tusToken, craToken]){
+
+                    let value: BigNumber = await erc20.balanceOf(from)
+
+                    if (erc20.address === tusToken.address)
+                        value = value.sub(parseEther('240')) // Backup value for reinforcements
+
+                    if (value.gt(0)){
+                        console.log('erc20.transferFrom(from, rewardsto, value)', from, rewardsto, formatEther(value));
+                        
+                        await erc20.connect(signer).callStatic.transferFrom(from, rewardsto, value, override)
+                        await erc20.connect(signer).transferFrom(from, rewardsto, value, override)
+                    }
+
+            }
+
+        }
+
+    })
+    .addParam("rewardsfrom", "Accounts that recieves the rewards (',': coma separeted).", 
+        [
+            "0xB2f4C513164cD12a1e121Dc4141920B805d024B8",
+            "0xE90A22064F415896F1F72e041874Da419390CC6D",
+            "0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2"
+        ].join(','), types.string)
+    .addParam("rewardsto", "Deposit address.", "0x1A6ED72C435fe1c34491BB3d4e99f888fA2a6152", types.string)
+
