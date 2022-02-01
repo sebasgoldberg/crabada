@@ -1583,8 +1583,8 @@ task(
     .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)
     .addOptionalParam("toblock", "To from.", undefined , types.int)
     .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
-    .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355,5357,6152" , types.string)
-    .addOptionalParam("nodesquan", "Nodes quantity", 10, types.int)
+    .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355,5357,6152,7449,8157,9236" , types.string)
+    .addOptionalParam("nodesquan", "Nodes quantity", 11, types.int)
 
 // TODO Task to understand costs
 /**
@@ -1733,7 +1733,7 @@ task(
     .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)
     .addOptionalParam("toblock", "To from.", undefined , types.int)
     .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
-    .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355,5357,6152" , types.string)
+    .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355,5357,6152,7449,8157,9236" , types.string)
     .addOptionalParam("steps", "Step to consider in the distance analysis.", 10 , types.int)
 
 task(

@@ -19,12 +19,12 @@ export const main: AccountConfig = {
 
 export const looter1: AccountConfig = {
     accountIndex: 1,
-    teams: [5355, 5357, /*6152*/]
+    teams: [5355, 5357, 6152]
 }
 
 export const looter2: AccountConfig = {
     accountIndex: 2,
-    teams: [7449, 8157]
+    teams: [7449, 8157, 9236]
 }
 
 
