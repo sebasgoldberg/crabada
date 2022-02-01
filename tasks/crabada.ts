@@ -8,7 +8,7 @@ import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
 import { format } from "path/posix";
-import { AccountConfig, CONFIG_BY_NODE_ID, NodeConfig,  } from "../config/nodes";
+import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig,  } from "../config/nodes";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -846,18 +846,9 @@ task(
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
 
 const REINFORCE_CONFIG: AccountConfig[] = [
-    {
-        accountIndex: 0,
-        teams: [3286, 3759, 5032]
-    },
-    {
-        accountIndex: 1,
-        teams: [5355, 5357, 6152]
-    },
-    {
-        accountIndex: 2,
-        teams: [7449, 8157]
-    }
+    main,
+    looter1,
+    looter2,
 ]
 
 task(
