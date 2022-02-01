@@ -1355,7 +1355,7 @@ export interface CrabadaInTabern{
     mine_point: number
 }
 
-const BORROW_ADDITIONAL_PRICE = parseEther('5')
+const BORROW_ADDITIONAL_PRICE = parseEther('2')
 const BORROW_MAX_PRICE = parseEther('35')
 
 export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise<CrabadaToBorrow> => {
