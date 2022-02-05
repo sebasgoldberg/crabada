@@ -1110,7 +1110,7 @@ task(
                     const teamId = BigNumber.from('0x'+(log.data as string).slice(66,130))
                     console.log(+new Date()/1000, "eth_getFilterChanges", log.transactionHash, BigNumber.from(log.blockNumber).toNumber(), teamId.toNumber());
                 }
-            }, 100)
+            }, 10)
 
         }))
 
@@ -1413,6 +1413,7 @@ task(
                     )
 
                     const startGameTransactions = transactions
+                        .filter( tx => tx.to )
                         .filter( tx => tx.to === idleGame.address )
                         .filter( tx => tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION )
 
@@ -1422,7 +1423,7 @@ task(
                             console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
                         })
 
-                }, 1000)
+                }, 10)
     
             }))
     
