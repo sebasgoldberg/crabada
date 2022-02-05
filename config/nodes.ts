@@ -4,7 +4,12 @@ export interface AccountConfig{
     teams: number[]
 }
 
+export interface LootConfig {
+    attackOnlyTeamsThatPlayToLoose: boolean
+}
+
 export interface NodeConfig {
+    lootConfig: LootConfig
     accountsConfigs: AccountConfig[]
 }
 
@@ -27,12 +32,19 @@ export const looter2: AccountConfig = {
     teams: [7449, 8157, 9236]
 }
 
+const LOOT_CONFIG_FOR_REINFORCE: LootConfig = {
+    attackOnlyTeamsThatPlayToLoose: false
+}
+
+const LOOT_CONFIG_FOR_VALIDATOR: LootConfig = {
+    attackOnlyTeamsThatPlayToLoose: true
+}
 
 export const CONFIG_BY_NODE_ID: ConfigByNodeId = {
-    1: { accountsConfigs: [ main ] },
-    2: { accountsConfigs: [ looter2, looter1 ] },
-    4: { accountsConfigs: [ main ]},
-    5: { accountsConfigs: [ looter2, looter1 ] },
-    9: { accountsConfigs: [ looter2, looter1 ] },
-    11: { accountsConfigs: [ main ]},
+    1: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ main ] },
+    2: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ looter2, looter1 ] },
+    4: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ main ]},
+    5: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ looter2, looter1 ] },
+    9: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ looter2, looter1 ] },
+    11: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ main ]},
 }

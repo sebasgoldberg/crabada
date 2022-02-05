@@ -400,20 +400,16 @@ export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame
         )).every( locked => locked )
 }
 
-const LOOT_CONFIG = {
-    attackOnlyTeamsThatPlayToLoose: false
-}
 
 task(
     "loot",
     "Loot process.",
-    async ({ blockstoanalyze, firstdefendwindow, lootersteamsbyaccount, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
         if (!(hre.config.nodeId in CONFIG_BY_NODE_ID))
             return
 
-        const nodeConfig: NodeConfig = lootersteamsbyaccount ? 
-            JSON.parse(lootersteamsbyaccount) : CONFIG_BY_NODE_ID[hre.config.nodeId]
+        const nodeConfig: NodeConfig = CONFIG_BY_NODE_ID[hre.config.nodeId]
 
         const { idleGame } = getCrabadaContracts(hre)
 
@@ -426,7 +422,7 @@ task(
             return
 
         const teamsThatPlayToLooseByTeamId = await (
-            LOOT_CONFIG.attackOnlyTeamsThatPlayToLoose ? 
+            nodeConfig.lootConfig.attackOnlyTeamsThatPlayToLoose ? 
                 getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
                 : getTeamsBattlePoint(hre, blockstoanalyze)
         )
@@ -470,7 +466,6 @@ task(
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
-    .addOptionalParam("lootersteamsbyaccount", "JSON (array of arrays) with the looters teams ids by account. Example: '[[0,1,2],[4,5],[6]]'.", undefined, types.string)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
 
