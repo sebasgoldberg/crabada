@@ -1405,7 +1405,7 @@ task(
                 setInterval(async () => {
                     
                     const pendingTransactionsHashes: string[] = await provider.send("eth_getFilterChanges", [filterId]);
-                    console.log('pendingTransactions', pendingTransactionsHashes.length);
+                    // console.log('pendingTransactions', pendingTransactionsHashes.length);
                     
                     const transactions = await Promise.all(
                         pendingTransactionsHashes
