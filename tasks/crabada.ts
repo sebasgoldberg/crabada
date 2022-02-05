@@ -1085,15 +1085,17 @@ task(
 task(
     "pendingstartgameevents",
     "Listen for pending transactions.",
-    async ({ }, hre: HardhatRuntimeEnvironment) => {
+    async ({ pending }, hre: HardhatRuntimeEnvironment) => {
         
         const provider = hre.ethers.provider
 
         const { idleGame } = getCrabadaContracts(hre)
 
+        const mode = pending ? 'pending' : 'latest'
+
         const filter = {
-            fromBlock: 'pending',
-            toBlock: 'pending',
+            fromBlock: mode,
+            toBlock: mode,
             address: idleGame.address,
             topics: [ START_GAME_EVENT_TOPIC ]
         };
@@ -1115,6 +1117,7 @@ task(
         }))
 
     })
+    .addOptionalParam('pending', 'Get pending events or lastest.', true, types.boolean)
 
 export const getBlocksInterval = async (hre: HardhatRuntimeEnvironment, fromblock: number, toblock: number, blocksquan: number) => {
         
