@@ -5,7 +5,8 @@ export interface AccountConfig{
 }
 
 export interface LootConfig {
-    attackOnlyTeamsThatPlayToLoose: boolean
+    attackOnlyTeamsThatPlayToLoose: boolean,
+    startGameFilterMode: "latest" | "pending",
 }
 
 export interface NodeConfig {
@@ -33,11 +34,13 @@ export const looter2: AccountConfig = {
 }
 
 const LOOT_CONFIG_FOR_REINFORCE: LootConfig = {
-    attackOnlyTeamsThatPlayToLoose: false
+    attackOnlyTeamsThatPlayToLoose: false,
+    startGameFilterMode: "latest",
 }
 
 const LOOT_CONFIG_FOR_VALIDATOR: LootConfig = {
-    attackOnlyTeamsThatPlayToLoose: true
+    attackOnlyTeamsThatPlayToLoose: true,
+    startGameFilterMode: "latest"
 }
 
 export const CONFIG_BY_NODE_ID: ConfigByNodeId = {

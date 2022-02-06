@@ -1036,7 +1036,7 @@ task(
         await (new Promise(async () => {
             const { idleGame } = getCrabadaContracts(hre)
 
-            hre.ethers.provider.on("pending", (tx: ethers.Transaction) =>{
+            hre.ethers.provider.on('latest', (tx: ethers.Transaction) =>{
                 if (tx.to === idleGame.address &&
                     tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION){
 
@@ -1055,8 +1055,8 @@ task(
 
 
             const filter = {
-                fromBlock: 'pending',
-                toBlock: 'pending',
+                fromBlock: 'latest',
+                toBlock: 'latest',
                 address: idleGame.address,
                 topics: [ START_GAME_EVENT_TOPIC ]
             };

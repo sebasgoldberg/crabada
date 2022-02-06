@@ -1259,6 +1259,7 @@ export const _battlePoint = ({ hp, damage, armor }: CrabadaAPIInfo): number => {
 }
 
 import axios from "axios";
+import { CONFIG_BY_NODE_ID, NodeConfig } from "../config/nodes";
 
 export class CrabadaAPI{
 
@@ -1473,6 +1474,8 @@ export const loot = async (
     looterteamid: number, signer: SignerWithAddress, 
     log: (typeof console.log) = console.log, testMode=true, playerAddress?: string): Promise<TransactionResponse|undefined> => {
 
+    const nodeConfig: NodeConfig = CONFIG_BY_NODE_ID[hre.config.nodeId]
+
     const { idleGame } = getCrabadaContracts(hre)
 
     const { lockTo: looterLockTo, currentGameId: looterCurrentGameId, battlePoint: looterBattlePoint } = await idleGame.getTeamInfo(looterteamid)
@@ -1491,24 +1494,15 @@ export const loot = async (
     }
 
     const START_GAME_FILTER = {
-        fromBlock: 'pending',
-        toBlock: 'pending',
+        fromBlock: nodeConfig.lootConfig.startGameFilterMode,
+        toBlock: nodeConfig.lootConfig.startGameFilterMode,
         address: idleGame.address,
         topics: [ '0x0eef6f7452b7d2ee11184579c086fb47626e796a83df2b2e16254df60ab761eb' ]
-    };
-    
-    const FIGHT_FILTER = {
-        fromBlock: 'pending',
-        toBlock: 'pending',
-        address: idleGame.address,
-        topics: [ '0xc9116f8ab51c97fa0f2ebd6cc9f75395464ae81bebc69d2d468b508a460a7136' ]
     };
     
     const provider = hre.ethers.provider
     
     const startGameFilterId = await provider.send("eth_newFilter", [START_GAME_FILTER]);
-
-    const fightFilterId = await provider.send("eth_newFilter", [FIGHT_FILTER]);
 
     const lootedGame: { [gameId:string]: boolean } = {}
     
