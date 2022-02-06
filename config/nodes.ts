@@ -48,6 +48,6 @@ export const CONFIG_BY_NODE_ID: ConfigByNodeId = {
     2: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ looter2 ] },
     4: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ main ]},
     5: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ looter2 ] },
-    9: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ main, looter1, looter2 ] },
+    9: { lootConfig: LOOT_CONFIG_FOR_VALIDATOR, accountsConfigs: [ main, looter1, looter2 ] },
     11: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ main ]},
 }
