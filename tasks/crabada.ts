@@ -1390,6 +1390,37 @@ task(
 
     })
 
+type PendingTransactionTask = (tx: ethers.Transaction) => void
+
+const listenPendingStartGameTransaction = async (hre: HardhatRuntimeEnvironment, pendingTransactionTask: PendingTransactionTask) => {
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    const provider = hre.ethers.provider
+    const filterId = await provider.send("eth_newPendingTransactionFilter", []);
+
+    return setInterval(async () => {
+                    
+        const pendingTransactionsHashes: string[] = await provider.send("eth_getFilterChanges", [filterId]);
+        // console.log('pendingTransactions', pendingTransactionsHashes.length);
+        
+        const transactions = await Promise.all(
+            pendingTransactionsHashes
+                .map( async(tHash) => await provider.getTransaction(tHash))
+        )
+
+        const startGameTransactions = transactions
+            .filter( tx => tx )
+            .filter( tx => !tx.blockNumber ) // Are discarded the transactions that were already executed
+            .filter( tx => tx.to === idleGame.address )
+            .filter( tx => tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION )
+
+        startGameTransactions
+            .forEach( pendingTransactionTask )
+
+    }, 10)
+
+}
 
 task(
     "pendingstartgametransactions",
@@ -1397,39 +1428,11 @@ task(
     async ({ }, hre: HardhatRuntimeEnvironment) => {
         
         await (new Promise(async () => {
-            const { idleGame } = getCrabadaContracts(hre)
 
-            const provider = hre.ethers.provider
-            const filterId = await provider.send("eth_newPendingTransactionFilter", []);
-            console.log(filterId);
-    
-            await (new Promise(() => {
-    
-                setInterval(async () => {
-                    
-                    const pendingTransactionsHashes: string[] = await provider.send("eth_getFilterChanges", [filterId]);
-                    // console.log('pendingTransactions', pendingTransactionsHashes.length);
-                    
-                    const transactions = await Promise.all(
-                        pendingTransactionsHashes
-                            .map( async(tHash) => await provider.getTransaction(tHash))
-                    )
-
-                    const startGameTransactions = transactions
-                        .filter( tx => tx )
-                        .filter( tx => tx.to )
-                        .filter( tx => tx.to === idleGame.address )
-                        .filter( tx => tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION )
-
-                    startGameTransactions
-                        .forEach( tx => {
-                            const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
-                            console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
-                        })
-
-                }, 10)
-    
-            }))
+            listenPendingStartGameTransaction(hre, tx => {
+                const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
+                console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
+            })
     
         }))
 
