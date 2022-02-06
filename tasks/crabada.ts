@@ -1422,9 +1422,11 @@ task(
                         .filter( tx => tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION )
 
                     startGameTransactions
-                        .forEach( tx => {
+                        .forEach( async(tx) => {
                             const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
-                            console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
+                            const txr = await hre.ethers.provider.getTransactionReceipt(tx.hash)
+                            console.log('eth_newPendingTransactionFilter', tx.hash, (tx as any).blockNumber, teamId.toNumber());
+                            console.log('Logs', txr.logs);
                         })
 
                 }, 10)
