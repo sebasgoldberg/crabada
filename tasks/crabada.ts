@@ -1416,6 +1416,7 @@ task(
                     )
 
                     const startGameTransactions = transactions
+                        .filter( tx => tx )
                         .filter( tx => tx.to )
                         .filter( tx => tx.to === idleGame.address )
                         .filter( tx => tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION )
