@@ -509,7 +509,7 @@ task(
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
 
 
-interface LootGuessConfig {
+interface LootPendingConfig {
     players: {
         address: string,
         teams: number[]
@@ -533,8 +533,8 @@ interface LootGuessConfig {
 }
 
 task(
-    "lootguess",
-    "Loot process based on predict of startGame transactions using the CloseGame events and analyses on teams behaviours.",
+    "lootpending",
+    "Loot pending startGame transactions.",
     async ({ blockstoanalyze, firstdefendwindow, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
         // signer used to settle
@@ -542,7 +542,7 @@ task(
 
         const lootersSigners = (await hre.ethers.getSigners()).slice(1)
 
-        const lootGuessConfig: LootGuessConfig = {
+        const lootPendingConfig: LootPendingConfig = {
             maxBlocksPerTeams: 55,
             maxStandardDeviation: 14,
             router: {
@@ -570,13 +570,13 @@ task(
 
         const { idleGame } = getCrabadaContracts(hre)
         const router: Contract | undefined = 
-            lootGuessConfig.router.address ? 
-                await attachAttackRouter(hre, lootGuessConfig.router.address)
+            lootPendingConfig.router.address ? 
+                await attachAttackRouter(hre, lootPendingConfig.router.address)
                 : undefined
 
         // Verify there are teams in the config.
 
-        const lootersTeams = lootGuessConfig.players.map( p => p.teams ).flat()
+        const lootersTeams = lootPendingConfig.players.map( p => p.teams ).flat()
 
         if (lootersTeams.length == 0)
             return
@@ -590,8 +590,7 @@ task(
             battlePoint: number,
         }
 
-        // TODO Verify that works
-        const playerTeamPairs: PlayerTeamPair[] = await Promise.all(lootGuessConfig.players
+        const playerTeamPairs: PlayerTeamPair[] = await Promise.all(lootPendingConfig.players
             .map( p => p.teams
                 .map( async(teamId) => {
                     const { battlePoint } = await idleGame.getTeamInfo(teamId)
@@ -605,10 +604,6 @@ task(
             )
             .flat())
         
-        // await Promise.all(playerTeamPairs.map( async(pair) => {
-        //     const { battlePoint } = await idleGame.getTeamInfo(pair.teamId)
-        //     pair.battlePoint = battlePoint
-        // }))
         
         // Initialize teams' lock status
 
@@ -666,16 +661,6 @@ task(
 
         idleGame.on(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
 
-        // Get teams with their minCloseDistanceToStart, averageCloseDistanceToStart and
-        // deviationCloseDistanceToStart
-        const closeDistanceToStartByTeamId: CloseDistanceToStartByTeamId = await getCloseDistanceToStartByTeamId(hre, blockstoanalyze, teamsThatPlayToLooseByTeamId)
-
-        const stepsDistributionForDistanceDeviation: StepMaxValuesByPercentage = getPercentualStepDistribution(
-            Object.keys(closeDistanceToStartByTeamId)
-                .map(teamId => closeDistanceToStartByTeamId[teamId].standardDeviationBlocks)
-                .sort((a,b) => a<b?-1:a>b?1:0),
-            20)
-        console.log('stepsDistributionForDistanceDeviation', stepsDistributionForDistanceDeviation);
 
         // Set interval for updating teams' lock status.
 
@@ -683,25 +668,26 @@ task(
 
         // Listen for CloseGame events to register team for looting
 
-        interface ClosedGameTargets {
+        interface StartGameTargets {
             teamId: BigNumber,
-            closeGameBlocknumber: number,
+            attacksPerformed: number,
         }
 
-        interface ClosedGameTargetsByTeamId {
-            [teamId:string]: ClosedGameTargets
+        interface StartedGameTargetsByTeamId {
+            [teamId:string]: StartGameTargets
         }
 
-        const closedGameTargetsByTeamId: ClosedGameTargetsByTeamId = {}
+        const startedGameTargetsByTeamId: StartedGameTargetsByTeamId = {}
 
-        const addTeamToLootTargets = async (gameId: BigNumber, { transactionHash, blockNumber, getBlock }) => {
+        const addTeamToLootTargets = (tx: ethers.Transaction) => {
 
-            const { teamId } = await idleGame.getGameBasicInfo(gameId)
-
-            if (!teamsThatPlayToLooseByTeamId[teamId.toString()])
-                return
+            const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
+            console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
 
             const targetTeamInfo = teamsThatPlayToLooseByTeamId[teamId.toString()]
+
+            if (!targetTeamInfo)
+                return
 
             if (!targetTeamInfo.battlePoint)
                 return
@@ -711,129 +697,39 @@ task(
             if (pairsStrongerThanTarget.length == 0)
                 return
 
-            const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
-
-            if (!closeDistanceToStart){
-                return
-            }
-
-            if (closeDistanceToStart.standardDeviationBlocks>lootGuessConfig.maxStandardDeviation){
-                console.log('CloseGame:', transactionHash, 
-                    'Discarded:', 'Deviation', 
-                    closeDistanceToStart.standardDeviationBlocks, '>', lootGuessConfig.maxStandardDeviation,
-                )
-                return
-            }
-
-            closedGameTargetsByTeamId[teamId.toString()] = {
+            startedGameTargetsByTeamId[teamId.toString()] = {
                 teamId,
-                closeGameBlocknumber: blockNumber,
+                attacksPerformed: 0,
             }
 
-            console.log('CloseGame', transactionHash, 
-                'Added team to loot targets (teamId, blockNumber, gameId)', 
-                teamId.toNumber(), blockNumber, gameId.toNumber()
+            // TODO Verify if attack imediately it is needed.
+
+            console.log('Pending startGame', tx.hash, 
+                'Added team to loot targets', teamId.toNumber()
             );
             
         }
 
-        idleGame.on(idleGame.filters.CloseGame(), addTeamToLootTargets)
-
-        // Metrics implementation
-
-        interface GameInfo {
-            attackTransactions: number,
-        }
-
-        interface GameInfoByGameId {
-            [teamId: string]: GameInfo
-        }
-
-        class Metrics {
-
-            attackTransactions: number = 0
-            effectiveGameAttacks: number = 0 // Attack until looted
-            failedGameAttacks: number = 0 // Attack but no loot
-            startTime: number = +new Date()
-            gameInfoByGameId: GameInfoByGameId = {}
-
-            attackTeams(teamIds: string[]){
-                this.attackTransactions++
-                teamIds.forEach( teamId => {
-                    if (!this.gameInfoByGameId[teamId]){
-                        this.gameInfoByGameId[teamId] = { attackTransactions: 0 }
-                    }
-                    this.gameInfoByGameId[teamId].attackTransactions++    
-                })
-            }
-
-            lootTeam(teamId: string){
-                if (this.gameInfoByGameId[teamId] && this.gameInfoByGameId[teamId].attackTransactions>0){
-                    this.effectiveGameAttacks++
-                }
-            }
-
-            maxAttacksAchivedForTeam(teamId: string){
-                if (this.gameInfoByGameId[teamId] && this.gameInfoByGameId[teamId].attackTransactions>0){
-                    this.failedGameAttacks++
-                }
-            }
-
-            log(){
-                console.log('Metrics', {
-                    attackTransactions: this.attackTransactions,
-                    effectiveGameAttacks: this.effectiveGameAttacks,
-                    failedGameAttacks: this.failedGameAttacks,
-                    timeElapsedInSeconds: (+new Date() - this.startTime)/1000
-                });    
-            }
-
-        }
-
-        const metrics = new Metrics()
+        const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
 
 
-        // Block number update.
-
-        let currentBlockNumber = await hre.ethers.provider.getBlockNumber()
-
-        const blockNumberIntervalUpdate = setInterval(async() => {
-            currentBlockNumber = await hre.ethers.provider.getBlockNumber()
-        }, 1000)
-
-        
         // Set interval to verify if a possible target should be removed considering
         // the following conditions are met:
         // 1) game is already looted (use getGameBattleInfo and get status)
         // 2) currentBlock-closeGameBlock > maxBlocksPerTarget
 
+        const LOOTGUESS_MAX_ATTACKS_PER_TARGET = 3
+
         const removeCloseGameTargetsInterval = setInterval(() => {
 
-            Object.keys(closedGameTargetsByTeamId).forEach( async(teamId) => {
+            Object.keys(startedGameTargetsByTeamId).forEach( async(teamId) => {
 
-                const closedGameTarget = closedGameTargetsByTeamId[teamId]
+                const startedGameTarget = startedGameTargetsByTeamId[teamId]
 
-                const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
-
-                const deviationToUse = lootGuessConfig.behaviour.deviationToUse(closeDistanceToStart.standardDeviationBlocks)
-
-                if ((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
-                    > (closeDistanceToStart.averageBlocks+deviationToUse)){
-
-                    metrics.maxAttacksAchivedForTeam(teamId)
-                    
-                    console.log(
-                        'Max block difference from CloseGame achived', 
-                        currentBlockNumber-closedGameTarget.closeGameBlocknumber, '>',
-                        closeDistanceToStart.averageBlocks+deviationToUse,
-                        'Removed team from loot targets (teamId, blockNumber)', 
-                        teamId, closedGameTarget.closeGameBlocknumber
-                    );
-    
-                    delete closedGameTargetsByTeamId[teamId]
+                if (startedGameTarget.attacksPerformed >= LOOTGUESS_MAX_ATTACKS_PER_TARGET){
+                    delete startedGameTargetsByTeamId[teamId]
                     return
                 }
-
 
                 const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(teamId))
 
@@ -844,14 +740,7 @@ task(
                     // Validate if game is already looted
                     if (!(attackTeamId as BigNumber).isZero()){
 
-                        metrics.lootTeam(teamId)
-
-                        console.log(
-                            'Game Looted. Removed team from loot targets (teamId, blockNumber, currentGameId)', 
-                            teamId, closedGameTarget.closeGameBlocknumber, currentGameId.toNumber()
-                        );
-        
-                        delete closedGameTargetsByTeamId[teamId]
+                        delete startedGameTargetsByTeamId[teamId]
                         return
                     }
 
@@ -859,11 +748,7 @@ task(
 
             })
 
-        }, 1000)
-
-        setInterval( () => {
-            metrics.log()
-        }, 15000)
+        }, 500)
 
 
         // Main interval to perform attacks considering the following conditions:
@@ -884,50 +769,52 @@ task(
                 return
             }
 
-
+            // Get the max battlePoint for unlocked looter teams.
             const maxUnlockedLooterBattlePoint = Math.max(
                 ...unlockedPlayerTeamPairs
                     .map( playerTeamPair => playerTeamPair.battlePoint )
             )
 
-            const teamIdTargets = Object.keys(closedGameTargetsByTeamId)
+            const teamIdTargets = Object.keys(startedGameTargetsByTeamId)
                 // 2) Targets should have battlePoint lower than the maximum looterTeam target battlePoint.
                 .filter(teamId => {
-                    if (!teamsThatPlayToLooseByTeamId[teamId]){
+
+                    const targetInfo = teamsThatPlayToLooseByTeamId[teamId]
+
+                    // This is necessary because teamsThatPlayToLooseByTeamId could be updated.
+                    if (!targetInfo){
                         console.log('Attack Interval', 'Team', Number(teamId), 'does not play to loose.');
+                        return false
                     }
 
-                    if (!teamsThatPlayToLooseByTeamId[teamId].battlePoint){
+                    // This is necessary because teamsThatPlayToLooseByTeamId could be updated.
+                    if (!targetInfo.battlePoint){
                         console.log('Attack Interval', 'Team', Number(teamId), 'does not has battlePoint defined.');
+                        return false
                     }
                     
-                    if (teamsThatPlayToLooseByTeamId[teamId].battlePoint >= maxUnlockedLooterBattlePoint){
+                    if (targetInfo.battlePoint >= maxUnlockedLooterBattlePoint){
                         console.log('Attack Interval', 'Team', Number(teamId), 'has higher battlePoint', 
-                            teamsThatPlayToLooseByTeamId[teamId].battlePoint, 'than', maxUnlockedLooterBattlePoint);
+                        targetInfo.battlePoint, 'than', maxUnlockedLooterBattlePoint);
+                        return false
                     }
                     
-                    return teamsThatPlayToLooseByTeamId[teamId] &&
-                    teamsThatPlayToLooseByTeamId[teamId].battlePoint &&
-                    teamsThatPlayToLooseByTeamId[teamId].battlePoint < maxUnlockedLooterBattlePoint
+                    return true
                 })
 
-                // 3) For targets currentBlockNumber-closeGameBlockNumber >= average-deviation
+                // 3) Targets should not be attacked more than max times
                 .filter(teamId => {
-                    
-                    const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
-                    const closedGameTarget = closedGameTargetsByTeamId[teamId]
 
-                    const deviationToUse = lootGuessConfig.behaviour.deviationToUse(closeDistanceToStart.standardDeviationBlocks)
-                    
-                    if (((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
-                        < (closeDistanceToStart.averageBlocks-deviationToUse))){
-                        console.log('Attack Interval', 'Actual distance', 
-                            currentBlockNumber-closedGameTarget.closeGameBlocknumber, 'lower than min distance',
-                            closeDistanceToStart.averageBlocks-deviationToUse)
+                    const startedGameTarget = startedGameTargetsByTeamId[teamId]
+
+                    if (startedGameTarget.attacksPerformed > LOOTGUESS_MAX_ATTACKS_PER_TARGET){
+                        console.log('Max attacks per target achieved', '(attacksPerformed, max)', 
+                            startedGameTarget.attacksPerformed, LOOTGUESS_MAX_ATTACKS_PER_TARGET);
+                        return false
                     }
-                    
-                    return ((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
-                        >= (closeDistanceToStart.averageBlocks-deviationToUse))
+
+                    return true
+
                 })
             
             if (teamIdTargets.length == 0){
@@ -953,7 +840,6 @@ task(
                     a.battlePoint < b.battlePoint ? -1 : a.battlePoint > b.battlePoint ? 1 : 0
                 )
 
-
             const looterSignerIndex = attackIteration % lootersSigners.length
             attackIteration++
 
@@ -972,6 +858,9 @@ task(
                 ')'
             )
 
+            // Are increased the attacks performed by target
+            teamIdTargets.forEach( teamId => startedGameTargetsByTeamId[teamId].attacksPerformed++ )
+
             try {
 
                 if (router){
@@ -988,7 +877,7 @@ task(
                         looterBattlePoint,
                         teamIdTargets,
                         targetBattlePoint,
-                        lootGuessConfig.attackTransaction.override
+                        lootPendingConfig.attackTransaction.override
                     )
 
                     if (transactionResponse && (transactionResponse.hash || transactionResponse.blockNumber))
@@ -1002,25 +891,22 @@ task(
                 
             }
 
-            metrics.attackTeams(teamIdTargets)
-
         }, 1000)
 
+        // TODO Verify if finish needed.
         // Never finish
         await new Promise(() => {})
 
         clearInterval(attackTeamsInterval)
+        clearInterval(pendingStartGameTransactionInterval)
         idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
-        idleGame.off(idleGame.filters.CloseGame(), addTeamToLootTargets)
         clearInterval(updateLockStatusInterval)
         settleGameInterval && clearInterval(settleGameInterval)
         clearInterval(removeCloseGameTargetsInterval)
-        clearInterval(blockNumberIntervalUpdate)
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
-    .addOptionalParam("lootersteamsbyaccount", "JSON (array of arrays) with the looters teams ids by account. Example: '[[0,1,2],[4,5],[6]]'.", undefined, types.string)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
 
@@ -1392,7 +1278,7 @@ task(
 
 type PendingTransactionTask = (tx: ethers.Transaction) => void
 
-const listenPendingStartGameTransaction = async (hre: HardhatRuntimeEnvironment, pendingTransactionTask: PendingTransactionTask) => {
+const listenPendingStartGameTransaction = async (hre: HardhatRuntimeEnvironment, pendingTransactionTask: PendingTransactionTask): Promise<NodeJS.Timer> => {
 
     const { idleGame } = getCrabadaContracts(hre)
 
