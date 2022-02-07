@@ -555,15 +555,15 @@ task(
             attackTransaction: {
                 override: {
                     gasLimit: 1000000,
-                    gasPrice: BigNumber.from(ONE_GWEI*75),
+                    gasPrice: BigNumber.from(ONE_GWEI*100),
                     // maxFeePerGas: BigNumber.from(ONE_GWEI*400),
                     // maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*75)
                 }
             },        
-            players: [ // TODO Modify 
+            players: [
                 {
-                    address: '0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd', // TODO Modify 
-                    teams: [5032, 3759] // TODO Modify 
+                    address: '0xb972ADCAc416Fe6e6a3330c5c374b97046013796',
+                    teams: [10471, 10472]
                 },
             ]
         }
