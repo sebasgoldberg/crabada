@@ -525,9 +525,9 @@ interface LootPendingConfig {
     attackTransaction: {
         override: {
             gasLimit: number,
-            gasPrice: BigNumber,
-            // maxFeePerGas: BigNumber,
-            // maxPriorityFeePerGas: BigNumber,
+            // gasPrice: BigNumber,
+            maxFeePerGas: BigNumber,
+            maxPriorityFeePerGas: BigNumber,
         }
     }
 }
@@ -555,9 +555,8 @@ task(
             attackTransaction: {
                 override: {
                     gasLimit: 1000000,
-                    gasPrice: BigNumber.from(ONE_GWEI*100),
-                    // maxFeePerGas: BigNumber.from(ONE_GWEI*400),
-                    // maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*75)
+                    maxFeePerGas: BigNumber.from(ONE_GWEI*400),
+                    maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50)
                 }
             },        
             players: [
@@ -903,7 +902,20 @@ task(
 
         // TODO Verify if finish needed.
         // Never finish
-        await new Promise(() => {})
+        await new Promise((resolve) => {
+
+            const endProcessInterval = setInterval(()=>{
+
+                const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => !p.locked || testmode )
+
+                if (unlockedPlayerTeamPairs.length == 0){
+                    console.log('Ending process', 'No unlocked looter teams');
+                    clearInterval(endProcessInterval)
+                    resolve(undefined)
+                }
+
+            }, 1000)
+        })
 
         clearInterval(attackTeamsInterval)
         clearInterval(pendingStartGameTransactionInterval)
