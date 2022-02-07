@@ -1,7 +1,8 @@
 
 export interface AccountConfig{
     accountIndex: number,
-    teams: number[]
+    teams: number[],
+    player?: string
 }
 
 export interface LootConfig {
@@ -31,6 +32,12 @@ export const looter1: AccountConfig = {
 export const looter2: AccountConfig = {
     accountIndex: 2,
     teams: [7449, 8157, 9236]
+}
+
+export const player1: AccountConfig = {
+    accountIndex: 0,
+    teams: [ 10471, 10472, 10515 ],
+    player: '0xb972ADCAc416Fe6e6a3330c5c374b97046013796'
 }
 
 const LOOT_CONFIG_FOR_REINFORCE: LootConfig = {

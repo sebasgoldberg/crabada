@@ -6,7 +6,7 @@ import { attachAttackRouter, baseFee, CloseDistanceToStartByTeamId, closeGameToS
 import { types } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
-import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig,  } from "../config/nodes";
+import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig, player1,  } from "../config/nodes";
 
 import "./player"
 
@@ -470,9 +470,9 @@ task(
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
 
 const REINFORCE_CONFIG: AccountConfig[] = [
-    /*main,*/
     looter1,
     looter2,
+    player1,
 ]
 
 task(
@@ -480,7 +480,7 @@ task(
     "Reinforce process.",
     async ({ testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
-        for (const {accountIndex, teams} of REINFORCE_CONFIG){
+        for (const {accountIndex, teams, player} of REINFORCE_CONFIG){
 
             const signer = await getSigner(hre, testaccount, accountIndex)
 
@@ -492,7 +492,7 @@ task(
 
                 try {
 
-                    const tr = await reinforce(hre, looterTeamId, signer, console.log, testmode);
+                    const tr = await reinforce(hre, looterTeamId, signer, player, console.log, testmode);
 
                 } catch (error) {
                     
@@ -561,8 +561,8 @@ task(
             },        
             players: [
                 {
-                    address: '0xb972ADCAc416Fe6e6a3330c5c374b97046013796',
-                    teams: [10471, 10472, 10515]
+                    address: player1.player,
+                    teams: player1.teams
                 },
             ]
         }
