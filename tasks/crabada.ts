@@ -856,6 +856,7 @@ task(
             const targetBattlePoint = teamIdTargets.map(teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint)
 
             console.log(
+                +new Date()/1000,
                 'attackTeams(', 
                 'players=', playerAddresses.toString(),
                 'looterTeams=', looterTeams.toString(),
