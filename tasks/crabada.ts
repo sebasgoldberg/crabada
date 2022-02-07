@@ -618,12 +618,29 @@ task(
 
         // Sets interval to settleGame for unlocked teams.
         
+        let settleInProgress = false
+
         const settleGames = async()=>{
 
-            for (const p of playerTeamPairs.filter(p=>!p.locked)){
-                const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
-                await settleGame(idleGame.connect(settleSigner), currentGameId, 1, ()=>{})
+            if (settleInProgress)
+                return
+
+            settleInProgress = true
+
+            try {
+
+                for (const p of playerTeamPairs.filter(p=>!p.locked)){
+                    const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
+                    await settleGame(idleGame.connect(settleSigner), currentGameId, 1, ()=>{})
+                }
+                    
+            } catch (error) {
+
+                // To be possible to deactivate settleInProgress
+                
             }
+
+            settleInProgress = false
 
         }
 
