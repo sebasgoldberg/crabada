@@ -766,7 +766,7 @@ task(
         // 1) game is already looted (use getGameBattleInfo and get status)
         // 2) currentBlock-closeGameBlock > maxBlocksPerTarget
 
-        const LOOTGUESS_MAX_ATTACKS_PER_TARGET = 1
+        const LOOTGUESS_MAX_ATTACKS_PER_TARGET = 2
 
         const removeCloseGameTargetsInterval = setInterval(() => {
 
