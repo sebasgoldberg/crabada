@@ -1341,7 +1341,7 @@ task(
 
 type PendingTransactionsTask = (txs: ethers.Transaction[]) => void
 
-const listenPendingStartGameTransaction = async (hre: HardhatRuntimeEnvironment, pendingTransactionsTask: PendingTransactionsTask): Promise<NodeJS.Timer> => {
+const listenPendingStartGameTransaction = async (hre: HardhatRuntimeEnvironment, pendingTransactionsTask: PendingTransactionsTask, interval: number = 50): Promise<NodeJS.Timer> => {
 
     const { idleGame } = getCrabadaContracts(hre)
 
@@ -1366,7 +1366,7 @@ const listenPendingStartGameTransaction = async (hre: HardhatRuntimeEnvironment,
 
         pendingTransactionsTask(startGameTransactions)
         
-    }, 10)
+    }, interval)
 
 }
 
