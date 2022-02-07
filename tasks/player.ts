@@ -5,7 +5,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { attachAttackRouter, attachPlayer, deployAttackRouter, deployPlayer, getCrabadaContracts, getOverride, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
-import { BigNumber } from "ethers";
+import { BigNumber, ethers } from "ethers";
 import { getSigner } from "./crabada";
 
 task(
@@ -353,9 +353,13 @@ task(
 
         const playerC = await attachPlayer(hre, player)
 
-        await playerC.connect(signer).callStatic.addOwner(newowner)
+        const override = await getOverride(hre)
 
-        await playerC.connect(signer).addOwner(newowner, await getOverride(hre))
+        await playerC.connect(signer).callStatic.addOwner(newowner, override)
+
+        const txr: ethers.providers.TransactionResponse = await playerC.connect(signer).addOwner(newowner, await getOverride(hre))
+        
+        console.log(txr.hash);
 
     })
     .addParam("player", "Player contract for which will be added a new owner.")
