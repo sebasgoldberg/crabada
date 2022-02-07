@@ -470,7 +470,7 @@ task(
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
 
 const REINFORCE_CONFIG: AccountConfig[] = [
-    main,
+    /*main,*/
     looter1,
     looter2,
 ]
