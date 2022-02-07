@@ -20,7 +20,7 @@ export interface ConfigByNodeId {
 
 export const main: AccountConfig = {
     accountIndex: 0,
-    teams: [3286, 3759, 5032]
+    teams: [3286, /*3759, 5032*/]
 }
 
 export const looter1: AccountConfig = {
