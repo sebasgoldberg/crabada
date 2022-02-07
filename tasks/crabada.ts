@@ -698,7 +698,7 @@ task(
         const startedGameTargetsByTeamId: StartedGameTargetsByTeamId = {}
 
         let attackIteration = 0
-        let secondAttackPlaned = false
+        // let secondAttackPlaned = false
 
         const addTeamToLootTargets = (txs: ethers.Transaction[]) => {
 
@@ -746,15 +746,15 @@ task(
             
             attackTeams()
 
-            if (secondAttackPlaned)
-                return
+            // if (secondAttackPlaned)
+            //     return
 
-            secondAttackPlaned = true
+            // secondAttackPlaned = true
 
-            setTimeout( () => {
-                attackTeams()
-                secondAttackPlaned = false
-            }, 1000)
+            // setTimeout( () => {
+            //     attackTeams()
+            //     secondAttackPlaned = false
+            // }, 1000)
 
         }
 
@@ -766,7 +766,7 @@ task(
         // 1) game is already looted (use getGameBattleInfo and get status)
         // 2) currentBlock-closeGameBlock > maxBlocksPerTarget
 
-        const LOOTGUESS_MAX_ATTACKS_PER_TARGET = 2
+        const LOOTGUESS_MAX_ATTACKS_PER_TARGET = 1
 
         const removeCloseGameTargetsInterval = setInterval(() => {
 
