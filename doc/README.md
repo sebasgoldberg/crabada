@@ -182,6 +182,7 @@ npx hardhat playerlistteams --network mainnet --player 0xb972ADCAc416Fe6e6a3330c
 
 # Are moved the crabadas from signer's inventory to IddleGame in favor of Player contract.
 npx hardhat playerdeposit --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --crabadas 12269,12712,9981,18396,9980,12714
+npx hardhat playerdeposit --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --crabadas 9860,12777,18410
 
 # Are added the crabadas to the existing team
 #npx hardhat playeraddtoteam --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --teamid 4400 --position 0 --crabada 12269
@@ -191,6 +192,7 @@ npx hardhat playerdeposit --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c
 # Are created the new teams.
 npx hardhat playercreateteam --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --c1 12269 --c2 12712 --c3 9981
 npx hardhat playercreateteam --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --c1 18396 --c2 9980 --c3 12714
+npx hardhat playercreateteam --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --c1 9860 --c2 12777 --c3 18410
 
 # First checks the teams final status of Player contract.
 npx hardhat playerlistteams --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796

@@ -562,7 +562,7 @@ task(
             players: [
                 {
                     address: '0xb972ADCAc416Fe6e6a3330c5c374b97046013796',
-                    teams: [10471, 10472]
+                    teams: [10471, 10472, 10515]
                 },
             ]
         }
