@@ -726,6 +726,7 @@ task(
     
             })
             
+            attackTeams()
         }
 
         const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
@@ -736,7 +737,7 @@ task(
         // 1) game is already looted (use getGameBattleInfo and get status)
         // 2) currentBlock-closeGameBlock > maxBlocksPerTarget
 
-        const LOOTGUESS_MAX_ATTACKS_PER_TARGET = 3
+        const LOOTGUESS_MAX_ATTACKS_PER_TARGET = 1
 
         const removeCloseGameTargetsInterval = setInterval(() => {
 
@@ -910,7 +911,7 @@ task(
 
         }
 
-        const attackTeamsInterval = setInterval(attackTeams, 1000)
+        //const attackTeamsInterval = setInterval(attackTeams, 1000)
 
         // TODO Verify if finish needed.
         // Never finish
@@ -929,7 +930,7 @@ task(
             }, 1000)
         })
 
-        clearInterval(attackTeamsInterval)
+        //clearInterval(attackTeamsInterval)
         clearInterval(pendingStartGameTransactionInterval)
         idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
         clearInterval(updateLockStatusInterval)
