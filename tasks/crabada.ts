@@ -686,16 +686,22 @@ task(
 
             const targetTeamInfo = teamsThatPlayToLooseByTeamId[teamId.toString()]
 
-            if (!targetTeamInfo)
+            if (!targetTeamInfo){
+                console.log('Discarded, team does not play to loose.', teamId.toString());
                 return
+            }
 
-            if (!targetTeamInfo.battlePoint)
+            if (!targetTeamInfo.battlePoint){
+                console.log('Discarded, team with no battlePointdefined.', teamId.toString());
                 return
+            }
 
             const pairsStrongerThanTarget = playerTeamPairs.filter( p => p.battlePoint > targetTeamInfo.battlePoint)
 
-            if (pairsStrongerThanTarget.length == 0)
+            if (pairsStrongerThanTarget.length == 0){
+                console.log('Discarded, no stronger team for attack.', teamId.toString());
                 return
+            }
 
             startedGameTargetsByTeamId[teamId.toString()] = {
                 teamId,
