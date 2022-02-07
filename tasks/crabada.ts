@@ -560,10 +560,10 @@ task(
                     // maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*75)
                 }
             },        
-            players: [
+            players: [ // TODO Modify 
                 {
-                    address: '0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd',
-                    teams: [8700, 8702, 4400]
+                    address: '0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd', // TODO Modify 
+                    teams: [5032, 3759] // TODO Modify 
                 },
             ]
         }
