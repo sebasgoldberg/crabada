@@ -1396,6 +1396,12 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 
     const allowance: BigNumber = await tusToken.allowance(player ? player : signer.address, spender)
 
+    const override = {
+        gasLimit: GAS_LIMIT,
+        maxFeePerGas: MAX_FEE,
+        maxPriorityFeePerGas: ONE_GWEI
+    }
+
     if (allowance.lt(ethers.constants.MaxUint256.div(2))){
 
         let tr: TransactionResponse;
@@ -1405,14 +1411,14 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
             const playerContract = await attachPlayer(hre, player)
             console.log('playerContract.approveERC20(tusToken, spender, MaxUint256)', 
                 tusToken.address, spender, formatEther(ethers.constants.MaxUint256));
-            await playerContract.connect(signer).callStatic.approveERC20(tusToken.address, spender, ethers.constants.MaxUint256);
-            tr = await playerContract.connect(signer).approveERC20(tusToken.address, spender, ethers.constants.MaxUint256);
+            await playerContract.connect(signer).callStatic.approveERC20(tusToken.address, spender, ethers.constants.MaxUint256, override);
+            tr = await playerContract.connect(signer).approveERC20(tusToken.address, spender, ethers.constants.MaxUint256, override);
 
         }else{
 
             console.log('tusToken.approve(spender, MaxUint256)', spender, formatEther(ethers.constants.MaxUint256));
-            await tusToken.connect(signer).callStatic.approve(spender, ethers.constants.MaxUint256)
-            tr = await tusToken.connect(signer).approve(spender, ethers.constants.MaxUint256, await getOverride(hre))
+            await tusToken.connect(signer).callStatic.approve(spender, ethers.constants.MaxUint256, override)
+            tr = await tusToken.connect(signer).approve(spender, ethers.constants.MaxUint256, override)
     
         }
 
