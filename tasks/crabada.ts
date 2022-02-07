@@ -699,7 +699,8 @@ task(
             const pairsStrongerThanTarget = playerTeamPairs.filter( p => p.battlePoint > targetTeamInfo.battlePoint)
 
             if (pairsStrongerThanTarget.length == 0){
-                console.log('Discarded, no stronger team for attack.', teamId.toString());
+                console.log('Discarded, no stronger team for attack. (teamId, playerTeamPairs.battlePoint, target.battlePoint)', 
+                    teamId.toString(), playerTeamPairs.map(p=>p.battlePoint), targetTeamInfo.battlePoint);
                 return
             }
 
