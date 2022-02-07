@@ -618,16 +618,18 @@ task(
 
         // Sets interval to settleGame for unlocked teams.
         
-        const settleGameInterval = !testmode && setInterval(async()=>{
+        const settleGames = async()=>{
 
-            playerTeamPairs
-                .filter(p=>!p.locked)
-                .forEach(async(p)=>{
-                    const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
-                    settleGame(idleGame.connect(settleSigner), currentGameId, 1, ()=>{})
-                })
+            for (const p of playerTeamPairs.filter(p=>!p.locked)){
+                const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
+                await settleGame(idleGame.connect(settleSigner), currentGameId, 1, ()=>{})
+            }
 
-        }, 2000)
+        }
+
+        !testmode && (await settleGames())
+
+        const settleGameInterval = !testmode && setInterval(settleGames, 2000)
 
 
         // Verify if all teams are locked.
@@ -678,41 +680,51 @@ task(
 
         const startedGameTargetsByTeamId: StartedGameTargetsByTeamId = {}
 
-        const addTeamToLootTargets = (tx: ethers.Transaction) => {
+        let attackIteration = 0
 
-            const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
-            console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
+        const addTeamToLootTargets = (txs: ethers.Transaction[]) => {
 
-            const targetTeamInfo = teamsThatPlayToLooseByTeamId[teamId.toString()]
-
-            if (!targetTeamInfo){
-                debug && console.log('Discarded, team does not play to loose.', teamId.toString());
+            if (txs.length == 0){
                 return
             }
 
-            if (!targetTeamInfo.battlePoint){
-                debug && console.log('Discarded, team with no battlePointdefined.', teamId.toString());
-                return
-            }
+            txs.forEach( tx => {
 
-            const pairsStrongerThanTarget = playerTeamPairs.filter( p => p.battlePoint > targetTeamInfo.battlePoint)
-
-            if (pairsStrongerThanTarget.length == 0){
-                debug && console.log('Discarded, no stronger team for attack. (teamId, playerTeamPairs.battlePoint, target.battlePoint)', 
-                    teamId.toString(), playerTeamPairs.map(p=>p.battlePoint), targetTeamInfo.battlePoint);
-                return
-            }
-
-            startedGameTargetsByTeamId[teamId.toString()] = {
-                teamId,
-                attacksPerformed: 0,
-            }
-
-            // TODO Verify if attack imediately it is needed.
-
-            console.log('Pending startGame', tx.hash, 
-                'Added team to loot targets', teamId.toNumber()
-            );
+                const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
+                console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
+    
+                const targetTeamInfo = teamsThatPlayToLooseByTeamId[teamId.toString()]
+    
+                if (!targetTeamInfo){
+                    debug && console.log('Discarded, team does not play to loose.', teamId.toString());
+                    return
+                }
+    
+                if (!targetTeamInfo.battlePoint){
+                    debug && console.log('Discarded, team with no battlePointdefined.', teamId.toString());
+                    return
+                }
+    
+                const pairsStrongerThanTarget = playerTeamPairs.filter( p => p.battlePoint > targetTeamInfo.battlePoint)
+    
+                if (pairsStrongerThanTarget.length == 0){
+                    debug && console.log('Discarded, no stronger team for attack. (teamId, playerTeamPairs.battlePoint, target.battlePoint)', 
+                        teamId.toString(), playerTeamPairs.map(p=>p.battlePoint), targetTeamInfo.battlePoint);
+                    return
+                }
+    
+                startedGameTargetsByTeamId[teamId.toString()] = {
+                    teamId,
+                    attacksPerformed: 0,
+                }
+    
+                // TODO Verify if attack imediately it is needed.
+    
+                console.log('Pending startGame', tx.hash, 
+                    'Added team to loot targets', teamId.toNumber()
+                );
+    
+            })
             
         }
 
@@ -763,9 +775,7 @@ task(
         // 3) For targets currentBlockNumber-closeGameBlockNumber >= minBlocknumberDistance-2
         // 4) Apply only for looter teams that have battlePoint higher than minimum target battlePoint.
 
-        let attackIteration = 0
-
-        const attackTeamsInterval = setInterval(async () => {
+        const attackTeams = async () => {
 
             // 1) Apply only for looter teams are unlocked
             const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => !p.locked || testmode )
@@ -898,7 +908,9 @@ task(
                 
             }
 
-        }, 1000)
+        }
+
+        const attackTeamsInterval = setInterval(attackTeams, 1000)
 
         // TODO Verify if finish needed.
         // Never finish
@@ -1297,9 +1309,9 @@ task(
 
     })
 
-type PendingTransactionTask = (tx: ethers.Transaction) => void
+type PendingTransactionsTask = (txs: ethers.Transaction[]) => void
 
-const listenPendingStartGameTransaction = async (hre: HardhatRuntimeEnvironment, pendingTransactionTask: PendingTransactionTask): Promise<NodeJS.Timer> => {
+const listenPendingStartGameTransaction = async (hre: HardhatRuntimeEnvironment, pendingTransactionsTask: PendingTransactionsTask): Promise<NodeJS.Timer> => {
 
     const { idleGame } = getCrabadaContracts(hre)
 
@@ -1322,9 +1334,8 @@ const listenPendingStartGameTransaction = async (hre: HardhatRuntimeEnvironment,
             .filter( tx => tx.to === idleGame.address )
             .filter( tx => tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION )
 
-        startGameTransactions
-            .forEach( pendingTransactionTask )
-
+        pendingTransactionsTask(startGameTransactions)
+        
     }, 10)
 
 }
@@ -1336,9 +1347,11 @@ task(
         
         await (new Promise(async () => {
 
-            listenPendingStartGameTransaction(hre, tx => {
-                const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
-                console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
+            listenPendingStartGameTransaction(hre, txs => {
+                txs.forEach( tx => {
+                    const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
+                    console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());    
+                })
             })
     
         }))
