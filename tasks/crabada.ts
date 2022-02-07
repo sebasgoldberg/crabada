@@ -535,7 +535,7 @@ interface LootPendingConfig {
 task(
     "lootpending",
     "Loot pending startGame transactions.",
-    async ({ blockstoanalyze, firstdefendwindow, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, testaccount, testmode, debug }, hre: HardhatRuntimeEnvironment) => {
 
         // signer used to settle
         const settleSigner = await getSigner(hre, testaccount)
@@ -687,19 +687,19 @@ task(
             const targetTeamInfo = teamsThatPlayToLooseByTeamId[teamId.toString()]
 
             if (!targetTeamInfo){
-                console.log('Discarded, team does not play to loose.', teamId.toString());
+                debug && console.log('Discarded, team does not play to loose.', teamId.toString());
                 return
             }
 
             if (!targetTeamInfo.battlePoint){
-                console.log('Discarded, team with no battlePointdefined.', teamId.toString());
+                debug && console.log('Discarded, team with no battlePointdefined.', teamId.toString());
                 return
             }
 
             const pairsStrongerThanTarget = playerTeamPairs.filter( p => p.battlePoint > targetTeamInfo.battlePoint)
 
             if (pairsStrongerThanTarget.length == 0){
-                console.log('Discarded, no stronger team for attack. (teamId, playerTeamPairs.battlePoint, target.battlePoint)', 
+                debug && console.log('Discarded, no stronger team for attack. (teamId, playerTeamPairs.battlePoint, target.battlePoint)', 
                     teamId.toString(), playerTeamPairs.map(p=>p.battlePoint), targetTeamInfo.battlePoint);
                 return
             }
@@ -790,18 +790,18 @@ task(
 
                     // This is necessary because teamsThatPlayToLooseByTeamId could be updated.
                     if (!targetInfo){
-                        console.log('Attack Interval', 'Team', Number(teamId), 'does not play to loose.');
+                        debug && console.log('Attack Interval', 'Team', Number(teamId), 'does not play to loose.');
                         return false
                     }
 
                     // This is necessary because teamsThatPlayToLooseByTeamId could be updated.
                     if (!targetInfo.battlePoint){
-                        console.log('Attack Interval', 'Team', Number(teamId), 'does not has battlePoint defined.');
+                        debug && console.log('Attack Interval', 'Team', Number(teamId), 'does not has battlePoint defined.');
                         return false
                     }
                     
                     if (targetInfo.battlePoint >= maxUnlockedLooterBattlePoint){
-                        console.log('Attack Interval', 'Team', Number(teamId), 'has higher battlePoint', 
+                        debug && console.log('Attack Interval', 'Team', Number(teamId), 'has higher battlePoint', 
                         targetInfo.battlePoint, 'than', maxUnlockedLooterBattlePoint);
                         return false
                     }
@@ -815,7 +815,7 @@ task(
                     const startedGameTarget = startedGameTargetsByTeamId[teamId]
 
                     if (startedGameTarget.attacksPerformed > LOOTGUESS_MAX_ATTACKS_PER_TARGET){
-                        console.log('Max attacks per target achieved', '(attacksPerformed, max)', 
+                        debug && console.log('Max attacks per target achieved', '(attacksPerformed, max)', 
                             startedGameTarget.attacksPerformed, LOOTGUESS_MAX_ATTACKS_PER_TARGET);
                         return false
                     }
@@ -868,30 +868,30 @@ task(
             // Are increased the attacks performed by target
             teamIdTargets.forEach( teamId => startedGameTargetsByTeamId[teamId].attacksPerformed++ )
 
+            if (testmode)
+                return
+
+            if (!router)
+                return
+
             try {
 
-                if (router){
+                // for test mode we perform a static call.
+                const attackTeams = router.connect(lootersSigners[looterSignerIndex]).attackTeams
 
-                    // for test mode we perform a static call.
-                    const attackTeams = testmode ?
-                        router.connect(lootersSigners[looterSignerIndex]).callStatic.attackTeams
-                        : router.connect(lootersSigners[looterSignerIndex]).attackTeams
+                const transactionResponse: ethers.providers.TransactionResponse = await attackTeams(
+                    idleGame.address,
+                    playerAddresses,
+                    looterTeams,
+                    looterBattlePoint,
+                    teamIdTargets,
+                    targetBattlePoint,
+                    lootPendingConfig.attackTransaction.override
+                )
 
-                    const transactionResponse: ethers.providers.TransactionResponse = await attackTeams(
-                        idleGame.address,
-                        playerAddresses,
-                        looterTeams,
-                        looterBattlePoint,
-                        teamIdTargets,
-                        targetBattlePoint,
-                        lootPendingConfig.attackTransaction.override
-                    )
+                if (transactionResponse && (transactionResponse.hash || transactionResponse.blockNumber))
+                    console.log('router.attackTeams', 'transaction hash', transactionResponse.hash, 'blocknumber', transactionResponse.blockNumber);
 
-                    if (transactionResponse && (transactionResponse.hash || transactionResponse.blockNumber))
-                        console.log('router.attackTeams', 'transaction hash', transactionResponse.hash, 'blocknumber', transactionResponse.blockNumber);
-
-                }
-    
             } catch (error) {
 
                 console.error('ERROR', 'router.attackTeams', String(error));
@@ -916,6 +916,7 @@ task(
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
+    .addOptionalParam("debug", "Debug mode", false, types.boolean)
 
     
 export const START_GAME_ENCODED_OPERATION = '0xe5ed1d59'
