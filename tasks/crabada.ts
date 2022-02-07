@@ -698,6 +698,7 @@ task(
         const startedGameTargetsByTeamId: StartedGameTargetsByTeamId = {}
 
         let attackIteration = 0
+        let secondAttackPlaned = false
 
         const addTeamToLootTargets = (txs: ethers.Transaction[]) => {
 
@@ -744,6 +745,17 @@ task(
             })
             
             attackTeams()
+
+            if (secondAttackPlaned)
+                return
+
+            secondAttackPlaned = true
+
+            setTimeout( () => {
+                attackTeams()
+                secondAttackPlaned = false
+            }, 1000)
+
         }
 
         const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
