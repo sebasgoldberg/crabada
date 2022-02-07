@@ -606,21 +606,21 @@ task(
         
         // Initialize teams' lock status
 
-        const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, playerTeamPairs: PlayerTeamPair[]) => {
+        const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, playerTeamPairs: PlayerTeamPair[], log: (typeof console.log)) => {
             return (await Promise.all(
                 playerTeamPairs.map( async(playerTeamPair): Promise<any> => {
-                    playerTeamPair.locked = !testmode && await isTeamLocked(hre, idleGame, playerTeamPair.teamId, ()=>{})
+                    playerTeamPair.locked = !testmode && await isTeamLocked(hre, idleGame, playerTeamPair.teamId, log)
                 }) 
             ))
         }
 
-        await updateLockStatus(hre, idleGame, playerTeamPairs)
+        await updateLockStatus(hre, idleGame, playerTeamPairs, console.log)
 
         // Sets interval to settleGame for unlocked teams.
         
         let settleInProgress = false
 
-        const settleGames = async()=>{
+        const settleGames = async(log: (typeof console.log))=>{
 
             if (settleInProgress)
                 return
@@ -644,9 +644,9 @@ task(
 
         }
 
-        !testmode && (await settleGames())
+        !testmode && (await settleGames(console.log))
 
-        const settleGameInterval = !testmode && setInterval(settleGames, 2000)
+        const settleGameInterval = !testmode && setInterval(() => settleGames(()=>{}), 2000)
 
 
         // Verify if all teams are locked.
@@ -682,7 +682,7 @@ task(
 
         // Set interval for updating teams' lock status.
 
-        const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs), 2000);
+        const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, ()=>{}), 2000);
 
         // Listen for CloseGame events to register team for looting
 
