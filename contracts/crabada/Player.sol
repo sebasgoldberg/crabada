@@ -99,9 +99,21 @@ contract Player is MultiOwnable, IERC721Receiver{
 
     }
 
+    function reinforceAttack(uint256 gameId, uint256 crabadaId, uint256 borrowPrice) public
+        onlyOwner(){
+
+        iddleGame.reinforceAttack(gameId, crabadaId, borrowPrice);
+
+    }
+
     function withdrawERC20(IERC20 ERC20, address to, uint256 amount) public
         onlyOwner(){
         ERC20.transfer(to, amount);
+    }
+
+    function approveERC20(IERC20 ERC20, address spender, uint256 amount) public
+        onlyOwner(){
+        ERC20.approve(spender, amount);
     }
 
     function withdrawERC721(IERC721 ERC721, address to, uint256 tokenId) public

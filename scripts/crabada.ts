@@ -368,7 +368,7 @@ export const deployAttackRouter = async (hre: HardhatRuntimeEnvironment, signer:
 }
 
 export const getOverride = async (hre: HardhatRuntimeEnvironment) => {
-    return ({maxFeePerGas: 30*ONE_GWEI, maxPriorityFeePerGas: ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
+    return ({maxFeePerGas: 40*ONE_GWEI, maxPriorityFeePerGas: ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
 }
 
 export interface TeamInfo {
@@ -1259,6 +1259,7 @@ export const _battlePoint = ({ hp, damage, armor }: CrabadaAPIInfo): number => {
 }
 
 import axios from "axios";
+import { CONFIG_BY_NODE_ID, NodeConfig } from "../config/nodes";
 
 export class CrabadaAPI{
 
@@ -1389,16 +1390,38 @@ export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise
 
 }
 
-export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, address: string): Promise<TransactionResponse|undefined> => {
+export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, spender: string, player: string|undefined): Promise<TransactionResponse|undefined> => {
 
     const { tusToken } = getCrabadaContracts(hre)
 
-    const allowance: BigNumber = await tusToken.allowance(signer.address, address)
+    const allowance: BigNumber = await tusToken.allowance(player ? player : signer.address, spender)
+
+    const override = {
+        gasLimit: GAS_LIMIT,
+        maxFeePerGas: MAX_FEE,
+        maxPriorityFeePerGas: ONE_GWEI
+    }
 
     if (allowance.lt(ethers.constants.MaxUint256.div(2))){
-        console.log('tusToken.approve(address, MaxUint256)', address, formatEther(ethers.constants.MaxUint256));
-        await tusToken.connect(signer).callStatic.approve(address, ethers.constants.MaxUint256)
-        const tr: TransactionResponse = await tusToken.connect(signer).approve(address, ethers.constants.MaxUint256, await getOverride(hre))
+
+        let tr: TransactionResponse;
+
+        if (player){
+
+            const playerContract = await attachPlayer(hre, player)
+            console.log('playerContract.approveERC20(tusToken, spender, MaxUint256)', 
+                tusToken.address, spender, formatEther(ethers.constants.MaxUint256));
+            await playerContract.connect(signer).callStatic.approveERC20(tusToken.address, spender, ethers.constants.MaxUint256, override);
+            tr = await playerContract.connect(signer).approveERC20(tusToken.address, spender, ethers.constants.MaxUint256, override);
+
+        }else{
+
+            console.log('tusToken.approve(spender, MaxUint256)', spender, formatEther(ethers.constants.MaxUint256));
+            await tusToken.connect(signer).callStatic.approve(spender, ethers.constants.MaxUint256, override)
+            tr = await tusToken.connect(signer).approve(spender, ethers.constants.MaxUint256, override)
+    
+        }
+
         console.log('Transaction hash', tr.hash);
         return tr
     }
@@ -1407,7 +1430,7 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 
 export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     currentGameId: BigNumber, minBattlePointNeeded: number,
-    signer: SignerWithAddress, testMode=true): Promise<TransactionResponse|undefined> => {
+    signer: SignerWithAddress, player: string|undefined, testMode=true): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
     
@@ -1419,22 +1442,43 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
         maxPriorityFeePerGas: ONE_GWEI
     }
 
-    console.log('idleGame.reinforceAttack(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
+    if (player){
 
-    await idleGame.connect(signer).callStatic.reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+        const playerContract = await attachPlayer(hre, player)
 
-    if (!testMode){
-        const tr: TransactionResponse = await idleGame.connect(signer).reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+        console.log('playerContract.reinforceAttack(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
 
-        console.log('Transaction hash', tr.hash);
+        await playerContract.connect(signer).callStatic.reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+
+        if (!testMode){
+            const tr: TransactionResponse = await playerContract.connect(signer).reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
     
-        return tr
+            console.log('Transaction hash', tr.hash);
+        
+            return tr
+        }
+
+    }else{
+
+        console.log('idleGame.reinforceAttack(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
+
+        await idleGame.connect(signer).callStatic.reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+
+        if (!testMode){
+            const tr: TransactionResponse = await idleGame.connect(signer).reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+    
+            console.log('Transaction hash', tr.hash);
+        
+            return tr
+        }
+    
     }
+
 
 }
 
 export const reinforce = async (hre: HardhatRuntimeEnvironment,
-    looterTeamId: number, signer: SignerWithAddress, 
+    looterTeamId: number, signer: SignerWithAddress, player: string|undefined,
     log: (typeof console.log) = console.log, testMode=true): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre);
@@ -1443,7 +1487,7 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
         return
 
     if (!testMode){
-        const tr = await setMaxAllowanceIfNotApproved(hre, signer, idleGame.address)
+        const tr = await setMaxAllowanceIfNotApproved(hre, signer, idleGame.address, player)
         await tr?.wait(5)
     }
 
@@ -1461,7 +1505,7 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
     
     console.log('reinforcementMinBattlePoints', reinforcementMinBattlePoints);
 
-    return await doReinforce(hre, currentGameId, reinforcementMinBattlePoints, signer, testMode)
+    return await doReinforce(hre, currentGameId, reinforcementMinBattlePoints, signer, player, testMode)
 
 }
 
@@ -1472,6 +1516,8 @@ export const loot = async (
     hre: HardhatRuntimeEnvironment, teamsThatPlayToLooseByTeamId: TeamInfoByTeam, 
     looterteamid: number, signer: SignerWithAddress, 
     log: (typeof console.log) = console.log, testMode=true, playerAddress?: string): Promise<TransactionResponse|undefined> => {
+
+    const nodeConfig: NodeConfig = CONFIG_BY_NODE_ID[hre.config.nodeId]
 
     const { idleGame } = getCrabadaContracts(hre)
 
@@ -1491,24 +1537,15 @@ export const loot = async (
     }
 
     const START_GAME_FILTER = {
-        fromBlock: 'pending',
-        toBlock: 'pending',
+        fromBlock: nodeConfig.lootConfig.startGameFilterMode,
+        toBlock: nodeConfig.lootConfig.startGameFilterMode,
         address: idleGame.address,
         topics: [ '0x0eef6f7452b7d2ee11184579c086fb47626e796a83df2b2e16254df60ab761eb' ]
-    };
-    
-    const FIGHT_FILTER = {
-        fromBlock: 'pending',
-        toBlock: 'pending',
-        address: idleGame.address,
-        topics: [ '0xc9116f8ab51c97fa0f2ebd6cc9f75395464ae81bebc69d2d468b508a460a7136' ]
     };
     
     const provider = hre.ethers.provider
     
     const startGameFilterId = await provider.send("eth_newFilter", [START_GAME_FILTER]);
-
-    const fightFilterId = await provider.send("eth_newFilter", [FIGHT_FILTER]);
 
     const lootedGame: { [gameId:string]: boolean } = {}
     

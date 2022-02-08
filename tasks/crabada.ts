@@ -1,14 +1,15 @@
 import { task } from "hardhat/config";
 
-import { formatEther, formatUnits, parseEther, parseUnits } from "ethers/lib/utils";
+import { formatEther, formatUnits, parseEther } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachAttackRouter, attachPlayer, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, deployAttackRouter, deployPlayer, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, reinforce, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
+import { attachAttackRouter, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, reinforce, setMaxAllowanceIfNotApproved, settleGame, StepMaxValuesByPercentage, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { types } from "hardhat/config"
-import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
-import { format } from "path/posix";
-import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig,  } from "../config/nodes";
+import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig, player1, player2, player3,  } from "../config/nodes";
+
+import "./player"
+import { logTransactionAndWait, withdrawTeam } from "../test/utils";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -208,153 +209,6 @@ task(
 
     })
 
-task(
-    "setupplayertest",
-    "Mine step: If mining, try to close game. Then, if not mining, create a game.",
-    async ({ teamid, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        await evm_increaseTime(hre, 4*60*60)
-
-        let signer = undefined
-
-        await hre.ethers.provider.send('hardhat_impersonateAccount', [testaccount] );
-        signer = await hre.ethers.provider.getSigner(testaccount)
-        if(!signer.address)
-            signer.address = signer._address
-
-        const { idleGame, crabada } = getCrabadaContracts(hre)
-
-        const crabadaTeamMembers = await transferCrabadasFromTeam(hre, teamid, signer.address, idleGame, crabada)
-
-        console.log(crabadaTeamMembers.map(x => x.toNumber()));
-        
-        // const player = await deployPlayer(hre, signer)
-        // console.log(`Player created: ${player.address}`);
-
-        // await crabada.connect(signer).setApprovalForAll(player.address, true)
-        // await player.connect(signer).deposit(signer.address, crabadaTeamMembers)
-        // await player.connect(signer).createTeam(...crabadaTeamMembers)
-        // const teamId = await player.teams(0)
-        // console.log(`Player's team created: ${teamId}`);
-
-    })
-    .addOptionalParam("teamid", "The team ID to use to setup player for testing.", 3156, types.int)
-    .addOptionalParam("testaccount", "Account used for testing", '0xB2f4C513164cD12a1e121Dc4141920B805d024B8', types.string)
-
-task(
-    "playerdeploy",
-    "Deploy of player contract.",
-    async ({ testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const player = await deployPlayer(hre, signer)
-        console.log(`Player created: ${player.address}`);
-        console.log(player.deployTransaction.hash);
-
-        await player.deployed()
-    
-    })
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
-
-task(
-    "routerdeploy",
-    "Deploy of AttackRouter contract.",
-    async ({ testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const router = await deployAttackRouter(hre, signer)
-        console.log(`AttackRouter created: ${router.address}`);
-        console.log(router.deployTransaction.hash);
-
-        await router.deployed()
-    
-    })
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
-
-task(
-    "playersetapproval",
-    "Signer sets approval to manage all Crabada NFTs to Player contract.",
-    async ({ player, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const { crabada } = getCrabadaContracts(hre)
-
-        const isApprovedForAll = await crabada.connect(signer).isApprovedForAll(signer.address, player)
-        if (!isApprovedForAll){
-            console.log('crabada.callStatic.setApprovalForAll(_playerTo.address, true)', player);
-            await crabada.connect(signer).callStatic.setApprovalForAll(player, true, await getOverride(hre))
-            console.log('crabada.setApprovalForAll(_playerTo.address, true)', player);
-            await waitTransaction(await crabada.connect(signer).setApprovalForAll(player, true, await getOverride(hre)), 2)
-        }else
-            console.log('Already approved')
-
-    })
-    .addParam("player", "Player contract address, for which will be created the team.")
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
-
-task(
-    "playerdeposit",
-    "Deposit of crabadas in the game.",
-    async ({ player, crabadas, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const playerC = await attachPlayer(hre, player)
-
-        const crabadasToDesposit = crabadas.split(',').map( s => BigNumber.from(s))
-
-        await playerC.connect(signer).callStatic.deposit(signer.address, crabadasToDesposit, await getOverride(hre))
-        
-        await playerC.connect(signer).deposit(signer.address, crabadasToDesposit, await getOverride(hre))
-        
-    })
-    .addParam("player", "Player contract address, for which will be created the team.")
-    .addParam("crabadas", "Crabada to deposit separated by ','.", '', types.string)
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
-
-task(
-    "playercreateteam",
-    "Team creation for player.",
-    async ({ player, c1, c2, c3, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const playerC = await attachPlayer(hre, player)
-
-        await playerC.connect(signer).callStatic.createTeam(c1, c2, c3, await getOverride(hre))
-
-        await playerC.connect(signer).createTeam(c1, c2, c3, await getOverride(hre))
-
-        const teamId = await playerC.teams((await playerC.teamsCount()).sub(1))
-        console.log(`Team created: ${teamId}`);
-        
-    })
-    .addParam("player", "Player contract address, for which will be created the team.")
-    .addParam("c1", "Crabada ID 1.", undefined, types.int)
-    .addParam("c2", "Crabada ID 2.", undefined, types.int)
-    .addParam("c3", "Crabada ID 3.", undefined, types.int)
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
-
-task(
-    "playerlistteams",
-    "List player teams.",
-    async ({ player }, hre: HardhatRuntimeEnvironment) => {
-        
-        const playerC = await attachPlayer(hre, player)
-        const { idleGame } = getCrabadaContracts(hre)
-
-        const teamsCount = await playerC.teamsCount()
-        for (let i=0; i<teamsCount; i++){
-            const teamId = await playerC.teams(i)
-            const teamInfo = await idleGame.getTeamInfo(teamId)
-            const { currentGameId: gameId3, crabadaId1: c1, crabadaId2: c2, crabadaId3: c3 } = teamInfo
-            console.log(`${teamId.toString()}: ${[c1, c2, c3].map( (x:BigNumber) => x.toNumber() )}`);
-        }
-    })
-    .addParam("player", "Player contract address, for which will be created the team.")
 
 task(
     "teaminfo",
@@ -370,53 +224,6 @@ task(
     })
     .addParam("teamid", "Team ID.", undefined, types.int)
 
-
-task(
-    "playerwithdrawerc20",
-    "Mine step: If mining, try to close game. Then, if not mining, create a game.",
-    async ({ player, accountindex, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount, accountindex)
-
-        const { tusToken, craToken } = getCrabadaContracts(hre)
-
-        const playerC = await attachPlayer(hre, player)
-
-        console.log('SIGNER: TUS, CRA', formatEther(await tusToken.balanceOf(signer.address)), formatEther(await craToken.balanceOf(signer.address)));
-        console.log('PLAYER: TUS, CRA', formatEther(await tusToken.balanceOf(playerC.address)), formatEther(await craToken.balanceOf(playerC.address)));
-        
-        await playerC.connect(signer).withdrawERC20(tusToken.address, signer.address, await tusToken.balanceOf(playerC.address), await getOverride(hre))
-        await playerC.connect(signer).withdrawERC20(craToken.address, signer.address, await craToken.balanceOf(playerC.address), await getOverride(hre))
-
-        console.log('SIGNER: TUS, CRA', formatEther(await tusToken.balanceOf(signer.address)), formatEther(await craToken.balanceOf(signer.address)));
-
-    })
-    .addOptionalParam("accountindex", "The index of the account to be used.", undefined, types.int)
-    .addOptionalParam("player", "Player contract address.")
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
-
-task(
-    "playerclosegame",
-    "Remove of crabadas from team.",
-    async ({ player, teamid, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const { idleGame } = getCrabadaContracts(hre)
-
-        const playerC = await attachPlayer(hre, player)
-
-        const teamInfo = await idleGame.getTeamInfo(teamid)
-        const { currentGameId: gameId} = teamInfo
-
-        await idleGame.connect(signer).callStatic.closeGame(gameId, await getOverride(hre))
-        
-        await idleGame.connect(signer).closeGame(gameId, await getOverride(hre))
-
-    })
-    .addParam("player", "Player contract address, for which will be created the team.")
-    .addParam("teamid", "Team ID from which Crabada has to be removed.", undefined, types.int)
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
 task(
     "settlegame",
@@ -437,65 +244,6 @@ task(
 
 
 task(
-    "playerremovefromteam",
-    "Remove of crabadas from team.",
-    async ({ player, teamid, position, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const playerC = await attachPlayer(hre, player)
-
-        await playerC.connect(signer).callStatic.removeCrabadaFromTeam(teamid, position, await getOverride(hre))
-        
-        await playerC.connect(signer).removeCrabadaFromTeam(teamid, position, await getOverride(hre))
-        
-    })
-    .addParam("player", "Player contract address, for which will be created the team.")
-    .addParam("teamid", "Team ID from which Crabada has to be removed.", undefined, types.int)
-    .addParam("position", "Position of Crabada to be removed.", undefined, types.int)
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
-
-task(
-    "playeraddtoteam",
-    "Add crabada to team in the specified position.",
-    async ({ player, teamid, position, crabada, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const _player = await attachPlayer(hre, player)
-
-        await _player.connect(signer).callStatic.addCrabadaToTeam(teamid, position, crabada, await getOverride(hre))
-        
-        await _player.connect(signer).addCrabadaToTeam(teamid, position, crabada, await getOverride(hre))
-        
-    })
-    .addParam("player", "Player contract address, for which will be created the team.")
-    .addParam("teamid", "Team ID from which Crabada has to be removed.", undefined, types.int)
-    .addParam("position", "Position of Crabada to be removed.", undefined, types.int)
-    .addParam("crabada", "Position of Crabada to be removed.", undefined, types.int)
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
-
-task(
-    "playerwithdraw",
-    "Remove crabadas from game and transfer to signer.",
-    async ({ player, crabadas, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const playerC = await attachPlayer(hre, player)
-
-        const crabadasIds = (crabadas as string).split(',').map( x => BigNumber.from(x) )
-
-        await playerC.connect(signer).callStatic.withdraw(signer.address, crabadasIds, await getOverride(hre))
-        
-        await playerC.connect(signer).withdraw(signer.address, crabadasIds, await getOverride(hre))
-        
-    })
-    .addParam("player", "Player contract address, for which will be created the team.")
-    .addParam("crabadas", "Crabadas to be withdraw.")
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
-
-task(
     "ownerof",
     "Remove of crabadas from team.",
     async ({ crabadaid }, hre: HardhatRuntimeEnvironment) => {
@@ -506,23 +254,6 @@ task(
     })
     .addParam("crabadaid", "Crabada ID.", undefined, types.int)
 
-task(
-    "playertransferownership",
-    "Transfer ownership.",
-    async ({ player, newowner, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const playerC = await attachPlayer(hre, player)
-
-        await playerC.connect(signer).callStatic.transferOwnership(newowner)
-
-        await playerC.connect(signer).transferOwnership(newowner, await getOverride(hre))
-
-    })
-    .addParam("player", "Player contract address that will be transfered.")
-    .addParam("newowner", "New owner of the player contract.")
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
 task(
     "listengames",
@@ -574,110 +305,9 @@ task(
     })
 
 
-task(
-    "playermigrateteam",
-    "Migrate teams from one player to another",
-    async ({ playerfrom, playerto, accountindex, wait, testaccount }, hre: HardhatRuntimeEnvironment) => {
-
-        const signer = await getSigner(hre, testaccount, accountindex)
-        
-        const { idleGame, crabada } = getCrabadaContracts(hre)
-
-        const _playerFrom = (await attachPlayer(hre, playerfrom)).connect(signer)
-
-        const _playerTo = (await attachPlayer(hre, playerto)).connect(signer)
-
-        const teamsCount: number = (await _playerFrom.teamsCount()).toNumber()
-
-        for (let i=0; i<teamsCount; i++){
-
-            const teamId = await _playerFrom.teams(i)
-            const teamInfo = await idleGame.getTeamInfo(teamId)
-            const { crabadaId1: c1, crabadaId2: c2, crabadaId3: c3 } = teamInfo
-
-            for (let position=0; position<3; position++){
-                console.log('_playerFrom.callStatic.removeCrabadaFromTeam(teamId, position)', teamId.toNumber(), position);
-                await _playerFrom.callStatic.removeCrabadaFromTeam(teamId, position, await getOverride(hre))
-                console.log('_playerFrom.removeCrabadaFromTeam(teamId, position)', teamId.toNumber(), position);
-                await waitTransaction(await _playerFrom.removeCrabadaFromTeam(teamId, position, await getOverride(hre)), wait)
-            }
-    
-            const crabadasIds = [c1, c2, c3]
-
-            console.log('_playerFrom.callStatic.withdraw(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
-            await _playerFrom.callStatic.withdraw(signer.address, crabadasIds, await getOverride(hre))
-            console.log('_playerFrom.withdraw(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
-            await waitTransaction(await _playerFrom.withdraw(signer.address, crabadasIds, await getOverride(hre)), wait)
-
-            const isApprovedForAll = await crabada.isApprovedForAll(signer.address, _playerTo.address)
-            if (!isApprovedForAll){
-                console.log('crabada.callStatic.setApprovalForAll(_playerTo.address, true)', _playerTo.address);
-                await crabada.connect(signer).callStatic.setApprovalForAll(_playerTo.address, true, await getOverride(hre))
-                console.log('crabada.setApprovalForAll(_playerTo.address, true)', _playerTo.address);
-                await waitTransaction(await crabada.connect(signer).setApprovalForAll(_playerTo.address, true, await getOverride(hre)), wait)
-            }
-
-            console.log('_playerTo.callStatic.deposit(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
-            await _playerTo.callStatic.deposit(signer.address, crabadasIds, await getOverride(hre))
-            console.log('_playerTo.deposit(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
-            await waitTransaction(await _playerTo.deposit(signer.address, crabadasIds, await getOverride(hre)), wait)
-
-            console.log('_playerTo.callStatic.createTeam(c1, c2, c3)', ...(crabadasIds.map(x=>x.toString())) );
-            await _playerTo.callStatic.createTeam(c1, c2, c3, await getOverride(hre))
-            console.log('_playerTo.createTeam(c1, c2, c3)', ...(crabadasIds.map(x=>x.toString())) );
-            await waitTransaction(await _playerTo.createTeam(c1, c2, c3, await getOverride(hre)), wait)
-        }
-
-
-    })
-    .addParam("playerfrom", "The contract that has teams of crabada.")
-    .addParam("playerto", "The contract that does not has teams of crabada.")
-    .addParam("accountindex", "The index of the account to be used.", undefined, types.int)
-    .addOptionalParam("wait", "Number of wait per transaction.", 3, types.int)
-    .addOptionalParam("testaccount", "Account used for testing.", undefined, types.string)
-    
-
-task(
-    "playeraddowner",
-    "Add a new owner for player.",
-    async ({ player, newowner, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const playerC = await attachPlayer(hre, player)
-
-        await playerC.connect(signer).callStatic.addOwner(newowner)
-
-        await playerC.connect(signer).addOwner(newowner, await getOverride(hre))
-
-    })
-    .addParam("player", "Player contract for which will be added a new owner.")
-    .addParam("newowner", "New owner of the player contract.")
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
-
-
-task(
-    "routeraddowner",
-    "Add a new owner for AttackRouter.",
-    async ({ router, newowner, testaccount }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = await getSigner(hre, testaccount)
-
-        const routerC = await attachAttackRouter(hre, router)
-
-        await routerC.connect(signer).callStatic.addOwner(newowner)
-
-        await routerC.connect(signer).addOwner(newowner, await getOverride(hre))
-
-    })
-    .addParam("router", "AttackRouter contract for which will be added a new owner.")
-    .addParam("newowner", "New owner of the AttackRouter contract.")
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
-
-
-    const MIN_BATTLE_POINTS = 564
-    const MAX_BATTLE_POINTS = 712
-    const STEP_BATTLE_POINTS = (MAX_BATTLE_POINTS-MIN_BATTLE_POINTS)/10
+const MIN_BATTLE_POINTS = 564
+const MAX_BATTLE_POINTS = 712
+const STEP_BATTLE_POINTS = (MAX_BATTLE_POINTS-MIN_BATTLE_POINTS)/10
 
 task(
     "lootpossibletargets",
@@ -771,20 +401,16 @@ export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame
         )).every( locked => locked )
 }
 
-const LOOT_CONFIG = {
-    attackOnlyTeamsThatPlayToLoose: false
-}
 
 task(
     "loot",
     "Loot process.",
-    async ({ blockstoanalyze, firstdefendwindow, lootersteamsbyaccount, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
         if (!(hre.config.nodeId in CONFIG_BY_NODE_ID))
             return
 
-        const nodeConfig: NodeConfig = lootersteamsbyaccount ? 
-            JSON.parse(lootersteamsbyaccount) : CONFIG_BY_NODE_ID[hre.config.nodeId]
+        const nodeConfig: NodeConfig = CONFIG_BY_NODE_ID[hre.config.nodeId]
 
         const { idleGame } = getCrabadaContracts(hre)
 
@@ -797,7 +423,7 @@ task(
             return
 
         const teamsThatPlayToLooseByTeamId = await (
-            LOOT_CONFIG.attackOnlyTeamsThatPlayToLoose ? 
+            nodeConfig.lootConfig.attackOnlyTeamsThatPlayToLoose ? 
                 getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
                 : getTeamsBattlePoint(hre, blockstoanalyze)
         )
@@ -841,14 +467,13 @@ task(
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
-    .addOptionalParam("lootersteamsbyaccount", "JSON (array of arrays) with the looters teams ids by account. Example: '[[0,1,2],[4,5],[6]]'.", undefined, types.string)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
 
 const REINFORCE_CONFIG: AccountConfig[] = [
-    main,
-    looter1,
-    looter2,
+    player1,
+    player2,
+    player3
 ]
 
 task(
@@ -856,7 +481,7 @@ task(
     "Reinforce process.",
     async ({ testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
-        for (const {accountIndex, teams} of REINFORCE_CONFIG){
+        for (const {accountIndex, teams, player} of REINFORCE_CONFIG){
 
             const signer = await getSigner(hre, testaccount, accountIndex)
 
@@ -868,7 +493,7 @@ task(
 
                 try {
 
-                    const tr = await reinforce(hre, looterTeamId, signer, console.log, testmode);
+                    const tr = await reinforce(hre, looterTeamId, signer, player, console.log, testmode);
 
                 } catch (error) {
                     
@@ -885,7 +510,7 @@ task(
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
 
 
-interface LootGuessConfig {
+interface LootPendingConfig {
     players: {
         address: string,
         teams: number[]
@@ -901,24 +526,24 @@ interface LootGuessConfig {
     attackTransaction: {
         override: {
             gasLimit: number,
-            gasPrice: BigNumber,
-            // maxFeePerGas: BigNumber,
-            // maxPriorityFeePerGas: BigNumber,
+            // gasPrice: BigNumber,
+            maxFeePerGas: BigNumber,
+            maxPriorityFeePerGas: BigNumber,
         }
     }
 }
 
 task(
-    "lootguess",
-    "Loot process based on predict of startGame transactions using the CloseGame events and analyses on teams behaviours.",
-    async ({ blockstoanalyze, firstdefendwindow, testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+    "lootpending",
+    "Loot pending startGame transactions.",
+    async ({ blockstoanalyze, firstdefendwindow, testaccount, testmode, debug }, hre: HardhatRuntimeEnvironment) => {
 
         // signer used to settle
         const settleSigner = await getSigner(hre, testaccount)
 
         const lootersSigners = (await hre.ethers.getSigners()).slice(1)
 
-        const lootGuessConfig: LootGuessConfig = {
+        const lootPendingConfig: LootPendingConfig = {
             maxBlocksPerTeams: 55,
             maxStandardDeviation: 14,
             router: {
@@ -931,28 +556,35 @@ task(
             attackTransaction: {
                 override: {
                     gasLimit: 1000000,
-                    gasPrice: BigNumber.from(ONE_GWEI*75),
-                    // maxFeePerGas: BigNumber.from(ONE_GWEI*400),
-                    // maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*75)
+                    maxFeePerGas: BigNumber.from(ONE_GWEI*400),
+                    maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50)
                 }
             },        
             players: [
                 {
-                    address: '0x39A9551C9683d9955ADA8f91438eB18CEd8DbFcd',
-                    teams: [8700, 8702, 4400]
+                    address: player1.player,
+                    teams: player1.teams
+                },
+                {
+                    address: player2.player,
+                    teams: player2.teams
+                },
+                {
+                    address: player3.player,
+                    teams: player3.teams
                 },
             ]
         }
 
         const { idleGame } = getCrabadaContracts(hre)
         const router: Contract | undefined = 
-            lootGuessConfig.router.address ? 
-                await attachAttackRouter(hre, lootGuessConfig.router.address)
+            lootPendingConfig.router.address ? 
+                await attachAttackRouter(hre, lootPendingConfig.router.address)
                 : undefined
 
         // Verify there are teams in the config.
 
-        const lootersTeams = lootGuessConfig.players.map( p => p.teams ).flat()
+        const lootersTeams = lootPendingConfig.players.map( p => p.teams ).flat()
 
         if (lootersTeams.length == 0)
             return
@@ -966,8 +598,7 @@ task(
             battlePoint: number,
         }
 
-        // TODO Verify that works
-        const playerTeamPairs: PlayerTeamPair[] = await Promise.all(lootGuessConfig.players
+        const playerTeamPairs: PlayerTeamPair[] = await Promise.all(lootPendingConfig.players
             .map( p => p.teams
                 .map( async(teamId) => {
                     const { battlePoint } = await idleGame.getTeamInfo(teamId)
@@ -981,35 +612,50 @@ task(
             )
             .flat())
         
-        // await Promise.all(playerTeamPairs.map( async(pair) => {
-        //     const { battlePoint } = await idleGame.getTeamInfo(pair.teamId)
-        //     pair.battlePoint = battlePoint
-        // }))
         
         // Initialize teams' lock status
 
-        const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, playerTeamPairs: PlayerTeamPair[]) => {
+        const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, playerTeamPairs: PlayerTeamPair[], log: (typeof console.log)) => {
             return (await Promise.all(
                 playerTeamPairs.map( async(playerTeamPair): Promise<any> => {
-                    playerTeamPair.locked = !testmode && await isTeamLocked(hre, idleGame, playerTeamPair.teamId, ()=>{})
+                    playerTeamPair.locked = !testmode && await isTeamLocked(hre, idleGame, playerTeamPair.teamId, log)
                 }) 
             ))
         }
 
-        await updateLockStatus(hre, idleGame, playerTeamPairs)
+        await updateLockStatus(hre, idleGame, playerTeamPairs, console.log)
 
         // Sets interval to settleGame for unlocked teams.
         
-        const settleGameInterval = !testmode && setInterval(async()=>{
+        let settleInProgress = false
 
-            playerTeamPairs
-                .filter(p=>!p.locked)
-                .forEach(async(p)=>{
+        const settleGames = async(log: (typeof console.log))=>{
+
+            if (settleInProgress)
+                return
+
+            settleInProgress = true
+
+            try {
+
+                for (const p of playerTeamPairs.filter(p=>!p.locked)){
                     const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
-                    settleGame(idleGame.connect(settleSigner), currentGameId, 1, ()=>{})
-                })
+                    await settleGame(idleGame.connect(settleSigner), currentGameId, 1, ()=>{})
+                }
+                    
+            } catch (error) {
 
-        }, 2000)
+                // To be possible to deactivate settleInProgress
+                
+            }
+
+            settleInProgress = false
+
+        }
+
+        !testmode && (await settleGames(console.log))
+
+        const settleGameInterval = !testmode && setInterval(() => settleGames(()=>{}), 2000)
 
 
         // Verify if all teams are locked.
@@ -1042,174 +688,105 @@ task(
 
         idleGame.on(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
 
-        // Get teams with their minCloseDistanceToStart, averageCloseDistanceToStart and
-        // deviationCloseDistanceToStart
-        const closeDistanceToStartByTeamId: CloseDistanceToStartByTeamId = await getCloseDistanceToStartByTeamId(hre, blockstoanalyze, teamsThatPlayToLooseByTeamId)
-
-        const stepsDistributionForDistanceDeviation: StepMaxValuesByPercentage = getPercentualStepDistribution(
-            Object.keys(closeDistanceToStartByTeamId)
-                .map(teamId => closeDistanceToStartByTeamId[teamId].standardDeviationBlocks)
-                .sort((a,b) => a<b?-1:a>b?1:0),
-            20)
-        console.log('stepsDistributionForDistanceDeviation', stepsDistributionForDistanceDeviation);
 
         // Set interval for updating teams' lock status.
 
-        const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs), 2000);
+        const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, ()=>{}), 2000);
 
         // Listen for CloseGame events to register team for looting
 
-        interface ClosedGameTargets {
+        interface StartGameTargets {
             teamId: BigNumber,
-            closeGameBlocknumber: number,
+            attacksPerformed: number,
         }
 
-        interface ClosedGameTargetsByTeamId {
-            [teamId:string]: ClosedGameTargets
+        interface StartedGameTargetsByTeamId {
+            [teamId:string]: StartGameTargets
         }
 
-        const closedGameTargetsByTeamId: ClosedGameTargetsByTeamId = {}
+        const startedGameTargetsByTeamId: StartedGameTargetsByTeamId = {}
 
-        const addTeamToLootTargets = async (gameId: BigNumber, { transactionHash, blockNumber, getBlock }) => {
+        let attackIteration = 0
+        // let secondAttackPlaned = false
 
-            const { teamId } = await idleGame.getGameBasicInfo(gameId)
+        const addTeamToLootTargets = (txs: ethers.Transaction[]) => {
 
-            if (!teamsThatPlayToLooseByTeamId[teamId.toString()])
-                return
-
-            const targetTeamInfo = teamsThatPlayToLooseByTeamId[teamId.toString()]
-
-            if (!targetTeamInfo.battlePoint)
-                return
-
-            const pairsStrongerThanTarget = playerTeamPairs.filter( p => p.battlePoint > targetTeamInfo.battlePoint)
-
-            if (pairsStrongerThanTarget.length == 0)
-                return
-
-            const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
-
-            if (!closeDistanceToStart){
+            if (txs.length == 0){
                 return
             }
 
-            if (closeDistanceToStart.standardDeviationBlocks>lootGuessConfig.maxStandardDeviation){
-                console.log('CloseGame:', transactionHash, 
-                    'Discarded:', 'Deviation', 
-                    closeDistanceToStart.standardDeviationBlocks, '>', lootGuessConfig.maxStandardDeviation,
-                )
-                return
-            }
+            txs.forEach( tx => {
 
-            closedGameTargetsByTeamId[teamId.toString()] = {
-                teamId,
-                closeGameBlocknumber: blockNumber,
-            }
-
-            console.log('CloseGame', transactionHash, 
-                'Added team to loot targets (teamId, blockNumber, gameId)', 
-                teamId.toNumber(), blockNumber, gameId.toNumber()
-            );
+                const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
+                console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
+    
+                const targetTeamInfo = teamsThatPlayToLooseByTeamId[teamId.toString()]
+    
+                if (!targetTeamInfo){
+                    debug && console.log('Discarded, team does not play to loose.', teamId.toString());
+                    return
+                }
+    
+                if (!targetTeamInfo.battlePoint){
+                    debug && console.log('Discarded, team with no battlePointdefined.', teamId.toString());
+                    return
+                }
+    
+                const pairsStrongerThanTarget = playerTeamPairs.filter( p => p.battlePoint > targetTeamInfo.battlePoint)
+    
+                if (pairsStrongerThanTarget.length == 0){
+                    debug && console.log('Discarded, no stronger team for attack. (teamId, playerTeamPairs.battlePoint, target.battlePoint)', 
+                        teamId.toString(), playerTeamPairs.map(p=>p.battlePoint), targetTeamInfo.battlePoint);
+                    return
+                }
+    
+                startedGameTargetsByTeamId[teamId.toString()] = {
+                    teamId,
+                    attacksPerformed: 0,
+                }
+    
+                // TODO Verify if attack imediately it is needed.
+    
+                console.log('Pending startGame', tx.hash, 
+                    'Added team to loot targets', teamId.toNumber()
+                );
+    
+            })
             
-        }
+            attackTeams()
 
-        idleGame.on(idleGame.filters.CloseGame(), addTeamToLootTargets)
+            // if (secondAttackPlaned)
+            //     return
 
-        // Metrics implementation
+            // secondAttackPlaned = true
 
-        interface GameInfo {
-            attackTransactions: number,
-        }
-
-        interface GameInfoByGameId {
-            [teamId: string]: GameInfo
-        }
-
-        class Metrics {
-
-            attackTransactions: number = 0
-            effectiveGameAttacks: number = 0 // Attack until looted
-            failedGameAttacks: number = 0 // Attack but no loot
-            startTime: number = +new Date()
-            gameInfoByGameId: GameInfoByGameId = {}
-
-            attackTeams(teamIds: string[]){
-                this.attackTransactions++
-                teamIds.forEach( teamId => {
-                    if (!this.gameInfoByGameId[teamId]){
-                        this.gameInfoByGameId[teamId] = { attackTransactions: 0 }
-                    }
-                    this.gameInfoByGameId[teamId].attackTransactions++    
-                })
-            }
-
-            lootTeam(teamId: string){
-                if (this.gameInfoByGameId[teamId] && this.gameInfoByGameId[teamId].attackTransactions>0){
-                    this.effectiveGameAttacks++
-                }
-            }
-
-            maxAttacksAchivedForTeam(teamId: string){
-                if (this.gameInfoByGameId[teamId] && this.gameInfoByGameId[teamId].attackTransactions>0){
-                    this.failedGameAttacks++
-                }
-            }
-
-            log(){
-                console.log('Metrics', {
-                    attackTransactions: this.attackTransactions,
-                    effectiveGameAttacks: this.effectiveGameAttacks,
-                    failedGameAttacks: this.failedGameAttacks,
-                    timeElapsedInSeconds: (+new Date() - this.startTime)/1000
-                });    
-            }
+            // setTimeout( () => {
+            //     attackTeams()
+            //     secondAttackPlaned = false
+            // }, 1000)
 
         }
 
-        const metrics = new Metrics()
+        const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
 
 
-        // Block number update.
-
-        let currentBlockNumber = await hre.ethers.provider.getBlockNumber()
-
-        const blockNumberIntervalUpdate = setInterval(async() => {
-            currentBlockNumber = await hre.ethers.provider.getBlockNumber()
-        }, 1000)
-
-        
         // Set interval to verify if a possible target should be removed considering
         // the following conditions are met:
         // 1) game is already looted (use getGameBattleInfo and get status)
         // 2) currentBlock-closeGameBlock > maxBlocksPerTarget
 
+        const LOOTGUESS_MAX_ATTACKS_PER_TARGET = 1
+
         const removeCloseGameTargetsInterval = setInterval(() => {
 
-            Object.keys(closedGameTargetsByTeamId).forEach( async(teamId) => {
+            Object.keys(startedGameTargetsByTeamId).forEach( async(teamId) => {
 
-                const closedGameTarget = closedGameTargetsByTeamId[teamId]
+                const startedGameTarget = startedGameTargetsByTeamId[teamId]
 
-                const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
-
-                const deviationToUse = lootGuessConfig.behaviour.deviationToUse(closeDistanceToStart.standardDeviationBlocks)
-
-                if ((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
-                    > (closeDistanceToStart.averageBlocks+deviationToUse)){
-
-                    metrics.maxAttacksAchivedForTeam(teamId)
-                    
-                    console.log(
-                        'Max block difference from CloseGame achived', 
-                        currentBlockNumber-closedGameTarget.closeGameBlocknumber, '>',
-                        closeDistanceToStart.averageBlocks+deviationToUse,
-                        'Removed team from loot targets (teamId, blockNumber)', 
-                        teamId, closedGameTarget.closeGameBlocknumber
-                    );
-    
-                    delete closedGameTargetsByTeamId[teamId]
+                if (startedGameTarget.attacksPerformed >= LOOTGUESS_MAX_ATTACKS_PER_TARGET){
+                    delete startedGameTargetsByTeamId[teamId]
                     return
                 }
-
 
                 const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(teamId))
 
@@ -1220,14 +797,7 @@ task(
                     // Validate if game is already looted
                     if (!(attackTeamId as BigNumber).isZero()){
 
-                        metrics.lootTeam(teamId)
-
-                        console.log(
-                            'Game Looted. Removed team from loot targets (teamId, blockNumber, currentGameId)', 
-                            teamId, closedGameTarget.closeGameBlocknumber, currentGameId.toNumber()
-                        );
-        
-                        delete closedGameTargetsByTeamId[teamId]
+                        delete startedGameTargetsByTeamId[teamId]
                         return
                     }
 
@@ -1235,11 +805,7 @@ task(
 
             })
 
-        }, 1000)
-
-        setInterval( () => {
-            metrics.log()
-        }, 15000)
+        }, 500)
 
 
         // Main interval to perform attacks considering the following conditions:
@@ -1248,9 +814,7 @@ task(
         // 3) For targets currentBlockNumber-closeGameBlockNumber >= minBlocknumberDistance-2
         // 4) Apply only for looter teams that have battlePoint higher than minimum target battlePoint.
 
-        let attackIteration = 0
-
-        const attackTeamsInterval = setInterval(async () => {
+        const attackTeams = async () => {
 
             // 1) Apply only for looter teams are unlocked
             const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => !p.locked || testmode )
@@ -1260,50 +824,52 @@ task(
                 return
             }
 
-
+            // Get the max battlePoint for unlocked looter teams.
             const maxUnlockedLooterBattlePoint = Math.max(
                 ...unlockedPlayerTeamPairs
                     .map( playerTeamPair => playerTeamPair.battlePoint )
             )
 
-            const teamIdTargets = Object.keys(closedGameTargetsByTeamId)
+            const teamIdTargets = Object.keys(startedGameTargetsByTeamId)
                 // 2) Targets should have battlePoint lower than the maximum looterTeam target battlePoint.
                 .filter(teamId => {
-                    if (!teamsThatPlayToLooseByTeamId[teamId]){
-                        console.log('Attack Interval', 'Team', Number(teamId), 'does not play to loose.');
+
+                    const targetInfo = teamsThatPlayToLooseByTeamId[teamId]
+
+                    // This is necessary because teamsThatPlayToLooseByTeamId could be updated.
+                    if (!targetInfo){
+                        debug && console.log('Attack Interval', 'Team', Number(teamId), 'does not play to loose.');
+                        return false
                     }
 
-                    if (!teamsThatPlayToLooseByTeamId[teamId].battlePoint){
-                        console.log('Attack Interval', 'Team', Number(teamId), 'does not has battlePoint defined.');
+                    // This is necessary because teamsThatPlayToLooseByTeamId could be updated.
+                    if (!targetInfo.battlePoint){
+                        debug && console.log('Attack Interval', 'Team', Number(teamId), 'does not has battlePoint defined.');
+                        return false
                     }
                     
-                    if (teamsThatPlayToLooseByTeamId[teamId].battlePoint >= maxUnlockedLooterBattlePoint){
-                        console.log('Attack Interval', 'Team', Number(teamId), 'has higher battlePoint', 
-                            teamsThatPlayToLooseByTeamId[teamId].battlePoint, 'than', maxUnlockedLooterBattlePoint);
+                    if (targetInfo.battlePoint >= maxUnlockedLooterBattlePoint){
+                        debug && console.log('Attack Interval', 'Team', Number(teamId), 'has higher battlePoint', 
+                        targetInfo.battlePoint, 'than', maxUnlockedLooterBattlePoint);
+                        return false
                     }
                     
-                    return teamsThatPlayToLooseByTeamId[teamId] &&
-                    teamsThatPlayToLooseByTeamId[teamId].battlePoint &&
-                    teamsThatPlayToLooseByTeamId[teamId].battlePoint < maxUnlockedLooterBattlePoint
+                    return true
                 })
 
-                // 3) For targets currentBlockNumber-closeGameBlockNumber >= average-deviation
+                // 3) Targets should not be attacked more than max times
                 .filter(teamId => {
-                    
-                    const closeDistanceToStart = closeDistanceToStartByTeamId[teamId]
-                    const closedGameTarget = closedGameTargetsByTeamId[teamId]
 
-                    const deviationToUse = lootGuessConfig.behaviour.deviationToUse(closeDistanceToStart.standardDeviationBlocks)
-                    
-                    if (((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
-                        < (closeDistanceToStart.averageBlocks-deviationToUse))){
-                        console.log('Attack Interval', 'Actual distance', 
-                            currentBlockNumber-closedGameTarget.closeGameBlocknumber, 'lower than min distance',
-                            closeDistanceToStart.averageBlocks-deviationToUse)
+                    const startedGameTarget = startedGameTargetsByTeamId[teamId]
+
+                    if (startedGameTarget.attacksPerformed > LOOTGUESS_MAX_ATTACKS_PER_TARGET){
+                        debug && console.log('Max attacks per target achieved', '(attacksPerformed, max)', 
+                            startedGameTarget.attacksPerformed, LOOTGUESS_MAX_ATTACKS_PER_TARGET);
+                        return false
                     }
-                    
-                    return ((currentBlockNumber-closedGameTarget.closeGameBlocknumber) 
-                        >= (closeDistanceToStart.averageBlocks-deviationToUse))
+
+                    return true
+
                 })
             
             if (teamIdTargets.length == 0){
@@ -1329,7 +895,6 @@ task(
                     a.battlePoint < b.battlePoint ? -1 : a.battlePoint > b.battlePoint ? 1 : 0
                 )
 
-
             const looterSignerIndex = attackIteration % lootersSigners.length
             attackIteration++
 
@@ -1339,6 +904,7 @@ task(
             const targetBattlePoint = teamIdTargets.map(teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint)
 
             console.log(
+                +new Date()/1000,
                 'attackTeams(', 
                 'players=', playerAddresses.toString(),
                 'looterTeams=', looterTeams.toString(),
@@ -1348,60 +914,77 @@ task(
                 ')'
             )
 
+            // Are increased the attacks performed by target
+            teamIdTargets.forEach( teamId => startedGameTargetsByTeamId[teamId].attacksPerformed++ )
+
+            if (testmode)
+                return
+
+            if (!router)
+                return
+
             try {
 
-                if (router){
+                // for test mode we perform a static call.
+                const attackTeams = router.connect(lootersSigners[looterSignerIndex]).attackTeams
 
-                    // for test mode we perform a static call.
-                    const attackTeams = testmode ?
-                        router.connect(lootersSigners[looterSignerIndex]).callStatic.attackTeams
-                        : router.connect(lootersSigners[looterSignerIndex]).attackTeams
+                const transactionResponse: ethers.providers.TransactionResponse = await attackTeams(
+                    idleGame.address,
+                    playerAddresses,
+                    looterTeams,
+                    looterBattlePoint,
+                    teamIdTargets,
+                    targetBattlePoint,
+                    lootPendingConfig.attackTransaction.override
+                )
 
-                    const transactionResponse: ethers.providers.TransactionResponse = await attackTeams(
-                        idleGame.address,
-                        playerAddresses,
-                        looterTeams,
-                        looterBattlePoint,
-                        teamIdTargets,
-                        targetBattlePoint,
-                        lootGuessConfig.attackTransaction.override
-                    )
+                if (transactionResponse && (transactionResponse.hash || transactionResponse.blockNumber))
+                    console.log('router.attackTeams', 'transaction hash', transactionResponse.hash, 'blocknumber', transactionResponse.blockNumber);
 
-                    if (transactionResponse && (transactionResponse.hash || transactionResponse.blockNumber))
-                        console.log('router.attackTeams', 'transaction hash', transactionResponse.hash, 'blocknumber', transactionResponse.blockNumber);
-
-                }
-    
             } catch (error) {
 
                 console.error('ERROR', 'router.attackTeams', String(error));
                 
             }
 
-            metrics.attackTeams(teamIdTargets)
+        }
 
-        }, 1000)
+        //const attackTeamsInterval = setInterval(attackTeams, 1000)
 
+        // TODO Verify if finish needed.
         // Never finish
-        await new Promise(() => {})
+        await new Promise((resolve) => {
 
-        clearInterval(attackTeamsInterval)
+            const endProcessInterval = setInterval(()=>{
+
+                const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => !p.locked || testmode )
+
+                if (unlockedPlayerTeamPairs.length == 0){
+                    console.log('Ending process', 'No unlocked looter teams');
+                    clearInterval(endProcessInterval)
+                    resolve(undefined)
+                }
+
+            }, 1000)
+        })
+
+        //clearInterval(attackTeamsInterval)
+        clearInterval(pendingStartGameTransactionInterval)
         idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
-        idleGame.off(idleGame.filters.CloseGame(), addTeamToLootTargets)
         clearInterval(updateLockStatusInterval)
         settleGameInterval && clearInterval(settleGameInterval)
         clearInterval(removeCloseGameTargetsInterval)
-        clearInterval(blockNumberIntervalUpdate)
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
-    .addOptionalParam("lootersteamsbyaccount", "JSON (array of arrays) with the looters teams ids by account. Example: '[[0,1,2],[4,5],[6]]'.", undefined, types.string)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
+    .addOptionalParam("debug", "Debug mode", false, types.boolean)
 
     
 export const START_GAME_ENCODED_OPERATION = '0xe5ed1d59'
+export const START_GAME_EVENT_TOPIC ='0x0eef6f7452b7d2ee11184579c086fb47626e796a83df2b2e16254df60ab761eb'
 
 task(
     "meassurestartgameevents",
@@ -1411,7 +994,7 @@ task(
         await (new Promise(async () => {
             const { idleGame } = getCrabadaContracts(hre)
 
-            hre.ethers.provider.on("pending", (tx: ethers.Transaction) =>{
+            hre.ethers.provider.on('latest', (tx: ethers.Transaction) =>{
                 if (tx.to === idleGame.address &&
                     tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION){
 
@@ -1430,10 +1013,10 @@ task(
 
 
             const filter = {
-                fromBlock: 'pending',
-                toBlock: 'pending',
+                fromBlock: 'latest',
+                toBlock: 'latest',
                 address: idleGame.address,
-                topics: [ '0x0eef6f7452b7d2ee11184579c086fb47626e796a83df2b2e16254df60ab761eb' ]
+                topics: [ START_GAME_EVENT_TOPIC ]
             };
             
             const provider = hre.ethers.provider
@@ -1458,19 +1041,21 @@ task(
     })
 
 task(
-    "pendingtransactions",
+    "pendingstartgameevents",
     "Listen for pending transactions.",
-    async ({ }, hre: HardhatRuntimeEnvironment) => {
+    async ({ pending }, hre: HardhatRuntimeEnvironment) => {
         
         const provider = hre.ethers.provider
 
         const { idleGame } = getCrabadaContracts(hre)
 
+        const mode = pending ? 'pending' : 'latest'
+
         const filter = {
-            fromBlock: 'pending',
-            toBlock: 'pending',
+            fromBlock: mode,
+            toBlock: mode,
             address: idleGame.address,
-            topics: [ '0x0eef6f7452b7d2ee11184579c086fb47626e796a83df2b2e16254df60ab761eb' ]
+            topics: [ START_GAME_EVENT_TOPIC ]
         };
 
         const filterId = await provider.send("eth_newFilter", [filter]);
@@ -1485,11 +1070,12 @@ task(
                     const teamId = BigNumber.from('0x'+(log.data as string).slice(66,130))
                     console.log(+new Date()/1000, "eth_getFilterChanges", log.transactionHash, BigNumber.from(log.blockNumber).toNumber(), teamId.toNumber());
                 }
-            }, 100)
+            }, 10)
 
         }))
 
     })
+    .addOptionalParam('pending', 'Get pending events or lastest.', true, types.boolean)
 
 export const getBlocksInterval = async (hre: HardhatRuntimeEnvironment, fromblock: number, toblock: number, blocksquan: number) => {
         
@@ -1762,6 +1348,54 @@ task(
 
     })
 
+type PendingTransactionsTask = (txs: ethers.Transaction[]) => void
+
+const listenPendingStartGameTransaction = async (hre: HardhatRuntimeEnvironment, pendingTransactionsTask: PendingTransactionsTask, interval: number = 50): Promise<NodeJS.Timer> => {
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    const provider = hre.ethers.provider
+    const filterId = await provider.send("eth_newPendingTransactionFilter", []);
+
+    return setInterval(async () => {
+                    
+        const pendingTransactionsHashes: string[] = await provider.send("eth_getFilterChanges", [filterId]);
+        // console.log('pendingTransactions', pendingTransactionsHashes.length);
+        
+        const transactions = await Promise.all(
+            pendingTransactionsHashes
+                .map( async(tHash) => await provider.getTransaction(tHash))
+        )
+
+        const startGameTransactions = transactions
+            .filter( tx => tx )
+            .filter( tx => !tx.blockNumber ) // Are discarded the transactions that were already executed
+            .filter( tx => tx.to === idleGame.address )
+            .filter( tx => tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION )
+
+        pendingTransactionsTask(startGameTransactions)
+        
+    }, interval)
+
+}
+
+task(
+    "pendingstartgametransactions",
+    "Test retrieve of pending startGame transactions.",
+    async ({ }, hre: HardhatRuntimeEnvironment) => {
+        
+        await (new Promise(async () => {
+
+            listenPendingStartGameTransaction(hre, txs => {
+                txs.forEach( tx => {
+                    const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
+                    console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());    
+                })
+            })
+    
+        }))
+
+    })
 
 task(
     "iswinner",
@@ -1813,6 +1447,8 @@ task(
     .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
     .addOptionalParam("battlepoints", "Battle points.", 235*3 , types.int)
 
+const OPERATION_ADDRESS = "0xf597AC540730B2c99A31aE1e1362867C4675de2C"
+
 task(
     "approveoperation",
     "Approve account that will transfer the rewards.",
@@ -1842,16 +1478,18 @@ task(
         }
 
     })
-    .addOptionalParam("operationaddress", "Operation account address.", "0xf597AC540730B2c99A31aE1e1362867C4675de2C", types.string)
+    .addOptionalParam("operationaddress", "Operation account address.", OPERATION_ADDRESS, types.string)
 
 task(
     "withdrawrewards",
-    "Withdraw rewards to deposit.",
-    async ({ rewardsfrom, rewardsto }, hre: HardhatRuntimeEnvironment) => {
+    "Withdraw rewards to operation account.",
+    async ({ rewardsfrom }, hre: HardhatRuntimeEnvironment) => {
         
         const { tusToken, craToken } = getCrabadaContracts(hre)
 
         const signer = (await hre.ethers.getSigners())[0]
+
+        const rewardsTo = signer.address
 
         const override = await getOverride(hre)
 
@@ -1867,10 +1505,10 @@ task(
                         value = value.sub(parseEther('240')) // Backup value for reinforcements
 
                     if (value.gt(0)){
-                        console.log('erc20.transferFrom(from, rewardsto, value)', from, rewardsto, formatEther(value));
+                        console.log('erc20.transferFrom(from, rewardsto, value)', from, rewardsTo, formatEther(value));
                         
-                        await erc20.connect(signer).callStatic.transferFrom(from, rewardsto, value, override)
-                        await erc20.connect(signer).transferFrom(from, rewardsto, value, override)
+                        await erc20.connect(signer).callStatic.transferFrom(from, rewardsTo, value, override)
+                        await erc20.connect(signer).transferFrom(from, rewardsTo, value, override)
                     }
 
             }
@@ -1880,9 +1518,72 @@ task(
     })
     .addParam("rewardsfrom", "Accounts that recieves the rewards (',': coma separeted).", 
         [
-            "0xB2f4C513164cD12a1e121Dc4141920B805d024B8",
             "0xE90A22064F415896F1F72e041874Da419390CC6D",
-            "0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2"
+            "0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2",
         ].join(','), types.string)
-    .addParam("rewardsto", "Deposit address.", "0x1A6ED72C435fe1c34491BB3d4e99f888fA2a6152", types.string)
+
+task(
+    "refillavax",
+    "Refill accounts with avax.",
+    async ({ lootpending, settler, reinforce }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = (await hre.ethers.getSigners())[0]
+
+        const override = await getOverride(hre)
+
+        const lootPendingAddresses: string[] = lootpending.split(',')
+
+        const refillAvax = async (signer: SignerWithAddress, destination: string, targetAmmount: BigNumber) => {
+            
+            const destinationBalance: BigNumber = await hre.ethers.provider.getBalance(destination);
+
+            const amountToTransfer = targetAmmount.sub(destinationBalance)
+
+            if (amountToTransfer.lte(0))
+                return
+
+            console.log('sendTransaction(to, value)', destination, formatEther(amountToTransfer));
+
+            const txr = await signer.sendTransaction({
+                to: destination, 
+                value: amountToTransfer,
+                ...override
+            })
+
+            console.log(txr.hash);
+
+        }
+
+        for (const destination of lootPendingAddresses)
+            await refillAvax(signer, destination, parseEther('4'))
+        
+        await refillAvax(signer, settler, parseEther('2'))
+
+        await refillAvax(signer, reinforce, parseEther('2'))
+
+    })
+    .addParam("lootpending", "Accounts used in loot pending transactions.", 
+        [
+            "0xbfca579D0eB8e294DeAe8C8a94cD3eF3c4836634",
+            "0x83Ff016a2e574b2c35d17Fe4302188b192b64344",
+            "0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8",
+            "0xfa310944F9708DE3fd12A999Dfefe9B300C738cF",
+            "0xC72F8A49dfb612302c1F4628f12D2795482D6077"
+        ].join(','), types.string)
+    .addParam("settler", "Settler account.", "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4", types.string)
+    .addParam("reinforce", "Reinforce account.", "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f", types.string)
+
+
+task(
+    "withdrawteam",
+    "Withdraw team members from team owned by signer, to the specified address.",
+    async ({ addressto, teamid }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = (await hre.ethers.getSigners())[0]
+
+        await withdrawTeam(hre, signer, addressto, Number(teamid))
+
+    })
+    .addParam("addressto", "Account to be sent the team members.", OPERATION_ADDRESS, types.string)
+    .addParam("teamid", "Team ID where are going to withdraw its members.", undefined, types.string)
 

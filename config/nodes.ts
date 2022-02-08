@@ -1,10 +1,17 @@
 
 export interface AccountConfig{
     accountIndex: number,
-    teams: number[]
+    teams: number[],
+    player?: string
+}
+
+export interface LootConfig {
+    attackOnlyTeamsThatPlayToLoose: boolean,
+    startGameFilterMode: "latest" | "pending",
 }
 
 export interface NodeConfig {
+    lootConfig: LootConfig
     accountsConfigs: AccountConfig[]
 }
 
@@ -14,7 +21,7 @@ export interface ConfigByNodeId {
 
 export const main: AccountConfig = {
     accountIndex: 0,
-    teams: [3286, 3759, 5032]
+    teams: [/*3286, 3759, 5032*/]
 }
 
 export const looter1: AccountConfig = {
@@ -27,12 +34,39 @@ export const looter2: AccountConfig = {
     teams: [7449, 8157, 9236]
 }
 
+export const player1: AccountConfig = {
+    accountIndex: 0,
+    teams: [ 10471, 10472, 10515 ],
+    player: '0xb972ADCAc416Fe6e6a3330c5c374b97046013796'
+}
+
+export const player2: AccountConfig = {
+    accountIndex: 0,
+    teams: [ 10654, 10655, 10656 ],
+    player: '0x24A73065af5991278e71fe0058cd602c502ba41e'
+}
+
+export const player3: AccountConfig = {
+    accountIndex: 0,
+    teams: [ 10658, 10659, 10661 ],
+    player: '0x5f99D122e14A6e8de1C191f9B6F6D1c4639ad21D'
+}
+
+const LOOT_CONFIG_FOR_REINFORCE: LootConfig = {
+    attackOnlyTeamsThatPlayToLoose: false,
+    startGameFilterMode: "latest",
+}
+
+const LOOT_CONFIG_FOR_VALIDATOR: LootConfig = {
+    attackOnlyTeamsThatPlayToLoose: true,
+    startGameFilterMode: "latest"
+}
 
 export const CONFIG_BY_NODE_ID: ConfigByNodeId = {
-    1: { accountsConfigs: [ main ] },
-    2: { accountsConfigs: [ looter2 ] },
-    4: { accountsConfigs: [ main ]},
-    5: { accountsConfigs: [ looter2 ] },
-    9: { accountsConfigs: [ looter1 ] },
-    11: { accountsConfigs: [ main ]},
+    1: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ main ] },
+    2: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ looter2 ] },
+    4: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ main ]},
+    5: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ looter2 ] },
+    9: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ /*main,*/ looter1, looter2 ] },
+    11: { lootConfig: LOOT_CONFIG_FOR_REINFORCE, accountsConfigs: [ main ]},
 }
