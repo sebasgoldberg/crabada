@@ -472,7 +472,7 @@ task(
 const REINFORCE_CONFIG: AccountConfig[] = [
     looter1,
     looter2,
-    //player1,
+    player1,
 ]
 
 task(
