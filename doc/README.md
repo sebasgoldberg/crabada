@@ -162,9 +162,13 @@ npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0
 # Creating player using operation account
 npx hardhat playerdeploy --network mainnet
 Player created: 0xb972ADCAc416Fe6e6a3330c5c374b97046013796
+Player created: 0x24A73065af5991278e71fe0058cd602c502ba41e
+Player created: 0x5f99D122e14A6e8de1C191f9B6F6D1c4639ad21D
 
 # Added router as owner of player, because router calls player.attack
 npx hardhat playeraddowner --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --newowner 0x524Ba539123784d404aD3756815B3d46eF2A6430
+npx hardhat playeraddowner --network mainnet --player 0x24A73065af5991278e71fe0058cd602c502ba41e --newowner 0x524Ba539123784d404aD3756815B3d46eF2A6430
+npx hardhat playeraddowner --network mainnet --player 0x5f99D122e14A6e8de1C191f9B6F6D1c4639ad21D --newowner 0x524Ba539123784d404aD3756815B3d46eF2A6430
 
 # Added the looters external accounts as owners of router, because they will be calling router.attackTeams
 npx hardhat routeraddowner --network mainnet --router 0x524Ba539123784d404aD3756815B3d46eF2A6430  --newowner 0xbfca579D0eB8e294DeAe8C8a94cD3eF3c4836634
@@ -174,15 +178,23 @@ npx hardhat routeraddowner --network mainnet --router 0x524Ba539123784d404aD3756
 npx hardhat routeraddowner --network mainnet --router 0x524Ba539123784d404aD3756815B3d46eF2A6430  --newowner 0xC72F8A49dfb612302c1F4628f12D2795482D6077
 
 # Signer (who owns crabadas) sets approval to manage all Crabada NFTs to Player contract.
-npx hardhat playersetapproval --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796
+npx hardhat playersetapproval --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 # main
+npx hardhat playersetapproval --network mainnet --player 0x24A73065af5991278e71fe0058cd602c502ba41e # looter1
+npx hardhat playersetapproval --network mainnet --player 0x5f99D122e14A6e8de1C191f9B6F6D1c4639ad21D # looter2
 
 # First checks the teams status of Player contract.
 npx hardhat playerlistteams --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796
+npx hardhat playerlistteams --network mainnet --player 0x24A73065af5991278e71fe0058cd602c502ba41e
+npx hardhat playerlistteams --network mainnet --player 0x5f99D122e14A6e8de1C191f9B6F6D1c4639ad21D
 # 4400: 0,0,0
 
 # Are moved the crabadas from signer's inventory to IddleGame in favor of Player contract.
 npx hardhat playerdeposit --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --crabadas 12269,12712,9981,18396,9980,12714
 npx hardhat playerdeposit --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --crabadas 9860,12777,18410
+
+npx hardhat playerdeposit --network mainnet --player 0x24A73065af5991278e71fe0058cd602c502ba41e --crabadas 9787,19147,18770,9217,20505,21516,13443,22851,13977
+npx hardhat playerdeposit --network mainnet --player 0x5f99D122e14A6e8de1C191f9B6F6D1c4639ad21D --crabadas 13442,10914,15430,15428,9309,4564,21517,20506,8224
+
 
 # Are added the crabadas to the existing team
 #npx hardhat playeraddtoteam --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --teamid 4400 --position 0 --crabada 12269
@@ -193,6 +205,15 @@ npx hardhat playerdeposit --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c
 npx hardhat playercreateteam --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --c1 12269 --c2 12712 --c3 9981
 npx hardhat playercreateteam --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --c1 18396 --c2 9980 --c3 12714
 npx hardhat playercreateteam --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796 --c1 9860 --c2 12777 --c3 18410
+
+npx hardhat playercreateteam --network mainnet --player 0x24A73065af5991278e71fe0058cd602c502ba41e --c1 9787 --c2 19147 --c3 18770
+npx hardhat playercreateteam --network mainnet --player 0x24A73065af5991278e71fe0058cd602c502ba41e --c1 9217 --c2 20505 --c3 21516
+npx hardhat playercreateteam --network mainnet --player 0x24A73065af5991278e71fe0058cd602c502ba41e --c1 13443 --c2 22851 --c3 13977
+
+npx hardhat playercreateteam --network mainnet --player 0x5f99D122e14A6e8de1C191f9B6F6D1c4639ad21D --c1 13442 --c2 10914 --c3 15430
+npx hardhat playercreateteam --network mainnet --player 0x5f99D122e14A6e8de1C191f9B6F6D1c4639ad21D --c1 15428 --c2 9309 --c3 4564
+npx hardhat playercreateteam --network mainnet --player 0x5f99D122e14A6e8de1C191f9B6F6D1c4639ad21D --c1 21517 --c2 20506 --c3 8224
+
 
 # First checks the teams final status of Player contract.
 npx hardhat playerlistteams --network mainnet --player 0xb972ADCAc416Fe6e6a3330c5c374b97046013796

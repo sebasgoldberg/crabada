@@ -6,9 +6,10 @@ import { attachAttackRouter, baseFee, CloseDistanceToStartByTeamId, closeGameToS
 import { types } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
-import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig, player1,  } from "../config/nodes";
+import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig, player1, player2, player3,  } from "../config/nodes";
 
 import "./player"
+import { logTransactionAndWait, withdrawTeam } from "../test/utils";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -470,9 +471,9 @@ task(
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
 
 const REINFORCE_CONFIG: AccountConfig[] = [
-    looter1,
-    looter2,
     player1,
+    player2,
+    player3
 ]
 
 task(
@@ -563,6 +564,14 @@ task(
                 {
                     address: player1.player,
                     teams: player1.teams
+                },
+                {
+                    address: player2.player,
+                    teams: player2.teams
+                },
+                {
+                    address: player3.player,
+                    teams: player3.teams
                 },
             ]
         }
@@ -1438,6 +1447,8 @@ task(
     .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
     .addOptionalParam("battlepoints", "Battle points.", 235*3 , types.int)
 
+const OPERATION_ADDRESS = "0xf597AC540730B2c99A31aE1e1362867C4675de2C"
+
 task(
     "approveoperation",
     "Approve account that will transfer the rewards.",
@@ -1467,7 +1478,7 @@ task(
         }
 
     })
-    .addOptionalParam("operationaddress", "Operation account address.", "0xf597AC540730B2c99A31aE1e1362867C4675de2C", types.string)
+    .addOptionalParam("operationaddress", "Operation account address.", OPERATION_ADDRESS, types.string)
 
 task(
     "withdrawrewards",
@@ -1544,7 +1555,7 @@ task(
         }
 
         for (const destination of lootPendingAddresses)
-            await refillAvax(signer, destination, parseEther('2'))
+            await refillAvax(signer, destination, parseEther('4'))
         
         await refillAvax(signer, settler, parseEther('2'))
 
@@ -1561,4 +1572,18 @@ task(
         ].join(','), types.string)
     .addParam("settler", "Settler account.", "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4", types.string)
     .addParam("reinforce", "Reinforce account.", "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f", types.string)
+
+
+task(
+    "withdrawteam",
+    "Withdraw team members from team owned by signer, to the specified address.",
+    async ({ addressto, teamid }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = (await hre.ethers.getSigners())[0]
+
+        await withdrawTeam(hre, signer, addressto, Number(teamid))
+
+    })
+    .addParam("addressto", "Account to be sent the team members.", OPERATION_ADDRESS, types.string)
+    .addParam("teamid", "Team ID where are going to withdraw its members.", undefined, types.string)
 
