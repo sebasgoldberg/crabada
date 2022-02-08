@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachAttackRouter, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, reinforce, setMaxAllowanceIfNotApproved, settleGame, StepMaxValuesByPercentage, updateTeamsThatWereChaged } from "../scripts/crabada";
+import { attachAttackRouter, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, currentBlockTimeStamp, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, reinforce, setMaxAllowanceIfNotApproved, settleGame, StepMaxValuesByPercentage, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
@@ -533,6 +533,39 @@ interface LootPendingConfig {
     }
 }
 
+const LOOT_PENDING_CONFIG: LootPendingConfig = {
+    maxBlocksPerTeams: 55,
+    maxStandardDeviation: 14,
+    router: {
+        address: '0x524Ba539123784d404aD3756815B3d46eF2A6430'
+    },
+    behaviour: {
+        deviationToUse: (startStandardDeviationInBlocks: number): number => 
+            Math.max(5, startStandardDeviationInBlocks)
+    },
+    attackTransaction: {
+        override: {
+            gasLimit: 1000000,
+            maxFeePerGas: BigNumber.from(ONE_GWEI*400),
+            maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50)
+        }
+    },        
+    players: [
+        {
+            address: player1.player,
+            teams: player1.teams
+        },
+        {
+            address: player2.player,
+            teams: player2.teams
+        },
+        {
+            address: player3.player,
+            teams: player3.teams
+        },
+    ]
+}
+
 task(
     "lootpending",
     "Loot pending startGame transactions.",
@@ -543,48 +576,15 @@ task(
 
         const lootersSigners = (await hre.ethers.getSigners()).slice(1)
 
-        const lootPendingConfig: LootPendingConfig = {
-            maxBlocksPerTeams: 55,
-            maxStandardDeviation: 14,
-            router: {
-                address: '0x524Ba539123784d404aD3756815B3d46eF2A6430'
-            },
-            behaviour: {
-                deviationToUse: (startStandardDeviationInBlocks: number): number => 
-                    Math.max(5, startStandardDeviationInBlocks)
-            },
-            attackTransaction: {
-                override: {
-                    gasLimit: 1000000,
-                    maxFeePerGas: BigNumber.from(ONE_GWEI*400),
-                    maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*50)
-                }
-            },        
-            players: [
-                {
-                    address: player1.player,
-                    teams: player1.teams
-                },
-                {
-                    address: player2.player,
-                    teams: player2.teams
-                },
-                {
-                    address: player3.player,
-                    teams: player3.teams
-                },
-            ]
-        }
-
         const { idleGame } = getCrabadaContracts(hre)
         const router: Contract | undefined = 
-            lootPendingConfig.router.address ? 
-                await attachAttackRouter(hre, lootPendingConfig.router.address)
+            LOOT_PENDING_CONFIG.router.address ? 
+                await attachAttackRouter(hre, LOOT_PENDING_CONFIG.router.address)
                 : undefined
 
         // Verify there are teams in the config.
 
-        const lootersTeams = lootPendingConfig.players.map( p => p.teams ).flat()
+        const lootersTeams = LOOT_PENDING_CONFIG.players.map( p => p.teams ).flat()
 
         if (lootersTeams.length == 0)
             return
@@ -598,7 +598,7 @@ task(
             battlePoint: number,
         }
 
-        const playerTeamPairs: PlayerTeamPair[] = await Promise.all(lootPendingConfig.players
+        const playerTeamPairs: PlayerTeamPair[] = await Promise.all(LOOT_PENDING_CONFIG.players
             .map( p => p.teams
                 .map( async(teamId) => {
                     const { battlePoint } = await idleGame.getTeamInfo(teamId)
@@ -935,7 +935,7 @@ task(
                     looterBattlePoint,
                     teamIdTargets,
                     targetBattlePoint,
-                    lootPendingConfig.attackTransaction.override
+                    LOOT_PENDING_CONFIG.attackTransaction.override
                 )
 
                 if (transactionResponse && (transactionResponse.hash || transactionResponse.blockNumber))
@@ -1522,6 +1522,17 @@ task(
             "0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2",
         ].join(','), types.string)
 
+const LOOT_PENDING_AVAX_ACCOUNTS = [
+    "0xbfca579D0eB8e294DeAe8C8a94cD3eF3c4836634",
+    "0x83Ff016a2e574b2c35d17Fe4302188b192b64344",
+    "0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8",
+    "0xfa310944F9708DE3fd12A999Dfefe9B300C738cF",
+    "0xC72F8A49dfb612302c1F4628f12D2795482D6077"
+]
+
+const SETTLER_ACCOUNT = "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4"
+const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
+
 task(
     "refillavax",
     "Refill accounts with avax.",
@@ -1563,16 +1574,9 @@ task(
 
     })
     .addParam("lootpending", "Accounts used in loot pending transactions.", 
-        [
-            "0xbfca579D0eB8e294DeAe8C8a94cD3eF3c4836634",
-            "0x83Ff016a2e574b2c35d17Fe4302188b192b64344",
-            "0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8",
-            "0xfa310944F9708DE3fd12A999Dfefe9B300C738cF",
-            "0xC72F8A49dfb612302c1F4628f12D2795482D6077"
-        ].join(','), types.string)
-    .addParam("settler", "Settler account.", "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4", types.string)
-    .addParam("reinforce", "Reinforce account.", "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f", types.string)
-
+        LOOT_PENDING_AVAX_ACCOUNTS.join(','), types.string)
+    .addParam("settler", "Settler account.", SETTLER_ACCOUNT, types.string)
+    .addParam("reinforce", "Reinforce account.", REINFORCE_ACCOUNT, types.string)
 
 task(
     "withdrawteam",
@@ -1586,4 +1590,69 @@ task(
     })
     .addParam("addressto", "Account to be sent the team members.", OPERATION_ADDRESS, types.string)
     .addParam("teamid", "Team ID where are going to withdraw its members.", undefined, types.string)
+
+
+task(
+    "dashboard",
+    "Display dashboard with team status.",
+    async ({ }, hre: HardhatRuntimeEnvironment) => {
+
+        const { idleGame, tusToken, craToken } = getCrabadaContracts(hre)
+
+        console.log('LOOT_PENDING_AVAX_ACCOUNTS');
+        
+        for (const address of LOOT_PENDING_AVAX_ACCOUNTS){
+            console.log('-', address, formatEther(await hre.ethers.provider.getBalance(address)));
+        }
+
+        console.log('SETTLER_ACCOUNT');
+        console.log('-', SETTLER_ACCOUNT, formatEther(await hre.ethers.provider.getBalance(SETTLER_ACCOUNT)));
+
+        console.log('REINFORCE_ACCOUNT');
+        console.log('-', REINFORCE_ACCOUNT, formatEther(await hre.ethers.provider.getBalance(REINFORCE_ACCOUNT)));
+
+        const timestamp = await currentBlockTimeStamp(hre)
+
+        console.log('')
+
+        for (const player of LOOT_PENDING_CONFIG.players){
+
+            console.log('')
+
+            console.log('Player contract', player.address);
+            console.log('TUS', formatEther(await tusToken.balanceOf(player.address)));
+            console.log('CRA', formatEther(await craToken.balanceOf(player.address)));
+
+            for (const team of player.teams){
+
+                console.log('')
+
+                console.log('Team', team);
+
+                const { crabadaId1, crabadaId2, crabadaId3, battlePoint, timePoint, currentGameId, lockTo } = await idleGame.getTeamInfo(team)
+                console.log('Team info:')
+                console.log('- Members', [crabadaId1, crabadaId2, crabadaId3].map(x=>x.toString()))
+                console.log('- bp:', battlePoint, '| mp:', timePoint)
+                console.log('- Current Game:', currentGameId.toString())
+                console.log('- Seconds to unlock', lockTo-timestamp)
+
+                const { attackTime, lastAttackTime, lastDefTime, attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId);
+                console.log('Game info:')
+                // console.log('- Attack time (seconds ago)', timestamp-attackTime)
+                // console.log('- lastAttackTime (seconds ago)', timestamp-lastAttackTime)
+                // console.log('- lastDefTime (seconds ago)', timestamp-lastDefTime)
+                console.log('- Attack crabada reinforcements', attackId1.toString(), attackId2.toString())
+                console.log('- Defense crabada reinforcements', defId1.toString(), defId2.toString())
+
+                const { teamId: minerTeam } = await idleGame.getGameBasicInfo(currentGameId)
+                const { battlePoint: minerBattlePoint, timePoint: minerTimePoint } = await idleGame.getTeamInfo(minerTeam)
+                console.log('Miner info:')
+                console.log('Team ID', minerTeam.toString())
+                console.log('- bp:', minerBattlePoint, '| mp:', minerTimePoint)
+                
+            }
+
+        }
+
+    })
 
