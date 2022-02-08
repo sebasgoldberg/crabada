@@ -755,7 +755,7 @@ task(
             setTimeout( async () => {
                 await removeTargetIfLooted(startedGameTargetsByTeamId)
                 attackTeams(startedGameTargetsByTeamId)
-            }, 1000)
+            }, 1500)
 
         }
 
