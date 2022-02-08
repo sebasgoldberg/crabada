@@ -704,16 +704,15 @@ task(
             [teamId:string]: StartGameTargets
         }
 
-        const startedGameTargetsByTeamId: StartedGameTargetsByTeamId = {}
-
         let attackIteration = 0
-        // let secondAttackPlaned = false
 
         const addTeamToLootTargets = (txs: ethers.Transaction[]) => {
 
             if (txs.length == 0){
                 return
             }
+
+            const startedGameTargetsByTeamId: StartedGameTargetsByTeamId = {}
 
             txs.forEach( tx => {
 
@@ -745,25 +744,18 @@ task(
                     attacksPerformed: 0,
                 }
     
-                // TODO Verify if attack imediately it is needed.
-    
                 console.log('Pending startGame', tx.hash, 
                     'Added team to loot targets', teamId.toNumber()
                 );
     
             })
             
-            attackTeams()
+            attackTeams(startedGameTargetsByTeamId)
 
-            // if (secondAttackPlaned)
-            //     return
-
-            // secondAttackPlaned = true
-
-            // setTimeout( () => {
-            //     attackTeams()
-            //     secondAttackPlaned = false
-            // }, 1000)
+            setTimeout( async () => {
+                await removeTargetIfLooted(startedGameTargetsByTeamId)
+                attackTeams(startedGameTargetsByTeamId)
+            }, 1000)
 
         }
 
@@ -775,38 +767,30 @@ task(
         // 1) game is already looted (use getGameBattleInfo and get status)
         // 2) currentBlock-closeGameBlock > maxBlocksPerTarget
 
-        const LOOTGUESS_MAX_ATTACKS_PER_TARGET = 1
+        const removeTargetIfLooted = async (startedGameTargetsByTeamId: StartedGameTargetsByTeamId) => {
 
-        const removeCloseGameTargetsInterval = setInterval(() => {
+            await Promise.all(
+                Object.keys(startedGameTargetsByTeamId).map( async(teamId) => {
 
-            Object.keys(startedGameTargetsByTeamId).forEach( async(teamId) => {
+                    const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(teamId))
 
-                const startedGameTarget = startedGameTargetsByTeamId[teamId]
+                    if (!(currentGameId as BigNumber).isZero()){
 
-                if (startedGameTarget.attacksPerformed >= LOOTGUESS_MAX_ATTACKS_PER_TARGET){
-                    delete startedGameTargetsByTeamId[teamId]
-                    return
-                }
+                        const { attackTeamId } = await idleGame.getGameBattleInfo(currentGameId)
 
-                const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(teamId))
+                        // Validate if game is already looted
+                        if (!(attackTeamId as BigNumber).isZero()){
 
-                if (!(currentGameId as BigNumber).isZero()){
+                            delete startedGameTargetsByTeamId[teamId]
+                            return
+                        }
 
-                    const { attackTeamId } = await idleGame.getGameBattleInfo(currentGameId)
-
-                    // Validate if game is already looted
-                    if (!(attackTeamId as BigNumber).isZero()){
-
-                        delete startedGameTargetsByTeamId[teamId]
-                        return
                     }
 
-                }
+                })
+            )
 
-            })
-
-        }, 500)
-
+        }
 
         // Main interval to perform attacks considering the following conditions:
         // 1) Apply only for looter teams are unlocked
@@ -814,7 +798,7 @@ task(
         // 3) For targets currentBlockNumber-closeGameBlockNumber >= minBlocknumberDistance-2
         // 4) Apply only for looter teams that have battlePoint higher than minimum target battlePoint.
 
-        const attackTeams = async () => {
+        const attackTeams = async (startedGameTargetsByTeamId: StartedGameTargetsByTeamId) => {
 
             // 1) Apply only for looter teams are unlocked
             const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => !p.locked || testmode )
@@ -857,21 +841,7 @@ task(
                     return true
                 })
 
-                // 3) Targets should not be attacked more than max times
-                .filter(teamId => {
 
-                    const startedGameTarget = startedGameTargetsByTeamId[teamId]
-
-                    if (startedGameTarget.attacksPerformed > LOOTGUESS_MAX_ATTACKS_PER_TARGET){
-                        debug && console.log('Max attacks per target achieved', '(attacksPerformed, max)', 
-                            startedGameTarget.attacksPerformed, LOOTGUESS_MAX_ATTACKS_PER_TARGET);
-                        return false
-                    }
-
-                    return true
-
-                })
-            
             if (teamIdTargets.length == 0){
                 return
             }
@@ -973,7 +943,6 @@ task(
         idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
         clearInterval(updateLockStatusInterval)
         settleGameInterval && clearInterval(settleGameInterval)
-        clearInterval(removeCloseGameTargetsInterval)
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
