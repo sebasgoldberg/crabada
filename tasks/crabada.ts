@@ -1561,12 +1561,43 @@ task(
     .addParam("teamid", "Team ID where are going to withdraw its members.", undefined, types.string)
 
 
+const printTeamStatus = async (hre: HardhatRuntimeEnvironment, team: number) => {
+
+    const { idleGame, tusToken, craToken } = getCrabadaContracts(hre)
+
+    const timestamp = await currentBlockTimeStamp(hre)
+
+    console.log('Team', team);
+
+    const { crabadaId1, crabadaId2, crabadaId3, battlePoint, timePoint, currentGameId, lockTo } = await idleGame.getTeamInfo(team)
+    console.log('Team info:')
+    console.log('- Members', [crabadaId1, crabadaId2, crabadaId3].map(x=>x.toString()))
+    console.log('- bp:', battlePoint, '| mp:', timePoint)
+    console.log('- Current Game:', currentGameId.toString())
+    console.log('- Seconds to unlock', lockTo-timestamp)
+
+    const { attackTime, lastAttackTime, lastDefTime, attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId);
+    console.log('Game info:')
+    // console.log('- Attack time (seconds ago)', timestamp-attackTime)
+    // console.log('- lastAttackTime (seconds ago)', timestamp-lastAttackTime)
+    // console.log('- lastDefTime (seconds ago)', timestamp-lastDefTime)
+    console.log('- Attack crabada reinforcements', attackId1.toString(), attackId2.toString())
+    console.log('- Defense crabada reinforcements', defId1.toString(), defId2.toString())
+
+    const { teamId: minerTeam } = await idleGame.getGameBasicInfo(currentGameId)
+    const { battlePoint: minerBattlePoint, timePoint: minerTimePoint } = await idleGame.getTeamInfo(minerTeam)
+    console.log('Miner info:')
+    console.log('Team ID', minerTeam.toString())
+    console.log('- bp:', minerBattlePoint, '| mp:', minerTimePoint)
+
+}
+
 task(
     "dashboard",
     "Display dashboard with team status.",
     async ({ }, hre: HardhatRuntimeEnvironment) => {
 
-        const { idleGame, tusToken, craToken } = getCrabadaContracts(hre)
+        const { tusToken, craToken } = getCrabadaContracts(hre)
 
         console.log('LOOT_PENDING_AVAX_ACCOUNTS');
         
@@ -1579,8 +1610,6 @@ task(
 
         console.log('REINFORCE_ACCOUNT');
         console.log('-', REINFORCE_ACCOUNT, formatEther(await hre.ethers.provider.getBalance(REINFORCE_ACCOUNT)));
-
-        const timestamp = await currentBlockTimeStamp(hre)
 
         console.log('')
 
@@ -1596,32 +1625,21 @@ task(
 
                 console.log('')
 
-                console.log('Team', team);
+                await printTeamStatus(hre, team)
 
-                const { crabadaId1, crabadaId2, crabadaId3, battlePoint, timePoint, currentGameId, lockTo } = await idleGame.getTeamInfo(team)
-                console.log('Team info:')
-                console.log('- Members', [crabadaId1, crabadaId2, crabadaId3].map(x=>x.toString()))
-                console.log('- bp:', battlePoint, '| mp:', timePoint)
-                console.log('- Current Game:', currentGameId.toString())
-                console.log('- Seconds to unlock', lockTo-timestamp)
-
-                const { attackTime, lastAttackTime, lastDefTime, attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId);
-                console.log('Game info:')
-                // console.log('- Attack time (seconds ago)', timestamp-attackTime)
-                // console.log('- lastAttackTime (seconds ago)', timestamp-lastAttackTime)
-                // console.log('- lastDefTime (seconds ago)', timestamp-lastDefTime)
-                console.log('- Attack crabada reinforcements', attackId1.toString(), attackId2.toString())
-                console.log('- Defense crabada reinforcements', defId1.toString(), defId2.toString())
-
-                const { teamId: minerTeam } = await idleGame.getGameBasicInfo(currentGameId)
-                const { battlePoint: minerBattlePoint, timePoint: minerTimePoint } = await idleGame.getTeamInfo(minerTeam)
-                console.log('Miner info:')
-                console.log('Team ID', minerTeam.toString())
-                console.log('- bp:', minerBattlePoint, '| mp:', minerTimePoint)
-                
             }
 
         }
 
     })
+
+task(
+    "teamstatus",
+    "Display team status.",
+    async ({ team }, hre: HardhatRuntimeEnvironment) => {
+
+        await printTeamStatus(hre, team)
+
+    })
+    .addParam("team", "Team ID.", undefined, types.int)
 
