@@ -227,7 +227,7 @@ task(
 
 task(
     "settlegame",
-    "Settle game id.",
+    "Settle current game for team id.",
     async ({ player, teamid, testaccount }, hre: HardhatRuntimeEnvironment) => {
         
         const signer = await getSigner(hre, testaccount)
