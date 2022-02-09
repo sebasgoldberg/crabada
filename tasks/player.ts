@@ -1,12 +1,12 @@
 import { task } from "hardhat/config";
 
-import { formatEther } from "ethers/lib/utils";
+import { formatEther, parseEther } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { attachAttackRouter, attachPlayer, deployAttackRouter, deployPlayer, getCrabadaContracts, getOverride, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
-import { evm_increaseTime, transferCrabadasFromTeam } from "../test/utils";
-import { BigNumber, ethers } from "ethers";
-import { getSigner } from "./crabada";
+import { evm_increaseTime, logTransactionAndWait, transferCrabadasFromTeam } from "../test/utils";
+import { BigNumber, Contract, ethers } from "ethers";
+import { getSigner, LOOT_PENDING_CONFIG } from "./crabada";
 
 task(
     "setupplayertest",
@@ -158,26 +158,45 @@ task(
 
 task(
     "playerwithdrawerc20",
-    "Mine step: If mining, try to close game. Then, if not mining, create a game.",
-    async ({ player, accountindex, testaccount }, hre: HardhatRuntimeEnvironment) => {
+    "Withdraw TUS and CRA from players.",
+    async ({ players, tusreserve, testaccount }, hre: HardhatRuntimeEnvironment) => {
         
-        const signer = await getSigner(hre, testaccount, accountindex)
+        const signer = await getSigner(hre, testaccount)
 
-        const { tusToken, craToken } = getCrabadaContracts(hre)
+        const pContracts: Contract[] = await Promise.all(
+            ( players ? 
+                (players as string).split(',') : LOOT_PENDING_CONFIG.players.map(p=>p.address) )
+                    .map( pAddress => attachPlayer(hre, pAddress))
+        )
 
-        const playerC = await attachPlayer(hre, player)
+        const override = await getOverride(hre)
 
-        console.log('SIGNER: TUS, CRA', formatEther(await tusToken.balanceOf(signer.address)), formatEther(await craToken.balanceOf(signer.address)));
-        console.log('PLAYER: TUS, CRA', formatEther(await tusToken.balanceOf(playerC.address)), formatEther(await craToken.balanceOf(playerC.address)));
-        
-        await playerC.connect(signer).withdrawERC20(tusToken.address, signer.address, await tusToken.balanceOf(playerC.address), await getOverride(hre))
-        await playerC.connect(signer).withdrawERC20(craToken.address, signer.address, await craToken.balanceOf(playerC.address), await getOverride(hre))
+        for (const p of pContracts){
 
-        console.log('SIGNER: TUS, CRA', formatEther(await tusToken.balanceOf(signer.address)), formatEther(await craToken.balanceOf(signer.address)));
+            const { tusToken, craToken } = getCrabadaContracts(hre)
+
+            for (const erc20 of [tusToken, craToken]){
+
+                let value: BigNumber = await erc20.balanceOf(p.address)
+
+                if (erc20.address === tusToken.address)
+                    value = value.sub(parseEther(tusreserve)) // Backup value for reinforcements
+
+                if (value.gt(0)){
+                    console.log('player.withdrawERC20(erc20.address, signer.address, value)', erc20.address, signer.address, formatEther(value));
+                    
+                    await p.connect(signer).callStatic.withdrawERC20(erc20.address, signer.address, value, override)
+                    await logTransactionAndWait(p.connect(signer).withdrawERC20(erc20.address, signer.address, value, override), 1)
+
+                }
+
+            }
+
+        }
 
     })
-    .addOptionalParam("accountindex", "The index of the account to be used.", undefined, types.int)
-    .addOptionalParam("player", "Player contract address.")
+    .addOptionalParam("players", "Player contracts addresses (coma separated).", undefined, types.string)
+    .addOptionalParam("tusreserve", "TUS to leave in player for reinforcements.", '120', types.string)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
 task(
