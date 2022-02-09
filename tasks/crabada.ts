@@ -533,7 +533,7 @@ interface LootPendingConfig {
     }
 }
 
-const LOOT_PENDING_CONFIG: LootPendingConfig = {
+export const LOOT_PENDING_CONFIG: LootPendingConfig = {
     maxBlocksPerTeams: 55,
     maxStandardDeviation: 14,
     router: {
