@@ -137,7 +137,7 @@ export async function fixture(signers: any, provider: any) {
 }
 
 // Start test block
-describe.only('AttackRouter', function () {
+describe('AttackRouter', function () {
 
   this.timeout(60*1000)
 
