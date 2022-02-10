@@ -1537,7 +1537,7 @@ task(
         for (const destination of lootPendingAddresses)
             await refillAvax(signer, destination, parseEther('4'))
         
-        await refillAvax(signer, settler, parseEther('2'))
+        await refillAvax(signer, settler, parseEther('3'))
 
         await refillAvax(signer, reinforce, parseEther('2'))
 
