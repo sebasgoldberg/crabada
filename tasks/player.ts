@@ -150,7 +150,7 @@ task(
         for (let i=0; i<teamsCount; i++){
             const teamId = await playerC.teams(i)
             const teamInfo = await idleGame.getTeamInfo(teamId)
-            const { currentGameId: gameId3, crabadaId1: c1, crabadaId2: c2, crabadaId3: c3, battlePoint } = teamInfo
+            const { crabadaId1: c1, crabadaId2: c2, crabadaId3: c3, battlePoint } = teamInfo
             console.log(`${teamId.toString()}: ${[c1, c2, c3].map( (x:BigNumber) => x.toNumber() )} | bp: ${ battlePoint }`);
         }
     })

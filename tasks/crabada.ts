@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachAttackRouter, baseFee, CloseDistanceToStartByTeamId, closeGameToStartGameDistances, compareBigNumbers, compareBigNumbersDescending, currentBlockTimeStamp, fightDistanceDistribution, gasPrice, getCloseDistanceToStartByTeamId, getCrabadaContracts, getOverride, getPercentualStepDistribution, getPossibleTargetsByTeamId, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, locked, loot, MAX_FEE, mineStep, MIN_VALID_BATTLE_POINTS, ONE_GWEI, queryFilterByPage, reinforce, setMaxAllowanceIfNotApproved, settleGame, StepMaxValuesByPercentage, updateTeamsThatWereChaged } from "../scripts/crabada";
+import { API, attachAttackRouter, baseFee, compareBigNumbers, compareBigNumbersDescending, currentBlockTimeStamp, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, loot, mineStep, ONE_GWEI, queryFilterByPage, reinforce, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
@@ -10,6 +10,8 @@ import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig, p
 
 import "./player"
 import { logTransactionAndWait, withdrawTeam } from "../test/utils";
+import { ClassNameByCrabada, classNameFromDna, CrabadaClassName, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
+import { assert } from "console";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -309,91 +311,54 @@ const MIN_BATTLE_POINTS = 564
 const MAX_BATTLE_POINTS = 712
 const STEP_BATTLE_POINTS = (MAX_BATTLE_POINTS-MIN_BATTLE_POINTS)/10
 
-task(
-    "lootpossibletargets",
-    "Loot process.",
-    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints }, hre: HardhatRuntimeEnvironment) => {
+const getClassNameByCrabada = async (hre: HardhatRuntimeEnvironment): Promise<ClassNameByCrabada> => {
 
-        console.log('Analyzed blocks', blockstoanalyze);
-        console.log('First defend window in blocks', firstdefendwindow);
-        console.log('Target´s max. battle points', maxbattlepoints);
-        
-        const possibleTargetsByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+    const { crabada } = getCrabadaContracts(hre)
 
-        // It is obtained the distribution of the attack points.
+    const result: ClassNameByCrabada = {}
 
-        const attackPointsDist = Array.from(Array(10).keys()).map(x=>0)
-        let targetsBelowMaxBattlePoints = 0
+    crabada.on(crabada.filters.Hatch(), async (tokenId: BigNumber, dna: BigNumber)=>{
 
-        Object.keys(possibleTargetsByTeamId).map( async (teamId) => {
-            if (possibleTargetsByTeamId[teamId].battlePoint<maxbattlepoints)
-                targetsBelowMaxBattlePoints++
-            const index = Math.floor( (possibleTargetsByTeamId[teamId].battlePoint - MIN_BATTLE_POINTS) / STEP_BATTLE_POINTS )
-            attackPointsDist[index]++
-        })
-
-        console.log('Targets below ', maxbattlepoints, 'battle points:', targetsBelowMaxBattlePoints);
-
-        console.log('attackPointsDist', attackPointsDist
-            .map( (q, index) => ({ [`${MIN_BATTLE_POINTS+STEP_BATTLE_POINTS*(index)} - ${MIN_BATTLE_POINTS+STEP_BATTLE_POINTS*(index+1)}`]: q }))
-        )
+        try {
+            result[tokenId.toString()] = classNameFromDna(dna)
+        } catch (error) {
+            console.error('ERROR: trying to obtain classname for crabada', tokenId.toString(), String(error));
+        }
 
     })
-    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 3600 /*2 hours*/ , types.int)
-    .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
-    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 621, types.int)
 
-task(
-    "fightdistance",
-    "Distribution of number of blocks between StartGame and Fight events for teams that play to loose with battle points up to maxbattlepoints.",
-    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints }, hre: HardhatRuntimeEnvironment) => {
+    try {
 
-        const possibleTargetsByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+        const hatchEvents: ethers.Event[] = await crabada.queryFilter(crabada.filters.Hatch(), 0)
 
-        console.log('Teams that play to loose', Object.keys(possibleTargetsByTeamId)
-            .filter( teamId => possibleTargetsByTeamId[teamId].battlePoint>=MIN_VALID_BATTLE_POINTS)
-            .filter( teamId => possibleTargetsByTeamId[teamId].battlePoint<=maxbattlepoints)
-            .length, 'below', maxbattlepoints, 'battle points'
-            );
+        for (const e of hatchEvents){
 
-        const fightDistanceDist = await fightDistanceDistribution(hre, blockstoanalyze, possibleTargetsByTeamId, maxbattlepoints)
+            const { tokenId, dna } = e.args
+
+            try {
+                result[(tokenId as BigNumber).toString()] = classNameFromDna(dna)
+            } catch (error) {
+                console.error('ERROR trying to obtain classname for crabada', tokenId.toString(), String(error));
+            }
+
+        }
         
-        console.log('fightDistanceDist', fightDistanceDist)
+    } catch (error) {
 
-    })
-    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*2 hours*/ , types.int)
-    .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
-    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 621, types.int)
+        const apiResult: ClassNameByCrabada = await API.getClassNameByCrabada()
 
-task(
-    "startgamedistance",
-    "Distribution of number of blocks in step between CloseGame and StartGame events for teams that play to loose with battle points up to maxbattlepoints.",
-    async ({ blockstoanalyze, firstdefendwindow, maxbattlepoints, steps }, hre: HardhatRuntimeEnvironment) => {
+        for ( const crabadaId in apiResult ){
+            result[crabadaId] = apiResult[crabadaId]
+        }
 
-        const possibleTargetsByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+    }
 
-        console.log('Teams that play to loose', Object.keys(possibleTargetsByTeamId)
-            .filter( teamId => possibleTargetsByTeamId[teamId].battlePoint>=MIN_VALID_BATTLE_POINTS)
-            .filter( teamId => possibleTargetsByTeamId[teamId].battlePoint<=maxbattlepoints)
-            .length, 'below', maxbattlepoints, 'battle points'
-            );
+    if (Object.keys(result).length == 0)
+        throw new Error("ERROR: Not possible to obtain crabada's class names.");
 
-        const distances = await closeGameToStartGameDistances(hre, blockstoanalyze, possibleTargetsByTeamId, maxbattlepoints)
-        
-        console.log('Distances found', distances.length);
-        
+    return result
 
-        const stepsDistributionDistances: StepMaxValuesByPercentage = getPercentualStepDistribution(
-            distances, steps)
-
-        console.log('Percentual distribution for distances between CloseGame and StartGame events', stepsDistributionDistances);
-
-    })
-    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*2 hours*/ , types.int)
-    .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
-    .addOptionalParam("maxbattlepoints", "Maximum battle points for a target.", 621, types.int)
-    .addOptionalParam("steps", "Step to consider in the distance analysis.", 10 , types.int)
-
+}
 
 export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, lootersTeams: number[]) => {
     return (await Promise.all(
@@ -422,18 +387,20 @@ task(
         if ( !testmode && (await areAllTeamsLocked(hre, idleGame, lootersTeams)) )
             return
 
+        const classNameByCrabada: ClassNameByCrabada = await getClassNameByCrabada(hre)
+
         const teamsThatPlayToLooseByTeamId = await (
             nodeConfig.lootConfig.attackOnlyTeamsThatPlayToLoose ? 
-                getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
-                : getTeamsBattlePoint(hre, blockstoanalyze)
+                getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow, classNameByCrabada)
+                : getTeamsBattlePoint(hre, blockstoanalyze, classNameByCrabada)
         )
 
-        await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, blockstoanalyze)
+        await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, classNameByCrabada, blockstoanalyze)
 
         const updateTeamBattlePointListener = async (teamId: BigNumber)=>{
             if (!teamsThatPlayToLooseByTeamId[teamId.toString()])
                 return
-            const { battlePoint } = await idleGame.getTeamInfo(teamId)
+            const battlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamId(idleGame, teamId, classNameByCrabada)
             console.log('Team', teamId.toString(), 'updated battlePoint, from', 
                 teamsThatPlayToLooseByTeamId[teamId.toString()].battlePoint, 'to', battlePoint);
             teamsThatPlayToLooseByTeamId[teamId.toString()].battlePoint = battlePoint
@@ -453,9 +420,7 @@ task(
     
                     console.log('Looting with team id', looterTeamId);
     
-                    const { battlePoint } = await idleGame.getTeamInfo(looterTeamId)
-    
-                    await loot(hre, teamsThatPlayToLooseByTeamId, looterTeamId, signer, console.log, testmode);    
+                    await loot(hre, teamsThatPlayToLooseByTeamId, looterTeamId, signer, classNameByCrabada, console.log, testmode);    
                 }
     
             }
@@ -481,6 +446,8 @@ task(
     "Reinforce process.",
     async ({ testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
+        const classNameByCrabada: ClassNameByCrabada = await getClassNameByCrabada(hre)
+
         for (const {accountIndex, teams, player} of REINFORCE_CONFIG){
 
             const signer = await getSigner(hre, testaccount, accountIndex)
@@ -493,7 +460,7 @@ task(
 
                 try {
 
-                    const tr = await reinforce(hre, looterTeamId, signer, player, console.log, testmode);
+                    const tr = await reinforce(hre, looterTeamId, signer, player, classNameByCrabada, console.log, testmode);
 
                 } catch (error) {
                     
@@ -566,6 +533,8 @@ export const LOOT_PENDING_CONFIG: LootPendingConfig = {
     ]
 }
 
+const LOOTERS_FACTION: TeamFaction = "LUX"
+
 task(
     "lootpending",
     "Loot pending startGame transactions.",
@@ -595,18 +564,17 @@ task(
             playerAddress: string,
             teamId: number,
             locked: boolean,
-            battlePoint: number,
+            battlePoint: TeamBattlePoints,
         }
 
         const playerTeamPairs: PlayerTeamPair[] = await Promise.all(LOOT_PENDING_CONFIG.players
             .map( p => p.teams
                 .map( async(teamId) => {
-                    const { battlePoint } = await idleGame.getTeamInfo(teamId)
                     return ({
                         playerAddress: p.address,
                         teamId,
                         locked: true,
-                        battlePoint,
+                        battlePoint: await TeamBattlePoints.createFromTeamId(idleGame, teamId, classNameByCrabada)
                     })
                 })
             )
@@ -668,19 +636,22 @@ task(
             return
 
         
+        const classNameByCrabada: ClassNameByCrabada = await getClassNameByCrabada(hre)
+        
         // Teams that play to loose...
 
-        const teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+        const teamsThatPlayToLooseByTeamId: TeamInfoByTeam = 
+            await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow, classNameByCrabada)
 
 
         // Update teams thar were changed and set interval to update regularly...
 
-        await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, blockstoanalyze)
+        await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, classNameByCrabada, blockstoanalyze)
 
         const updateTeamBattlePointListener = async (teamId: BigNumber)=>{
             if (!teamsThatPlayToLooseByTeamId[teamId.toString()])
                 return
-            const { battlePoint } = await idleGame.getTeamInfo(teamId)
+            const battlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamId(idleGame, teamId, classNameByCrabada)
             console.log('Team', teamId.toString(), 'updated battlePoint, from', 
                 teamsThatPlayToLooseByTeamId[teamId.toString()].battlePoint, 'to', battlePoint);
             teamsThatPlayToLooseByTeamId[teamId.toString()].battlePoint = battlePoint
@@ -727,11 +698,16 @@ task(
                 }
     
                 if (!targetTeamInfo.battlePoint){
-                    debug && console.log('Discarded, team with no battlePointdefined.', teamId.toString());
+                    debug && console.log('Discarded, team with no battlePoint defined.', teamId.toString());
                     return
                 }
     
-                const pairsStrongerThanTarget = playerTeamPairs.filter( p => p.battlePoint > targetTeamInfo.battlePoint)
+                if (!targetTeamInfo.battlePoint.isValid()){
+                    debug && console.log('Discarded, team with no valid battlePoint.', teamId.toString());
+                    return
+                }
+    
+                const pairsStrongerThanTarget = playerTeamPairs.filter( p => p.battlePoint.gt(targetTeamInfo.battlePoint))
     
                 if (pairsStrongerThanTarget.length == 0){
                     debug && console.log('Discarded, no stronger team for attack. (teamId, playerTeamPairs.battlePoint, target.battlePoint)', 
@@ -749,48 +725,61 @@ task(
                 );
     
             })
-            
-            attackTeams(startedGameTargetsByTeamId)
 
-            // setTimeout( async () => {
-            //     await removeTargetIfLooted(startedGameTargetsByTeamId)
-            //     attackTeams(startedGameTargetsByTeamId)
-            // }, 1500)
+            interface TargetsFactionAdvantageClassification { 
+                targetsWithAdvantageByTeamId: StartedGameTargetsByTeamId, 
+                targetsWithNoAdvantageByTeamId: StartedGameTargetsByTeamId
+            }
+            const classifyTargetsUsingFactionAdvantage = 
+                (startedGameTargetsByTeamId: StartedGameTargetsByTeamId, lootersFaction: TeamFaction): TargetsFactionAdvantageClassification => {
+
+                    const targetsWithAdvantageByTeamId: StartedGameTargetsByTeamId = {}
+                    const targetsWithNoAdvantageByTeamId: StartedGameTargetsByTeamId = {}
+                    
+                    for (const teamId in startedGameTargetsByTeamId){
+                        const startedGameTargetByTeamId = startedGameTargetsByTeamId[teamId]
+                        
+                        const targetInfo = teamsThatPlayToLooseByTeamId[teamId]
+
+                        // This is necessary because teamsThatPlayToLooseByTeamId could be updated.
+                        if (!targetInfo){
+                            debug && console.log('Attack Interval', 'Team', Number(teamId), 'does not play to loose.');
+                            continue
+                        }
+    
+                        // This is necessary because teamsThatPlayToLooseByTeamId could be updated.
+                        if (!targetInfo.battlePoint){
+                            debug && console.log('Attack Interval', 'Team', Number(teamId), 'does not has battlePoint defined.');
+                            continue
+                        }
+    
+                        // This is necessary because teamsThatPlayToLooseByTeamId could be updated.
+                        if (targetInfo.battlePoint.hasAdvantageOverFaction(lootersFaction)){
+                            targetsWithAdvantageByTeamId[teamId] = startedGameTargetByTeamId
+                        } else {
+                            targetsWithNoAdvantageByTeamId[teamId] = startedGameTargetByTeamId
+                        }
+    
+                    }
+
+                    return { 
+                        targetsWithAdvantageByTeamId,
+                        targetsWithNoAdvantageByTeamId
+                    }
+
+                }
+
+            const { targetsWithAdvantageByTeamId, targetsWithNoAdvantageByTeamId } = classifyTargetsUsingFactionAdvantage(
+                startedGameTargetsByTeamId, LOOTERS_FACTION
+            )
+            
+            attackTeams(targetsWithAdvantageByTeamId, true, LOOTERS_FACTION)
+            attackTeams(targetsWithNoAdvantageByTeamId, false, LOOTERS_FACTION)
 
         }
 
         const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
 
-
-        // Set interval to verify if a possible target should be removed considering
-        // the following conditions are met:
-        // 1) game is already looted (use getGameBattleInfo and get status)
-        // 2) currentBlock-closeGameBlock > maxBlocksPerTarget
-
-        const removeTargetIfLooted = async (startedGameTargetsByTeamId: StartedGameTargetsByTeamId) => {
-
-            await Promise.all(
-                Object.keys(startedGameTargetsByTeamId).map( async(teamId) => {
-
-                    const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(teamId))
-
-                    if (!(currentGameId as BigNumber).isZero()){
-
-                        const { attackTeamId } = await idleGame.getGameBattleInfo(currentGameId)
-
-                        // Validate if game is already looted
-                        if (!(attackTeamId as BigNumber).isZero()){
-
-                            delete startedGameTargetsByTeamId[teamId]
-                            return
-                        }
-
-                    }
-
-                })
-            )
-
-        }
 
         // Main interval to perform attacks considering the following conditions:
         // 1) Apply only for looter teams are unlocked
@@ -798,7 +787,7 @@ task(
         // 3) For targets currentBlockNumber-closeGameBlockNumber >= minBlocknumberDistance-2
         // 4) Apply only for looter teams that have battlePoint higher than minimum target battlePoint.
 
-        const attackTeams = async (startedGameTargetsByTeamId: StartedGameTargetsByTeamId) => {
+        const attackTeams = async (startedGameTargetsByTeamId: StartedGameTargetsByTeamId, targetsHaveAdvantage: boolean, lootersFaction: TeamFaction) => {
 
             // 1) Apply only for looter teams are unlocked
             const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => !p.locked || testmode )
@@ -808,11 +797,17 @@ task(
                 return
             }
 
-            // Get the max battlePoint for unlocked looter teams.
-            const maxUnlockedLooterBattlePoint = Math.max(
-                ...unlockedPlayerTeamPairs
-                    .map( playerTeamPair => playerTeamPair.battlePoint )
+            assert(
+                unlockedPlayerTeamPairs.every(p=>p.battlePoint.teamFaction == lootersFaction),
+                `ERROR: Not satisfied precondition where all looter teams have the same faction: ${lootersFaction}`
             )
+
+            // Get the max battlePoint for unlocked looter teams.
+
+            const maxUnlockedLooterBattlePoint: TeamBattlePoints = unlockedPlayerTeamPairs
+                .reduce((previous, current) => 
+                    previous.gt(current.battlePoint) ? previous : current.battlePoint,
+                unlockedPlayerTeamPairs[0].battlePoint)
 
             const teamIdTargets = Object.keys(startedGameTargetsByTeamId)
                 // 2) Targets should have battlePoint lower than the maximum looterTeam target battlePoint.
@@ -832,7 +827,7 @@ task(
                         return false
                     }
                     
-                    if (targetInfo.battlePoint >= maxUnlockedLooterBattlePoint){
+                    if (targetInfo.battlePoint.gte(maxUnlockedLooterBattlePoint)){
                         debug && console.log('Attack Interval', 'Team', Number(teamId), 'has higher battlePoint', 
                         targetInfo.battlePoint, 'than', maxUnlockedLooterBattlePoint);
                         return false
@@ -846,13 +841,17 @@ task(
                 return
             }
 
-            const minTargetBattlePoint = Math.min(
-                ...teamIdTargets.map( teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint )
-            )
+            const targetsBattlePoints = teamIdTargets.map( teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint )
+            const minTargetBattlePoint: TeamBattlePoints = 
+                targetsBattlePoints
+                .reduce((previous, current) => 
+                    previous.getRelativeBP(lootersFaction) < current.getRelativeBP(lootersFaction) ? previous : current,
+                    targetsBattlePoints[0]
+                )
 
             // 4) Apply only for looter teams that have battlePoint higher than minimum target battlePoint.
             const unlockedPlayerTeamPairsWithEnoughBattlePoint =
-                unlockedPlayerTeamPairs.filter( p => p.battlePoint > minTargetBattlePoint )
+                unlockedPlayerTeamPairs.filter( p => p.battlePoint.gt(minTargetBattlePoint) )
 
             if (unlockedPlayerTeamPairsWithEnoughBattlePoint.length == 0){
                 console.log('Attack Interval', 'No unlocked looter teams with enough battle points', 
@@ -862,7 +861,7 @@ task(
 
             const unlockedPlayerTeamPairsWithEnoughBattlePointSorted =
                 unlockedPlayerTeamPairsWithEnoughBattlePoint.sort( (a,b) => 
-                    a.battlePoint < b.battlePoint ? -1 : a.battlePoint > b.battlePoint ? 1 : 0
+                    a.battlePoint.lt(b.battlePoint) ? -1 : a.battlePoint.gt(b.battlePoint) ? 1 : 0
                 )
 
             const looterSignerIndex = attackIteration % lootersSigners.length
@@ -870,17 +869,18 @@ task(
 
             const playerAddresses = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.playerAddress)
             const looterTeams = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.teamId)
-            const looterBattlePoint = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.battlePoint)
-            const targetBattlePoint = teamIdTargets.map(teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint)
+            const looterRelativeBattlePoint = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.map(p=>p.battlePoint.getRelativeBPForAdvantage(targetsHaveAdvantage))
+            const targetRelativeBattlePoint = teamIdTargets.map(teamId => teamsThatPlayToLooseByTeamId[teamId].battlePoint.getRelativeBP(lootersFaction))
 
+            console.log('Looting with advantage:', !targetsHaveAdvantage)
             console.log(
                 +new Date()/1000,
                 'attackTeams(', 
                 'players=', playerAddresses.toString(),
                 'looterTeams=', looterTeams.toString(),
-                'looterBattlePoint=', looterBattlePoint.toString(),
+                'looterRelativeBattlePoint=', looterRelativeBattlePoint.toString(),
                 'targetTeams=', teamIdTargets.toString(),
-                'targetBattlePoint=', targetBattlePoint.toString(),
+                'targetRelativeBattlePoint=', targetRelativeBattlePoint.toString(),
                 ')'
             )
 
@@ -902,9 +902,9 @@ task(
                     idleGame.address,
                     playerAddresses,
                     looterTeams,
-                    looterBattlePoint,
+                    looterRelativeBattlePoint,
                     teamIdTargets,
-                    targetBattlePoint,
+                    targetRelativeBattlePoint,
                     LOOT_PENDING_CONFIG.attackTransaction.override
                 )
 
@@ -921,7 +921,6 @@ task(
 
         //const attackTeamsInterval = setInterval(attackTeams, 1000)
 
-        // TODO Verify if finish needed.
         // Never finish
         await new Promise((resolve) => {
 
@@ -1158,9 +1157,11 @@ task(
         const fightEventsPromise = queryFilterByPage(hre, idleGame, idleGame.filters.Fight(), 
             hre.ethers.provider.blockNumber-blockstoanalyze, hre.ethers.provider.blockNumber)
 
-        const teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow)
+        const classNameByCrabada: ClassNameByCrabada = await getClassNameByCrabada(hre)
 
-        await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, blockstoanalyze)
+        const teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow, classNameByCrabada)
+
+        await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, classNameByCrabada, blockstoanalyze)
 
         const fightEvents = await fightEventsPromise
 
@@ -1378,6 +1379,8 @@ task(
 
         const startGameEvents = await queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, toBlock)
 
+        const classNameByCrabada: ClassNameByCrabada = await getClassNameByCrabada(hre)
+
         let win = 0
         let loose = 0
 
@@ -1387,7 +1390,7 @@ task(
 
             const gameBattleInfoPromise = idleGame.getGameBattleInfo(gameId)
 
-            const { battlePoint } = await idleGame.getTeamInfo(teamId)
+            const battlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamId(idleGame, teamId, classNameByCrabada)
 
             if (battlePoint != battlepoints)
                 return
@@ -1397,9 +1400,10 @@ task(
             if ((attackTeamId as BigNumber).isZero())
                 win++
             else{
-                const { battlePoint: attackBattlePoint } = await idleGame.getTeamInfo(attackTeamId)
 
-                if (battlePoint >= attackBattlePoint)
+                const attackBattlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamId(idleGame, attackTeamId, classNameByCrabada)
+
+                if (battlePoint.gte(attackBattlePoint))
                     win++
                 else
                     loose++

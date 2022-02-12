@@ -72,7 +72,8 @@ describe('Looting', function () {
         }
       }
 
-      const lootPromise = loot(hre, possibleTargetsByTeamId, this.looterTeamId, this.owner, ()=>{})
+      // TODO Initialize dict using crabadas IDs from teams with class name 'PRIME'
+      const lootPromise = loot(hre, possibleTargetsByTeamId, this.looterTeamId, this.owner, {}, ()=>{})
 
       await idleGame.connect(this.owner).startGame(this.teamId1)
 
@@ -94,7 +95,8 @@ describe('Looting', function () {
         }
       }
 
-      const lootPromise = loot(hre, possibleTargetsByTeamId, this.looterTeamId, this.owner, ()=>{})
+      // TODO Initialize dict using crabadas IDs from teams with class name 'PRIME'
+      const lootPromise = loot(hre, possibleTargetsByTeamId, this.looterTeamId, this.owner, {}, ()=>{})
 
       await idleGame.connect(this.owner).startGame(this.teamId2)
 

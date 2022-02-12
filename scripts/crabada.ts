@@ -374,7 +374,7 @@ export const getOverride = async (hre: HardhatRuntimeEnvironment) => {
 export interface TeamInfo {
     startedGamesCount?: number,
     firstDefenseCount?: number,
-    battlePoint?: number,
+    battlePoint?: TeamBattlePoints,
 }
 
 export type TeamInfoByTeam = { [teamId: string]: TeamInfo }
@@ -406,22 +406,6 @@ export const queryFilterByPage = async (
     return events
 }
 
-export const getPossibleTargetsByTeamId = async (
-    hre: HardhatRuntimeEnvironment, teamsThatPlayToLoose: TeamInfoByTeam, 
-    maxbattlepoints: number, log = console.log): Promise<TeamInfoByTeam> =>{
-
-    const possibleTargetsByTeam: TeamInfoByTeam = {}
-
-    for (const teamId in teamsThatPlayToLoose){
-        if (teamsThatPlayToLoose[teamId].battlePoint < maxbattlepoints)
-            possibleTargetsByTeam[teamId] = teamsThatPlayToLoose[teamId]
-    }
-
-    log(`Possible targets below ${maxbattlepoints} battle points`, Object.keys(possibleTargetsByTeam).length)
-
-    return possibleTargetsByTeam
-}
-
 export const getTeamsThatWereChanged = async (
     hre: HardhatRuntimeEnvironment, blockstoanalyze: number, log
      = console.log): Promise<BigNumber[]> => {
@@ -450,6 +434,7 @@ export const getTeamsThatWereChanged = async (
 
 export const updateTeamsThatWereChaged = async (
     hre: HardhatRuntimeEnvironment, teamInfoByTeam: TeamInfoByTeam,
+    classNameByCrabada: ClassNameByCrabada,
     blockstoanalyze: number, log = console.log): Promise<TeamInfoByTeam> => {
     
     const teamsThatWereChanged: BigNumber[] = await getTeamsThatWereChanged(hre, blockstoanalyze, log)
@@ -458,9 +443,13 @@ export const updateTeamsThatWereChaged = async (
     
     await Promise.all(
         teamsThatWereChanged.map( async(teamId) => {
-            const { battlePoint } = await idleGame.getTeamInfo(teamId)
-            teamInfoByTeam[teamId.toString()]
-                && (teamInfoByTeam[teamId.toString()].battlePoint = battlePoint)
+
+            if (!teamInfoByTeam[teamId.toString()])
+                return
+
+            teamInfoByTeam[teamId.toString()].battlePoint = 
+                await TeamBattlePoints.createFromTeamId(idleGame, teamId, classNameByCrabada)
+
         })
     )
 
@@ -469,7 +458,7 @@ export const updateTeamsThatWereChaged = async (
     
 export const getTeamsThatPlayToLooseByTeamId = async (
     hre: HardhatRuntimeEnvironment, blockstoanalyze: number, 
-    firstdefendwindow: number, log = console.log, queryPageSize=3600): Promise<TeamInfoByTeam> =>{
+    firstdefendwindow: number, classNameByCrabada: ClassNameByCrabada, log = console.log, queryPageSize=3600): Promise<TeamInfoByTeam> =>{
 
     const { idleGame } = getCrabadaContracts(hre)
 
@@ -534,9 +523,6 @@ export const getTeamsThatPlayToLooseByTeamId = async (
             firstDefenseCount: teamBehaviour ? 
                 teamBehaviour.firstDefenseCount ? teamBehaviour.firstDefenseCount+firstDefenseCount : firstDefenseCount
                 : firstDefenseCount,
-            battlePoint: defensePoint ? 
-                defensePoint : teamBehaviour ?
-                teamBehaviour.battlePoint : undefined
         }
 
     }
@@ -570,8 +556,10 @@ export const getTeamsThatPlayToLooseByTeamId = async (
         Object.keys(teamsThatPlayToLoose)
             .filter( (teamId) => !teamsThatPlayToLoose[teamId].battlePoint )
             .map( async (teamId) => {
-                const { battlePoint } = await idleGame.getTeamInfo(teamId)
-                teamsThatPlayToLoose[teamId].battlePoint = battlePoint
+
+                teamsThatPlayToLoose[teamId].battlePoint = 
+                    await TeamBattlePoints.createFromTeamId(idleGame, BigNumber.from(teamId), classNameByCrabada)
+
             })
     )
 
@@ -580,7 +568,8 @@ export const getTeamsThatPlayToLooseByTeamId = async (
 }
 
 export const getTeamsBattlePoint = async (
-    hre: HardhatRuntimeEnvironment, blockstoanalyze: number, 
+    hre: HardhatRuntimeEnvironment, blockstoanalyze: number,
+    classNameByCrabada: ClassNameByCrabada,
     log = console.log, queryPageSize=3600): Promise<TeamInfoByTeam> =>{
 
     const { idleGame } = getCrabadaContracts(hre)
@@ -623,7 +612,7 @@ export const getTeamsBattlePoint = async (
 
         if (defensePoint)
             battlePointByTeamId[defenseTeamId.toString()] = {
-                battlePoint: defensePoint
+                battlePoint: await TeamBattlePoints.createFromTeamId(idleGame, BigNumber.from(defenseTeamId), classNameByCrabada)
             }
 
     }
@@ -636,118 +625,20 @@ export interface BlockDistanceDistribution {
     [distance: number]: number // quantity
 }
 
-export const isPossibleTarget = (teamsThatPlayToloose, teamId, maxBattlePoints): boolean => {
+export const isPossibleTarget = (teamsThatPlayToloose: TeamInfoByTeam, teamId: BigNumber, maxBattlePoints: TeamBattlePoints): boolean => {
     if (!teamsThatPlayToloose[teamId.toString()])
         return false
 
     if (!teamsThatPlayToloose[teamId.toString()].battlePoint)
         return false
 
-    if (teamsThatPlayToloose[teamId.toString()].battlePoint < MIN_VALID_BATTLE_POINTS)
+    if (!teamsThatPlayToloose[teamId.toString()].battlePoint.isValid())
         return false
 
-    if (teamsThatPlayToloose[teamId.toString()].battlePoint > maxBattlePoints)
+    if (teamsThatPlayToloose[teamId.toString()].battlePoint.gt(maxBattlePoints))
         return false
     
     return true
-}
-
-export const fightDistanceDistribution = async (
-    hre: HardhatRuntimeEnvironment, blockstoanalyze: number, teamsThatPlayToloose: TeamInfoByTeam, 
-    maxBattlePoints: number, log = console.log, queryPageSize=3600): Promise<BlockDistanceDistribution> =>{
-
-    const { idleGame } = getCrabadaContracts(hre)
-
-    hre.ethers.provider.blockNumber
-
-    const fromBlock = hre.ethers.provider.blockNumber-blockstoanalyze
-
-    const fightEventsPromise = queryFilterByPage(hre, idleGame, idleGame.filters.Fight(), fromBlock, hre.ethers.provider.blockNumber, log)
-    // gameId uint256
-    // turn uint256
-    // attackTeamId uint256
-    // defenseTeamId uint256
-    // soldierId uint256
-    // attackTime uint256
-    // attackPoint uint16
-    // defensePoint uint16
-
-    const startGameEvents: ethers.Event[] = await queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, hre.ethers.provider.blockNumber, log, queryPageSize)
-    // gameId uint256
-    // teamId uint256
-    // duration uint256
-    // craReward uint256
-    // tusReward uint256
-
-    const fightEvents: ethers.Event[] = await fightEventsPromise
-
-    interface FightDistance {
-        startGameBlocknumber: number,
-        fight0Blocknumber?: number,
-    }
-
-    interface FightDistanceByGameId {
-        [gameId: string]: FightDistance
-    }
-
-    const fightDistanceByGameId: FightDistanceByGameId = {}
-
-    const START_GAME_GAME_ID_ARG_INDEX=0
-    const START_GAME_TEAM_ID_ARG_INDEX=1
-
-    // Sets StartGame block number for gameId
-    for (const e of startGameEvents){
-
-        const teamId: BigNumber = e.args[START_GAME_TEAM_ID_ARG_INDEX]
-
-        if (!isPossibleTarget(teamsThatPlayToloose, teamId, maxBattlePoints))
-            continue
-
-        const gameId: BigNumber = e.args[START_GAME_GAME_ID_ARG_INDEX]
-        
-        fightDistanceByGameId[gameId.toString()] = {
-            startGameBlocknumber: e.blockNumber
-        }
-    }
-
-    const FIGHT_GAME_ID_ARG_INDEX = 0
-    const FIGHT_TURN_ARG_INDEX = 1
-    const FIGHT_DEFENSE_TEAM_ID = 3
-
-    // Sets Fight block number for gameId when turn is zero
-    for (const e of fightEvents){
-
-        const teamId: BigNumber = e.args[FIGHT_DEFENSE_TEAM_ID]
-
-        if (!isPossibleTarget(teamsThatPlayToloose, teamId, maxBattlePoints))
-            continue
-
-        const gameId: BigNumber = e.args[FIGHT_GAME_ID_ARG_INDEX]
-
-        const turn: BigNumber = e.args[FIGHT_TURN_ARG_INDEX] as any
-
-        if (!turn.isZero())
-            continue
-
-        if (!fightDistanceByGameId[gameId.toString()])
-            continue
-
-        fightDistanceByGameId[gameId.toString()].fight0Blocknumber = e.blockNumber
-    }
-
-    const blockDistanceDistribution: BlockDistanceDistribution = {}
-
-    for (const gameId in fightDistanceByGameId){
-        const fightDistance = fightDistanceByGameId[gameId]
-        if (!fightDistance.fight0Blocknumber)
-            continue
-        const distance = fightDistance.fight0Blocknumber-fightDistance.startGameBlocknumber
-        blockDistanceDistribution[distance] = blockDistanceDistribution[distance] || 0
-        blockDistanceDistribution[distance]++
-    }
-
-    return blockDistanceDistribution
-
 }
 
 export type StartGameDistances = number[]
@@ -932,144 +823,6 @@ export const getCloseDistanceToStartByTeamId = async (
 
 }
 
-export const closeGameToStartGameDistances = async (
-    hre: HardhatRuntimeEnvironment, blockstoanalyze: number, teamsThatPlayToLoose: TeamInfoByTeam, 
-    maxBattlePoints: number, log = console.log, queryPageSize=3600): Promise<StartGameDistances> =>{
-
-    const { idleGame } = getCrabadaContracts(hre)
-
-    hre.ethers.provider.blockNumber
-
-    const fromBlock = hre.ethers.provider.blockNumber-blockstoanalyze
-
-    const startGameEventsPromise = queryFilterByPage(hre, idleGame, idleGame.filters.StartGame(), fromBlock, hre.ethers.provider.blockNumber, log)
-    // gameId uint256
-    // teamId uint256
-    // duration uint256
-    // craReward uint256
-    // tusReward uint256
-
-    const closeGameEvents: ethers.Event[] = await queryFilterByPage(hre, idleGame, idleGame.filters.CloseGame(), fromBlock, hre.ethers.provider.blockNumber, log, queryPageSize)
-    // gameId uint256
-
-    const startGameEvents: ethers.Event[] = await startGameEventsPromise
-
-    console.log('closeGameEvents', closeGameEvents.length);
-    console.log('startGameEvents', startGameEvents.length);
-    
-
-    interface BlockNumbersByEventKind{
-        startGameBlockNumbers: number[],
-        closeGameBlockNumbers: number[]
-    }
-
-    interface EventsBlockNumbersByTeam{
-        [teamId: string]: BlockNumbersByEventKind
-    }
-
-    interface TeamIdByGameId{
-        [gameId: string]: BigNumber
-    }
-
-    // Necessary for performance issues when calling idleGame.getGameBasicInfo
-    // to get the teamId in CloseGame events.
-    const teamIdByGameId: TeamIdByGameId = {}
-
-    const eventsBlockNumbersByTeam: EventsBlockNumbersByTeam = {}
-
-    const START_GAME_GAME_ID_ARG_INDEX=0
-    const START_GAME_TEAM_ID_ARG_INDEX=1
-
-    // Sets Fight block number for gameId when turn is zero
-    for (const e of startGameEvents){
-
-        const gameId: BigNumber = e.args[START_GAME_GAME_ID_ARG_INDEX]
-        const teamId: BigNumber = e.args[START_GAME_TEAM_ID_ARG_INDEX]
-
-        teamIdByGameId[gameId.toString()] = teamId
-
-        if (!isPossibleTarget(teamsThatPlayToLoose, teamId, maxBattlePoints))
-            continue
-
-        eventsBlockNumbersByTeam[teamId.toString()] = eventsBlockNumbersByTeam[teamId.toString()] || {
-            startGameBlockNumbers: [],
-            closeGameBlockNumbers: []
-        }
-
-        eventsBlockNumbersByTeam[teamId.toString()].startGameBlockNumbers.push(e.blockNumber)
-
-    }
-
-    const CLOSE_GAME_GAME_ID_ARG_INDEX=0
-
-    closeGameEvents.forEach( (e) => {
-
-        const gameId: BigNumber = e.args[CLOSE_GAME_GAME_ID_ARG_INDEX]
-
-        const teamId = teamIdByGameId[gameId.toString()]
-
-        if (!teamId)
-            return
-
-        if (!isPossibleTarget(teamsThatPlayToLoose, teamId, maxBattlePoints))
-            return
-
-        eventsBlockNumbersByTeam[teamId.toString()] = eventsBlockNumbersByTeam[teamId.toString()] || {
-            startGameBlockNumbers: [],
-            closeGameBlockNumbers: []
-        }
-
-        eventsBlockNumbersByTeam[teamId.toString()].closeGameBlockNumbers.push(e.blockNumber)
-
-    })
-
-    const compareNumberAsc = (a,b) => a<b ? -1 : b<a ? 1 : 0
-
-    return Object.keys(eventsBlockNumbersByTeam)
-        .map( teamId => {
-            
-            const eventsBlockNumbersForTeam = eventsBlockNumbersByTeam[teamId]
-
-            eventsBlockNumbersForTeam.startGameBlockNumbers.sort(compareNumberAsc)
-            eventsBlockNumbersForTeam.closeGameBlockNumbers.sort(compareNumberAsc)
-    
-            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length==0 || 
-                eventsBlockNumbersForTeam.closeGameBlockNumbers.length==0)
-                return []
-            
-            // If first StartGame event blocknumber is lower than first CloseGame event 
-            // blocknumber, then we discard the first StartGame event.
-            if (eventsBlockNumbersForTeam.startGameBlockNumbers[0] < eventsBlockNumbersForTeam.closeGameBlockNumbers[0] )
-                eventsBlockNumbersForTeam.startGameBlockNumbers.shift()
-    
-            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length==0 || 
-                eventsBlockNumbersForTeam.closeGameBlockNumbers.length==0)
-                return []
-    
-            // If last StartGame event blocknumber is lower than last CloseGame event 
-            // blocknumber, then we discard the last CloseGame event.
-            if (eventsBlockNumbersForTeam.startGameBlockNumbers[eventsBlockNumbersForTeam.startGameBlockNumbers.length-1] 
-                < eventsBlockNumbersForTeam.closeGameBlockNumbers[eventsBlockNumbersForTeam.closeGameBlockNumbers.length-1] )
-                eventsBlockNumbersForTeam.closeGameBlockNumbers.pop()
-    
-            if (eventsBlockNumbersForTeam.startGameBlockNumbers.length != eventsBlockNumbersForTeam.closeGameBlockNumbers.length){
-                //throw new Error(`There is a difference between startGameBlockNumbers and closeGameBlockNumbers quantities for team ${ teamId.toString() }: ${ eventsBlockNumbersForTeam }`);
-                console.error(`There is a difference between startGameBlockNumbers and closeGameBlockNumbers quantities for team ${ teamId.toString() }: ${ eventsBlockNumbersForTeam }`);
-                return []
-
-            }
-
-            const distances: StartGameDistances = []
-
-            return eventsBlockNumbersForTeam.closeGameBlockNumbers.map( (closeGameBlockNumber, index) => 
-                eventsBlockNumbersForTeam.startGameBlockNumbers[index]-closeGameBlockNumber)
-    
-        })
-        .flat().sort(compareNumberAsc)
-
-}
-
-
 export const getDelayFrom = (timeFromInSeconds: number) => {
     return ((+new Date())/1000) - timeFromInSeconds
 }
@@ -1142,9 +895,9 @@ abstract class AttackStrategy{
         this.isEliteTeam = isEliteTeam
     }
 
-    abstract attack(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>
+    abstract attack(e: StartGameEvent, targetBattlePoint: TeamBattlePoints): Promise<TransactionResponse>
 
-    abstract attackCallStatic(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>
+    abstract attackCallStatic(e: StartGameEvent, targetBattlePoint: TeamBattlePoints): Promise<TransactionResponse>
 
     getAttackMaxPriorityFee(targetBattlePoint: number): BigNumber{
 
@@ -1163,26 +916,26 @@ abstract class AttackStrategy{
 
     }
 
-    getOverride(targetBattlePoint: number){
+    getOverride(targetBattlePoint: TeamBattlePoints){
 
 
         return ({
             gasLimit: GAS_LIMIT,
             maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-            maxPriorityFeePerGas: this.getAttackMaxPriorityFee(targetBattlePoint)
+            maxPriorityFeePerGas: this.getAttackMaxPriorityFee(targetBattlePoint.realBP)
         })
     }
 }
 
 class IddleGameAttackStrategy extends AttackStrategy{
 
-    async attack(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>{
+    async attack(e: StartGameEvent, targetBattlePoint: TeamBattlePoints): Promise<TransactionResponse>{
 
         return await this.connectedContract.attack(e.gameId, this.looterTeamId, this.getOverride(targetBattlePoint))
 
     }
 
-    async attackCallStatic(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>{
+    async attackCallStatic(e: StartGameEvent, targetBattlePoint: TeamBattlePoints): Promise<TransactionResponse>{
 
         return await this.connectedContract.callStatic.attack(e.gameId, this.looterTeamId, this.getOverride(targetBattlePoint))
 
@@ -1192,13 +945,13 @@ class IddleGameAttackStrategy extends AttackStrategy{
 
 class PlayerAttackStrategy extends AttackStrategy{
 
-    async attack(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>{
+    async attack(e: StartGameEvent, targetBattlePoint: TeamBattlePoints): Promise<TransactionResponse>{
 
         return await this.connectedContract.attackTeam(e.teamId, this.looterTeamId, this.getOverride(targetBattlePoint))
 
     }
 
-    async attackCallStatic(e: StartGameEvent, targetBattlePoint: number): Promise<TransactionResponse>{
+    async attackCallStatic(e: StartGameEvent, targetBattlePoint: TeamBattlePoints): Promise<TransactionResponse>{
 
         return await this.connectedContract.callStatic.attackTeam(e.teamId, this.looterTeamId, this.getOverride(targetBattlePoint))
 
@@ -1260,9 +1013,11 @@ export const _battlePoint = ({ hp, damage, armor }: CrabadaAPIInfo): number => {
 
 import axios from "axios";
 import { CONFIG_BY_NODE_ID, NodeConfig } from "../config/nodes";
+import { ClassNameByCrabada, CrabadaClassName, TeamBattlePoints } from "./teambp";
 
 export class CrabadaAPI{
 
+    // TODO Read chain data using Crabada contract: const { dna } = await crabada.crabadaInfo(4887)
     async getCrabadaInfo(crabadaId: BigNumber): Promise<CrabadaAPIInfo>{
 
         const response: { 
@@ -1301,22 +1056,59 @@ export class CrabadaAPI{
 
     }
 
+    async getClassNameByCrabada(): Promise<ClassNameByCrabada>{
+
+        interface ResponseObject { 
+            id: string,
+            class_name: string,
+        }
+
+        interface Response {
+            result: {
+                totalRecord: number
+                data: ResponseObject[] 
+            } 
+        }
+
+        const quanResponse: Response = (await axios.get(`https://api.crabada.com/public/crabada/all?limit=1&page=1`))
+            .data
+
+        const response: Response = (await axios.get(`https://api.crabada.com/public/crabada/all?limit=${ quanResponse.result.totalRecord+1000 }&page=1`))
+            .data
+
+        const result: ClassNameByCrabada = {}
+
+        for (const crabada of response.result.data){
+
+            if (!crabada.class_name)
+                continue
+
+            result[crabada.id] = (crabada.class_name as CrabadaClassName)
+
+        }
+
+        return result
+    
+    }
+    
 }
 
 export const API = new CrabadaAPI()
 
 export const getReinforcementMinBattlePoints = async (hre: HardhatRuntimeEnvironment,
-    looterTeamId: BigNumber): Promise<number> => {
+    looterTeamId: BigNumber, classNameByCrabada: ClassNameByCrabada): Promise<number> => {
 
     const { idleGame, crabada } = getCrabadaContracts(hre)
 
-    const { currentGameId, battlePoint: looterBattlePoint } = await idleGame.getTeamInfo(looterTeamId)
+    const { currentGameId } = await idleGame.getTeamInfo(looterTeamId)
+
+    const looterBattlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamId(idleGame, looterTeamId, classNameByCrabada)
 
     const { teamId: minerTeamId } = await idleGame.getGameBasicInfo(currentGameId)
 
     const { attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId)
     
-    const { battlePoint: minerBattlePoint } = await idleGame.getTeamInfo(minerTeamId)
+    const minerBattlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamId(idleGame, minerTeamId, classNameByCrabada)
     
     const crabadaIdToBattlePointPromise = async(crabadaId): Promise<number> => {
         if (crabadaId.isZero())
@@ -1333,10 +1125,10 @@ export const getReinforcementMinBattlePoints = async (hre: HardhatRuntimeEnviron
     const defenseReinforceBattlePoint = (await Promise.all([ defId1, defId2 ].map( crabadaIdToBattlePointPromise )))
         .reduce(sum,0)
     
-    const minBattlePointNeeded = minerBattlePoint
+    const minBattlePointNeeded = minerBattlePoint.getRelativeBP(looterBattlePoint.teamFaction)
         +defenseReinforceBattlePoint
         +1
-        -looterBattlePoint
+        -looterBattlePoint.getRelativeBP(minerBattlePoint.teamFaction)
         -attackReinforceBattlePoint
     
     return minBattlePointNeeded
@@ -1386,7 +1178,7 @@ export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise
 
     console.log('crabadasToBorrow', crabadasToBorrow.length);
 
-    return crabadasToBorrow[0] // To avoid revert with do not return the best option
+    return crabadasToBorrow[0]
 
 }
 
@@ -1429,12 +1221,12 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 }
 
 export const doReinforce = async (hre: HardhatRuntimeEnvironment,
-    currentGameId: BigNumber, minBattlePointNeeded: number,
+    currentGameId: BigNumber, minRealBattlePointNeeded: number,
     signer: SignerWithAddress, player: string|undefined, testMode=true): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
     
-    const { id: crabadaId, price: borrowPrice } = await getCrabadasToBorrow(minBattlePointNeeded)
+    const { id: crabadaId, price: borrowPrice } = await getCrabadasToBorrow(minRealBattlePointNeeded)
     
     const override = {
         gasLimit: GAS_LIMIT,
@@ -1479,6 +1271,7 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
 
 export const reinforce = async (hre: HardhatRuntimeEnvironment,
     looterTeamId: number, signer: SignerWithAddress, player: string|undefined,
+    classNameByCrabada: ClassNameByCrabada,
     log: (typeof console.log) = console.log, testMode=true): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre);
@@ -1501,7 +1294,9 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
     if (!_shoudReinforce(attackId1, attackId2, defId1, defId2))
         return
 
-    const reinforcementMinBattlePoints: number = await getReinforcementMinBattlePoints(hre, BigNumber.from(looterTeamId))
+    const reinforcementMinBattlePoints: number = await getReinforcementMinBattlePoints(
+        hre, BigNumber.from(looterTeamId), classNameByCrabada
+    )
     
     console.log('reinforcementMinBattlePoints', reinforcementMinBattlePoints);
 
@@ -1509,21 +1304,23 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
 
 }
 
-export const MIN_VALID_BATTLE_POINTS = 564
 export const MIN_BATTLE_POINTS_FOR_ELITE_TEAM = 655
 
 export const loot = async (
     hre: HardhatRuntimeEnvironment, teamsThatPlayToLooseByTeamId: TeamInfoByTeam, 
     looterteamid: number, signer: SignerWithAddress, 
+    classNameByCrabada: ClassNameByCrabada,
     log: (typeof console.log) = console.log, testMode=true, playerAddress?: string): Promise<TransactionResponse|undefined> => {
 
     const nodeConfig: NodeConfig = CONFIG_BY_NODE_ID[hre.config.nodeId]
 
     const { idleGame } = getCrabadaContracts(hre)
 
-    const { lockTo: looterLockTo, currentGameId: looterCurrentGameId, battlePoint: looterBattlePoint } = await idleGame.getTeamInfo(looterteamid)
+    const { lockTo: looterLockTo, currentGameId: looterCurrentGameId } = await idleGame.getTeamInfo(looterteamid)
 
-    const attackStrategy = await createAttackStrategy(hre, looterteamid, signer, looterBattlePoint>MIN_BATTLE_POINTS_FOR_ELITE_TEAM, playerAddress)
+    const looterBattlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamId(idleGame, looterteamid, classNameByCrabada)
+
+    const attackStrategy = await createAttackStrategy(hre, looterteamid, signer, false, playerAddress)
 
     const timestamp = await currentBlockTimeStamp(hre)
 
@@ -1630,9 +1427,9 @@ export const loot = async (
                 return
             
             if (// Invalid battlePoint
-                possibleTarget.battlePoint < 564 || 
+                (!possibleTarget.battlePoint.isValid()) || 
                 // Stronger than looter
-                possibleTarget.battlePoint >= looterBattlePoint)
+                possibleTarget.battlePoint.gte(looterBattlePoint))
                 return
 
             attackInProgress = true
