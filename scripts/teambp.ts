@@ -1,4 +1,5 @@
 import { BigNumber, Contract } from "ethers";
+import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getCrabadaContracts } from "./crabada";
 
 export type CrabadaClassName = 'SURGE' | 'SUNKEN' | 'PRIME' | 'BULK' | 'CRABOID' | 'RUINED' | 'GEM' | 'ORGANIC'
@@ -77,9 +78,12 @@ type AdvantagesByFaction = {
     [factionThatHasTheAdvantage in TeamFaction]: TeamFaction[]
 };
 
+export const LOOTERS_FACTION: TeamFaction = "LUX"
+
+const USE_LOOTERS_ADVANTAGE = false
 
 const ADVANTAGE_MATRIX: AdvantagesByFaction = {
-    LUX: [ "ORE", "FAERIES" ],
+    LUX: USE_LOOTERS_ADVANTAGE ? [ "ORE", "FAERIES" ] : [],
     FAERIES: [ "ORE", "ABYSS" ],
     ORE: [ "ABYSS", "TRENCH" ],
     ABYSS: [ "TRENCH", "MACHINE" ],
@@ -138,6 +142,37 @@ export class TeamBattlePoints{
         const classNames: CrabadaClassName[] = [ crabada1, crabada2, crabada3 ]
             .map(crabadaId => classNameByCrabada[crabadaId.toString()])
             .filter(className => className)
+        
+        if (classNames.length < 3)
+            return undefined
+
+        return this.createFromMembersClasses(
+            realBP,
+            classNames[0], classNames[1], classNames[2], 
+        )
+
+    }
+
+    static async createFromCrabadaIdsAsync(
+        hre: HardhatRuntimeEnvironment,
+        realBP: number,
+        crabada1: BigNumber, crabada2: BigNumber, crabada3: BigNumber
+        ): Promise<TeamBattlePoints>{
+
+        const { crabada } = getCrabadaContracts(hre)
+
+        const classNames: CrabadaClassName[] = (await Promise.all(
+            [ crabada1, crabada2, crabada3 ]
+                .map(async crabadaId => {
+                    const { dna } = await crabada.crabadaInfo(crabadaId)
+                    try {
+                        return classNameFromDna(dna)
+                    } catch (error) {
+                        return undefined
+                    }
+                })
+        ))
+        .filter(className => className)
         
         if (classNames.length < 3)
             return undefined

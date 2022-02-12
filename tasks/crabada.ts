@@ -6,11 +6,11 @@ import { API, attachAttackRouter, baseFee, compareBigNumbers, compareBigNumbersD
 import { types } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
-import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig, player1, player2, player3,  } from "../config/nodes";
+import { AccountConfig, CONFIG_BY_NODE_ID, NodeConfig, player1, player2, player3,  } from "../config/nodes";
 
 import "./player"
 import { logTransactionAndWait, withdrawTeam } from "../test/utils";
-import { ClassNameByCrabada, classNameFromDna, CrabadaClassName, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
+import { ClassNameByCrabada, classNameFromDna, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { assert } from "console";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
@@ -219,9 +219,15 @@ task(
 
         const { idleGame } = getCrabadaContracts(hre)
         const teamInfo = await idleGame.getTeamInfo(teamid)
-        const { owner, currentGameId: gameId3, crabadaId1: c1, crabadaId2: c2, crabadaId3: c3 } = teamInfo
-        console.log(owner);
-        console.log([c1, c2, c3].map( (x:BigNumber) => x.toNumber() ));
+        const { owner, currentGameId: gameId3, crabadaId1: c1, crabadaId2: c2, crabadaId3: c3, battlePoint } = teamInfo
+        console.log('owner', owner);
+        console.log('members', [c1, c2, c3].map( (x:BigNumber) => x.toNumber() ));
+        console.log('real bp', battlePoint);
+        const factionBattlePoint = await TeamBattlePoints.createFromCrabadaIdsAsync(hre, battlePoint, c1, c2, c3)
+        if (factionBattlePoint){
+            console.log('faction', factionBattlePoint.teamFaction);
+            console.log('relative bp to', LOOTERS_FACTION, factionBattlePoint.getRelativeBP(LOOTERS_FACTION));
+        }
 
     })
     .addParam("teamid", "Team ID.", undefined, types.int)
@@ -542,8 +548,6 @@ export const LOOT_PENDING_CONFIG: LootPendingConfig = {
         },
     ]
 }
-
-const LOOTERS_FACTION: TeamFaction = "LUX"
 
 task(
     "lootpending",
