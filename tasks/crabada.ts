@@ -1521,6 +1521,10 @@ const LOOT_PENDING_AVAX_ACCOUNTS = [
 const SETTLER_ACCOUNT = "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4"
 const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
+const LOOTER_TARGET_BALANCE = parseEther('4')
+const SETTLER_TARGET_BALANCE = parseEther('3')
+const REINFORCE_TARGET_BALANCE = parseEther('2')
+
 task(
     "refillavax",
     "Refill accounts with avax.",
@@ -1554,11 +1558,11 @@ task(
         }
 
         for (const destination of lootPendingAddresses)
-            await refillAvax(signer, destination, parseEther('4'))
+            await refillAvax(signer, destination, LOOTER_TARGET_BALANCE)
         
-        await refillAvax(signer, settler, parseEther('3'))
+        await refillAvax(signer, settler, SETTLER_TARGET_BALANCE)
 
-        await refillAvax(signer, reinforce, parseEther('2'))
+        await refillAvax(signer, reinforce, REINFORCE_TARGET_BALANCE)
 
     })
     .addParam("lootpending", "Accounts used in loot pending transactions.", 
@@ -1619,16 +1623,30 @@ task(
         const { tusToken, craToken } = getCrabadaContracts(hre)
 
         console.log('LOOT_PENDING_AVAX_ACCOUNTS');
+
+        let avaxConsumed = SETTLER_TARGET_BALANCE
+            .add(REINFORCE_TARGET_BALANCE)
         
         for (const address of LOOT_PENDING_AVAX_ACCOUNTS){
-            console.log('-', address, formatEther(await hre.ethers.provider.getBalance(address)));
+            const looterBalance = await hre.ethers.provider.getBalance(address)
+            avaxConsumed = avaxConsumed.add(LOOTER_TARGET_BALANCE).sub(looterBalance)
+            console.log('-', address, formatEther(looterBalance));
         }
 
         console.log('SETTLER_ACCOUNT');
-        console.log('-', SETTLER_ACCOUNT, formatEther(await hre.ethers.provider.getBalance(SETTLER_ACCOUNT)));
+        const settlerBalance = await hre.ethers.provider.getBalance(SETTLER_ACCOUNT)
+        avaxConsumed = avaxConsumed.sub(settlerBalance)
+        console.log('-', SETTLER_ACCOUNT, formatEther(settlerBalance));
 
         console.log('REINFORCE_ACCOUNT');
-        console.log('-', REINFORCE_ACCOUNT, formatEther(await hre.ethers.provider.getBalance(REINFORCE_ACCOUNT)));
+        const reinforceBalance = await hre.ethers.provider.getBalance(REINFORCE_ACCOUNT)
+        avaxConsumed = avaxConsumed.sub(reinforceBalance)
+        console.log('-', REINFORCE_ACCOUNT, formatEther(reinforceBalance));
+
+        console.log('');
+        console.log('avaxConsumed', formatEther(avaxConsumed));
+        
+        
 
         console.log('')
 
