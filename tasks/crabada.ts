@@ -328,8 +328,12 @@ const getClassNameByCrabada = async (hre: HardhatRuntimeEnvironment): Promise<Cl
     })
 
     try {
-
+        
+        console.log('Getting Hatch events to obtain class names of crabadas from dna.');
+        
         const hatchEvents: ethers.Event[] = await crabada.queryFilter(crabada.filters.Hatch(), 0)
+
+        console.log('Hatch events obtained', hatchEvents.length);
 
         for (const e of hatchEvents){
 
@@ -345,7 +349,13 @@ const getClassNameByCrabada = async (hre: HardhatRuntimeEnvironment): Promise<Cl
         
     } catch (error) {
 
+        console.error('ERROR Trying to obtain class names from Hatch events', String(error));
+
+        console.log('Getting class names using API.');
+
         const apiResult: ClassNameByCrabada = await API.getClassNameByCrabada()
+
+        console.log('Obtained class name for', Object.keys(apiResult).length, 'crabadas');
 
         for ( const crabadaId in apiResult ){
             result[crabadaId] = apiResult[crabadaId]
@@ -646,6 +656,7 @@ task(
         const teamsThatPlayToLooseByTeamId: TeamInfoByTeam = 
             await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow, classNameByCrabada)
 
+        console.log('teamsThatPlayToLooseByTeamId', Object.keys(teamsThatPlayToLooseByTeamId).length);
 
         // Update teams thar were changed and set interval to update regularly...
 
@@ -661,7 +672,6 @@ task(
         }
 
         idleGame.on(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
-
 
         // Set interval for updating teams' lock status.
 

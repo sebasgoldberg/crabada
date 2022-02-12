@@ -516,8 +516,6 @@ export const getTeamsThatPlayToLooseByTeamId = async (
 
         const teamBehaviour = teamsBehaviour[defenseTeamId.toString()]
 
-        const defensePoint: number = turn.isZero() ? e.args[FIGHT_DEFENSE_POINT] : undefined
-
         teamsBehaviour[defenseTeamId.toString()] = {
             ...teamsBehaviour[defenseTeamId.toString()],
             firstDefenseCount: teamBehaviour ? 
