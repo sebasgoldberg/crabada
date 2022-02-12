@@ -570,11 +570,14 @@ task(
         const playerTeamPairs: PlayerTeamPair[] = await Promise.all(LOOT_PENDING_CONFIG.players
             .map( p => p.teams
                 .map( async(teamId) => {
+                    const { battlePoint } = await idleGame.getTeamInfo(teamId)
                     return ({
                         playerAddress: p.address,
                         teamId,
                         locked: true,
-                        battlePoint: await TeamBattlePoints.createFromTeamId(idleGame, teamId, classNameByCrabada)
+                        // TODO TeamBattlePoints.createFromTeamId, once classNameByCrabada is retrieved.
+                        // battlePoint: await TeamBattlePoints.createFromTeamId(idleGame, teamId, classNameByCrabada)
+                        battlePoint: new TeamBattlePoints(LOOTERS_FACTION, battlePoint)
                     })
                 })
             )
