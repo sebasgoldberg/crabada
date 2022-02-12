@@ -223,7 +223,7 @@ task(
         console.log('owner', owner);
         console.log('members', [c1, c2, c3].map( (x:BigNumber) => x.toNumber() ));
         console.log('real bp', battlePoint);
-        const factionBattlePoint = await TeamBattlePoints.createFromCrabadaIdsAsync(hre, battlePoint, c1, c2, c3)
+        const factionBattlePoint = await TeamBattlePoints.createFromCrabadaIdsUsingContractForClassNames(hre, battlePoint, c1, c2, c3)
         if (factionBattlePoint){
             console.log('faction', factionBattlePoint.teamFaction);
             console.log('relative bp to', LOOTERS_FACTION, factionBattlePoint.getRelativeBP(LOOTERS_FACTION));
@@ -589,9 +589,7 @@ task(
                         playerAddress: p.address,
                         teamId,
                         locked: true,
-                        // TODO TeamBattlePoints.createFromTeamId, once classNameByCrabada is retrieved.
-                        // battlePoint: await TeamBattlePoints.createFromTeamId(idleGame, teamId, classNameByCrabada)
-                        battlePoint: new TeamBattlePoints(LOOTERS_FACTION, battlePoint)
+                        battlePoint: await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, teamId)
                     })
                 })
             )
@@ -1230,8 +1228,8 @@ task(
 
         const fightEventsForLooterTeams = fightEvents
             .filter((e: ethers.Event) =>{
-                const { attackTeamId } = e.args
-                return looterTeams.includes(attackTeamId.toNumber())
+                const { attackTeamId, turn }: { attackTeamId: BigNumber, turn: BigNumber } = e.args as any
+                return turn.isZero() && looterTeams.includes(attackTeamId.toNumber())
             })
 
         console.log('fightEventsForLooterTeams', fightEventsForLooterTeams.length);
@@ -1306,7 +1304,7 @@ task(
     .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)
     .addOptionalParam("toblock", "To from.", undefined , types.int)
     .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
-    .addOptionalParam("teams", "Teams to be considered in the analysis.", "3286,3759,5032,5355,5357,6152,7449,8157,9236" , types.string)
+    .addOptionalParam("teams", "Teams to be considered in the analysis.", "10471,10472,10515,10654,10655,10656,10658,10659,10661" , types.string)
     .addOptionalParam("steps", "Step to consider in the distance analysis.", 10 , types.int)
 
 task(

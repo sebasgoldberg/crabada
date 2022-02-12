@@ -135,6 +135,21 @@ export class TeamBattlePoints{
         )
     }
 
+    static async createFromTeamIdUsingContractForClassNames(
+        hre: HardhatRuntimeEnvironment, teamId: BigNumber|number){
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        const { battlePoint, crabadaId1, crabadaId2, crabadaId3 }:
+        { battlePoint: number, crabadaId1: BigNumber, 
+            crabadaId2: BigNumber, crabadaId3: BigNumber } = 
+                await idleGame.getTeamInfo(teamId)
+                
+        return await TeamBattlePoints.createFromCrabadaIdsUsingContractForClassNames(
+            hre, battlePoint, crabadaId1, crabadaId2, crabadaId3
+        )
+    }
+
     static createFromCrabadaIds(
         realBP: number,
         crabada1: BigNumber, crabada2: BigNumber, crabada3: BigNumber,
@@ -155,7 +170,7 @@ export class TeamBattlePoints{
 
     }
 
-    static async createFromCrabadaIdsAsync(
+    static async createFromCrabadaIdsUsingContractForClassNames(
         hre: HardhatRuntimeEnvironment,
         realBP: number,
         crabada1: BigNumber, crabada2: BigNumber, crabada3: BigNumber
