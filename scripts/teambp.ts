@@ -78,8 +78,10 @@ type AdvantagesByFaction = {
     [factionThatHasTheAdvantage in TeamFaction]: TeamFaction[]
 };
 
+// Asumes looters teams have a unique faction defined.
 export const LOOTERS_FACTION: TeamFaction = "LUX"
 
+// Asumes looters teams have a faction defined.
 const USE_LOOTERS_ADVANTAGE = false
 
 const ADVANTAGE_MATRIX: AdvantagesByFaction = {
@@ -194,8 +196,12 @@ export class TeamBattlePoints{
 
     getRelativeBP(otherTeamFaction: TeamFaction): number{
 
-        if (this.teamFaction == "NO FACTION")
-            return Math.floor(0.97 * this.realBP)
+        if (this.teamFaction == "NO FACTION"){
+            if (USE_LOOTERS_ADVANTAGE)
+                return Math.floor(0.97 * this.realBP)
+            else
+                return this.realBP
+        }
 
         if (ADVANTAGE_MATRIX[otherTeamFaction].includes(this.teamFaction))
             return Math.floor(0.93 * this.realBP)
@@ -206,8 +212,12 @@ export class TeamBattlePoints{
 
     getRelativeBPForAdvantage(hasDisadvantage: boolean): number{
 
-        if (this.teamFaction == "NO FACTION")
-            return Math.floor(0.97 * this.realBP)
+        if (this.teamFaction == "NO FACTION"){
+            if (USE_LOOTERS_ADVANTAGE)
+                return Math.floor(0.97 * this.realBP)
+            else
+                return this.realBP
+        }
 
         if (hasDisadvantage)
             return Math.floor(0.93 * this.realBP)
