@@ -600,8 +600,8 @@ task(
             playerAddress: string,
             teamId: number,
             locked: boolean,
-            settled: boolean,
             battlePoint: number,
+            settled: boolean,
         }
 
         const playerTeamPairs: PlayerTeamPair[] = await Promise.all(LOOT_PENDING_CONFIG.players
@@ -613,8 +613,8 @@ task(
                         playerAddress: p.address,
                         teamId,
                         locked: true,
-                        settled: currentGameId.isZero(),
                         battlePoint,
+                        settled: currentGameId.isZero(),
                     })
                 })
             )
