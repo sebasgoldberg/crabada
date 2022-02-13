@@ -600,17 +600,20 @@ task(
             playerAddress: string,
             teamId: number,
             locked: boolean,
+            settled: boolean,
             battlePoint: number,
         }
 
         const playerTeamPairs: PlayerTeamPair[] = await Promise.all(LOOT_PENDING_CONFIG.players
             .map( p => p.teams
                 .map( async(teamId) => {
-                    const { battlePoint } = await idleGame.getTeamInfo(teamId)
+                    const { battlePoint, currentGameId }: { battlePoint: number, currentGameId: BigNumber } = 
+                        await idleGame.getTeamInfo(teamId)
                     return ({
                         playerAddress: p.address,
                         teamId,
                         locked: true,
+                        settled: currentGameId.isZero(),
                         battlePoint,
                     })
                 })
@@ -624,6 +627,10 @@ task(
             return (await Promise.all(
                 playerTeamPairs.map( async(playerTeamPair): Promise<any> => {
                     playerTeamPair.locked = !testmode && await isTeamLocked(hre, idleGame, playerTeamPair.teamId, log)
+                    const { currentGameId }: { currentGameId: BigNumber } = 
+                        await idleGame.getTeamInfo(playerTeamPair.teamId)
+                    playerTeamPair.settled = testmode || currentGameId.isZero()
+
                 }) 
             ))
         }
@@ -643,7 +650,7 @@ task(
 
             try {
 
-                for (const p of playerTeamPairs.filter(p=>!p.locked)){
+                for (const p of playerTeamPairs.filter(p=> (!p.locked && !p.settled))){
                     const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
                     await settleGame(idleGame.connect(settleSigner), currentGameId, 1, ()=>{})
                 }
@@ -806,7 +813,7 @@ task(
         const attackTeams = async (startedGameTargetsByTeamId: StartedGameTargetsByTeamId) => {
 
             // 1) Apply only for looter teams are unlocked
-            const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => !p.locked || testmode )
+            const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => (!p.locked && p.settled) || testmode )
 
             if (unlockedPlayerTeamPairs.length == 0){
                 console.log('Attack Interval', 'No unlocked looter teams');
