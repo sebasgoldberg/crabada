@@ -81,6 +81,7 @@ type AdvantagesByFaction = {
 // Asumes looters teams have a unique faction defined.
 export const LOOTERS_FACTION: TeamFaction = "LUX"
 
+// TODO set to true when confirmed update.
 // Asumes looters teams have a faction defined.
 const USE_LOOTERS_ADVANTAGE = false
 
