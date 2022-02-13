@@ -816,7 +816,7 @@ task(
             const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => (!p.locked && p.settled) || testmode )
 
             if (unlockedPlayerTeamPairs.length == 0){
-                console.log('Attack Interval', 'No unlocked looter teams');
+                console.log('Attack Interval', 'No unlocked and settled looter teams');
                 return
             }
 
@@ -867,7 +867,7 @@ task(
                 unlockedPlayerTeamPairs.filter( p => p.battlePoint > minTargetBattlePoint )
 
             if (unlockedPlayerTeamPairsWithEnoughBattlePoint.length == 0){
-                console.log('Attack Interval', 'No unlocked looter teams with enough battle points', 
+                console.log('Attack Interval', 'No unlocked and settled looter teams with enough battle points', 
                     unlockedPlayerTeamPairs.map( p => p.battlePoint), '<=', minTargetBattlePoint)
                 return
             }
