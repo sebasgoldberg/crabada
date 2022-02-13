@@ -52,6 +52,12 @@ export const player3: AccountConfig = {
     player: '0x5f99D122e14A6e8de1C191f9B6F6D1c4639ad21D'
 }
 
+export const player4: AccountConfig = {
+    accountIndex: 0,
+    teams: [ 11472, ],
+    player: '0x01b6E5fD1C95bfB61b50013f3D3454B3CAf8742B'
+}
+
 const LOOT_CONFIG_FOR_REINFORCE: LootConfig = {
     attackOnlyTeamsThatPlayToLoose: false,
     startGameFilterMode: "latest",
