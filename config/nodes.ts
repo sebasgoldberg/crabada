@@ -54,7 +54,7 @@ export const player3: AccountConfig = {
 
 export const player4: AccountConfig = {
     accountIndex: 0,
-    teams: [ 11472, ],
+    teams: [ 11472, 11727 ],
     player: '0x01b6E5fD1C95bfB61b50013f3D3454B3CAf8742B'
 }
 
