@@ -1159,14 +1159,13 @@ export interface CrabadaInTabern{
 const BORROW_ADDITIONAL_PRICE = parseEther('2')
 const BORROW_MAX_PRICE = parseEther('35')
 
-export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise<CrabadaToBorrow> => {
+export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise<CrabadaToBorrow[]> => {
 
     const crabadasInTabernOrderByPrice: CrabadaInTabern[] = await API.getCrabadasInTabernOrderByPrice() //https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=100
 
     console.log('crabadasInTabernOrderByPrice', crabadasInTabernOrderByPrice.length);
 
     const possibleCrabadasToBorrowOrderByPrice = crabadasInTabernOrderByPrice
-        //.slice(15) // Are removed the first 15 elements to avoid transaction revert
         .filter( x => x.battle_point >= minBattlePointNeeded)
 
     console.log('possibleCrabadasToBorrowOrderByPrice', possibleCrabadasToBorrowOrderByPrice.length);
@@ -1186,7 +1185,7 @@ export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise
 
     console.log('crabadasToBorrow', crabadasToBorrow.length);
 
-    return crabadasToBorrow[0]
+    return crabadasToBorrow
 
 }
 
@@ -1234,7 +1233,7 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
 
     const { idleGame } = getCrabadaContracts(hre)
     
-    const { id: crabadaId, price: borrowPrice } = await getCrabadasToBorrow(minRealBattlePointNeeded)
+    const borrowOptions: CrabadaToBorrow[] = await getCrabadasToBorrow(minRealBattlePointNeeded)
     
     const override = {
         gasLimit: GAS_LIMIT,
@@ -1242,38 +1241,57 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
         maxPriorityFeePerGas: ONE_GWEI
     }
 
-    if (player){
+    for (const { id: crabadaId, price: borrowPrice } of borrowOptions){
 
-        const playerContract = await attachPlayer(hre, player)
+        if (player){
 
-        console.log('playerContract.reinforceAttack(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
-
-        await playerContract.connect(signer).callStatic.reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
-
-        if (!testMode){
-            const tr: TransactionResponse = await playerContract.connect(signer).reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+            const playerContract = await attachPlayer(hre, player)
     
-            console.log('Transaction hash', tr.hash);
+            try {
+    
+                console.log('playerContract.reinforceAttack(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
+    
+                await playerContract.connect(signer).callStatic.reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+    
+                if (!testMode){
+                    const tr: TransactionResponse = await playerContract.connect(signer).reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+            
+                    console.log('Transaction hash', tr.hash);
+                
+                    return tr
+                }
+    
+            } catch (error) {
+                
+                console.error('ERROR when trying to reinforce:', String(error));
+
+            }
+    
+        }else{
+    
+            try {
+
+                console.log('idleGame.reinforceAttack(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
         
-            return tr
+                await idleGame.connect(signer).callStatic.reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+        
+                if (!testMode){
+                    const tr: TransactionResponse = await idleGame.connect(signer).reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+            
+                    console.log('Transaction hash', tr.hash);
+                
+                    return tr
+                }
+
+            } catch (error) {
+                
+                console.error('ERROR when trying to reinforce:', String(error));
+
+            }
+        
         }
 
-    }else{
-
-        console.log('idleGame.reinforceAttack(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
-
-        await idleGame.connect(signer).callStatic.reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
-
-        if (!testMode){
-            const tr: TransactionResponse = await idleGame.connect(signer).reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
-    
-            console.log('Transaction hash', tr.hash);
-        
-            return tr
-        }
-    
     }
-
 
 }
 
