@@ -1284,11 +1284,21 @@ export class CrabadaAPI{
             mine_point: number
         }
 
+        interface Response {
+            result: {
+                totalRecord: number
+                data: ResponseObject[] 
+            } 
+        }
+
+        const quanResponse: Response = (await axios.get(`https://idle-api.crabada.com/public/idle/crabadas/lending?limit=1&page=1`))
+            .data
+
         const response: { 
             result: { 
                 data: ResponseObject[] 
             } 
-        } = (await axios.get(`https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=1000`))
+        } = (await axios.get(`https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=${ quanResponse.result.totalRecord+100 }`))
             .data
 
         return response.result.data.map( o => ({
