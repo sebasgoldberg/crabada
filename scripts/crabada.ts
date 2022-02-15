@@ -1059,10 +1059,9 @@ export class CrabadaAPI{
             .map( async (page: number) => {
                 try {
                     const url = `https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
-                    console.log(url);
                     return (await axios.get(url)).data
                 } catch (error) {
-                    error(`ERROR getting page for lending API`)
+                    error(`ERROR getting page for lending API`, String(error))
                     return undefined
                 }
             })
@@ -1193,22 +1192,22 @@ export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise
 
     console.log('possibleCrabadasToBorrowOrderByPrice', possibleCrabadasToBorrowOrderByPrice.length);
 
-    const crabadasToBorrow: CrabadaInTabern[] = PRICE_RANGES
+    const crabadasToBorrowOrderByBattlePointDescByPriceSteps: CrabadaInTabern[] = PRICE_RANGES
         .map( ({minPrice, maxPrice}) => {
-            const crabadasToBorrow = possibleCrabadasToBorrowOrderByPrice
+            const crabadasToBorrowForPriceStep = possibleCrabadasToBorrowOrderByPrice
                 .filter( x => x.price.gt(minPrice))
                 .filter( x => x.price.lte(maxPrice))
                 .sort( (a,b) => 
                     a.battle_point<b.battle_point ? 1 : a.battle_point>b.battle_point ? -1 : // battle_point descending
                     a.price.lt(b.price) ? -1 : a.price.gt(b.price) ? 1 : 0 // price ascending
                     )
-            return crabadasToBorrow
+            return crabadasToBorrowForPriceStep
         })
         .flat()
 
-    console.log('crabadasToBorrow', crabadasToBorrow.length);
+    console.log('crabadasToBorrow', crabadasToBorrowOrderByBattlePointDescByPriceSteps.length);
 
-    return crabadasToBorrow
+    return crabadasToBorrowOrderByBattlePointDescByPriceSteps
 
 }
 
@@ -1346,8 +1345,6 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
 
     if (!_shoudReinforce(attackId1, attackId2, defId1, defId2))
         return
-
-    log('_shoudReinforce', true)
 
     const reinforcementMinBattlePoints: number = await getReinforcementMinBattlePoints(
         hre, BigNumber.from(looterTeamId), classNameByCrabada
