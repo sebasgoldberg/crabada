@@ -1054,7 +1054,7 @@ export class CrabadaAPI{
                 data: ResponseObject[] 
             } 
         }[] = (await Promise.all(
-            Array.from(Array(Math.floor((quanResponse.result.totalRecord/50)+0.5)).keys())
+            Array.from(Array(Math.round((quanResponse.result.totalRecord/50)+0.5)).keys())
             .map( value => value+1 )
             .map( async (page: number) => {
                 try {
