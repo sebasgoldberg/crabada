@@ -1055,9 +1055,11 @@ export class CrabadaAPI{
             } 
         }[] = []
 
-        for (let i=1; i++; i<=Math.floor((quanResponse.result.totalRecord/50)+0.5)){
+        for (let i=1; i<=Math.floor((quanResponse.result.totalRecord/50)+0.5); i++){
             try {
-                responses.push((await axios.get(`https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${i}`))
+                const url = `https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${i}`
+                console.log(url);
+                responses.push((await axios.get(url))
                 .data)
             } catch (error) {
                 error(`ERROR getting page for lending API`)
