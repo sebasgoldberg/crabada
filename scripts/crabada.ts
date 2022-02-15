@@ -1047,20 +1047,32 @@ export class CrabadaAPI{
         const quanResponse: Response = (await axios.get(`https://idle-api.crabada.com/public/idle/crabadas/lending?limit=1&page=1`))
             .data
 
-        const response: { 
+        console.log('Lending totalRecord', quanResponse.result.totalRecord);
+
+        const responses: { 
             result: { 
                 data: ResponseObject[] 
             } 
-        } = (await axios.get(`https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=${ quanResponse.result.totalRecord+100 }`))
-            .data
+        }[] = []
 
-        return response.result.data.map( o => ({
-            id: BigNumber.from(o.id),
-            price: BigNumber.from(String(o.price)),
-            is_being_borrowed: o.is_being_borrowed ? true : false,
-            battle_point: o.battle_point,
-            mine_point: o.mine_point
-        }))
+        for (let i=1; i++; i<=Math.floor((quanResponse.result.totalRecord/50)+0.5)){
+            try {
+                responses.push((await axios.get(`https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${i}`))
+                .data)
+            } catch (error) {
+                error(`ERROR getting page for lending API`)
+            }
+        }
+
+        return responses.map( response => {
+            return response.result.data.map( o => ({
+                id: BigNumber.from(o.id),
+                price: BigNumber.from(String(o.price)),
+                is_being_borrowed: o.is_being_borrowed ? true : false,
+                battle_point: o.battle_point,
+                mine_point: o.mine_point
+            }))
+        }).flat()
 
     }
 
