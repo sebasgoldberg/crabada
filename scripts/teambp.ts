@@ -82,7 +82,7 @@ type AdvantagesByFaction = {
 export const LOOTERS_FACTION: TeamFaction = "LUX"
 
 // Asumes looters teams have a faction defined!!!
-const USE_LOOTERS_ADVANTAGE = false
+const USE_LOOTERS_ADVANTAGE = true
 
 const ADVANTAGE_MATRIX: AdvantagesByFaction = {
     LUX: USE_LOOTERS_ADVANTAGE ? [ "ORE", "FAERIES" ] : [],
@@ -103,10 +103,19 @@ export class TeamBattlePoints{
 
     teamFaction: TeamFaction
     realBP: number
+    addBPToRelative: number = 0
+
+    add(relativeBPToAdd: number){
+        const battlePointsWithAddition = new TeamBattlePoints(this.teamFaction, this.realBP)
+        battlePointsWithAddition.addBPToRelative = this.addBPToRelative+relativeBPToAdd
+        return battlePointsWithAddition
+    }
 
     constructor(teamFaction: TeamFaction, realBP: number){
         this.teamFaction = teamFaction
         this.realBP = realBP
+        if (ADVANTAGE_MATRIX.LUX.includes(teamFaction) || teamFaction === "NO FACTION")
+            this.addBPToRelative = 1
     }
 
     static createFromMembersClasses(
@@ -213,13 +222,13 @@ export class TeamBattlePoints{
 
         if (this.teamFaction == "NO FACTION"){
             if (USE_LOOTERS_ADVANTAGE)
-                return Math.floor(0.97 * this.realBP)
+                return Math.floor(0.97 * this.realBP)+this.addBPToRelative
             else
                 return this.realBP
         }
 
         if (ADVANTAGE_MATRIX[otherTeamFaction].includes(this.teamFaction))
-            return Math.floor(0.93 * this.realBP)
+            return Math.floor(0.93 * this.realBP)+this.addBPToRelative
         
         return this.realBP
 
@@ -229,13 +238,13 @@ export class TeamBattlePoints{
 
         if (this.teamFaction == "NO FACTION"){
             if (USE_LOOTERS_ADVANTAGE)
-                return Math.floor(0.97 * this.realBP)
+                return Math.floor(0.97 * this.realBP)+this.addBPToRelative
             else
                 return this.realBP
         }
 
         if (hasDisadvantage)
-            return Math.floor(0.93 * this.realBP)
+            return Math.floor(0.93 * this.realBP)+this.addBPToRelative
         
         return this.realBP
 
