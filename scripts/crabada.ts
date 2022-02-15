@@ -1054,8 +1054,8 @@ export class CrabadaAPI{
                 data: ResponseObject[] 
             } 
         }[] = (await Promise.all(
-            (new Array(Math.floor((quanResponse.result.totalRecord/50)+0.5)))
-            .map( (value: undefined, index: number) => index+1 )
+            Array.from(Array(Math.floor((quanResponse.result.totalRecord/50)+0.5)).keys())
+            .map( value => value+1 )
             .map( async (page: number) => {
                 try {
                     const url = `https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
