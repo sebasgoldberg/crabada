@@ -1069,13 +1069,19 @@ export class CrabadaAPI{
         )).filter(x=>x)
 
         return responses.map( response => {
-            return response.result.data.map( o => ({
-                id: BigNumber.from(o.id),
-                price: BigNumber.from(String(o.price)),
-                is_being_borrowed: o.is_being_borrowed ? true : false,
-                battle_point: o.battle_point,
-                mine_point: o.mine_point
-            }))
+            return response.result.data.map( o => {
+                try {
+                    return {
+                        id: BigNumber.from(o.id),
+                        price: BigNumber.from(String(o.price)),
+                        is_being_borrowed: o.is_being_borrowed ? true : false,
+                        battle_point: o.battle_point,
+                        mine_point: o.mine_point
+                    }
+                } catch (error) {
+                    return undefined
+                }
+            }).filter(x=>x)
         }).flat()
 
     }
