@@ -12,6 +12,7 @@ import "./player"
 import { logTransactionAndWait, withdrawTeam } from "../test/utils";
 import { ClassNameByCrabada, classNameFromDna, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { assert } from "console";
+import { PLAYER_TUS_RESERVE } from "./player";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -1664,13 +1665,20 @@ task(
 
         console.log('')
 
+        let playersTusBalance = ethers.constants.Zero
+        let playersCraBalance = ethers.constants.Zero
+
         for (const player of LOOT_PENDING_CONFIG.players){
 
             console.log('')
 
+            const playerTusBalance = ((await tusToken.balanceOf(player.address)) as BigNumber)
+                .sub(PLAYER_TUS_RESERVE)
+            const playerCraBalance = await craToken.balanceOf(player.address)
+
             console.log('Player contract', player.address);
-            console.log('TUS', formatEther(await tusToken.balanceOf(player.address)));
-            console.log('CRA', formatEther(await craToken.balanceOf(player.address)));
+            console.log('TUS', formatEther(playerTusBalance));
+            console.log('CRA', formatEther(playerCraBalance));
 
             for (const team of player.teams){
 
@@ -1680,7 +1688,14 @@ task(
 
             }
 
+            playersTusBalance = playersTusBalance.add(playerTusBalance)
+            playersCraBalance = playersCraBalance.add(playerCraBalance)
+
         }
+
+        console.log('')
+        console.log('TUS Balance:', formatEther(playersTusBalance))
+        console.log('CRA Balance:', formatEther(playersCraBalance))
 
     })
 

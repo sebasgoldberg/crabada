@@ -156,10 +156,12 @@ task(
     })
     .addParam("player", "Player contract address, for which will be created the team.")
 
+export const PLAYER_TUS_RESERVE = parseEther('120') 
+
 task(
     "playerwithdrawerc20",
     "Withdraw TUS and CRA from players.",
-    async ({ players, tusreserve, testaccount }, hre: HardhatRuntimeEnvironment) => {
+    async ({ players, testaccount }, hre: HardhatRuntimeEnvironment) => {
         
         const signer = await getSigner(hre, testaccount)
 
@@ -180,7 +182,7 @@ task(
                 let value: BigNumber = await erc20.balanceOf(p.address)
 
                 if (erc20.address === tusToken.address)
-                    value = value.sub(parseEther(tusreserve)) // Backup value for reinforcements
+                    value = value.sub(PLAYER_TUS_RESERVE) // Backup value for reinforcements
 
                 if (value.gt(0)){
                     console.log('player.withdrawERC20(erc20.address, signer.address, value)', erc20.address, signer.address, formatEther(value));
@@ -196,7 +198,6 @@ task(
 
     })
     .addOptionalParam("players", "Player contracts addresses (coma separated).", undefined, types.string)
-    .addOptionalParam("tusreserve", "TUS to leave in player for reinforcements.", '120', types.string)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
 task(
