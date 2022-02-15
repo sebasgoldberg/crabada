@@ -82,7 +82,7 @@ type AdvantagesByFaction = {
 export const LOOTERS_FACTION: TeamFaction = "LUX"
 
 // Asumes looters teams have a faction defined!!!
-const USE_LOOTERS_ADVANTAGE = true
+const USE_LOOTERS_ADVANTAGE = false
 
 const ADVANTAGE_MATRIX: AdvantagesByFaction = {
     LUX: USE_LOOTERS_ADVANTAGE ? [ "ORE", "FAERIES" ] : [],
