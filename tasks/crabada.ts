@@ -1603,8 +1603,6 @@ const printTeamStatus = async (hre: HardhatRuntimeEnvironment, team: number) => 
 
     const timestamp = await currentBlockTimeStamp(hre)
 
-    console.log('Team', team);
-
     const { crabadaId1, crabadaId2, crabadaId3, timePoint, currentGameId, lockTo } = await idleGame.getTeamInfo(team)
     const battlePoint = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, team)
 
@@ -1614,9 +1612,11 @@ const printTeamStatus = async (hre: HardhatRuntimeEnvironment, team: number) => 
     const { timePoint: minerTimePoint } = await idleGame.getTeamInfo(minerTeam)
     const minerBattlePoint = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, minerTeam)
 
+    console.log('Team', team, battlePoint.teamFaction);
+
     console.log('Team info:')
     console.log('- Members', [crabadaId1, crabadaId2, crabadaId3].map(x=>x.toString()))
-    console.log('- bp:', battlePoint, '| rbp:', battlePoint.getRelativeBP(minerBattlePoint.teamFaction), '| mp:', timePoint)
+    console.log('- bp:', battlePoint.realBP, '| rbp:', battlePoint.getRelativeBP(minerBattlePoint.teamFaction), '| mp:', timePoint)
     console.log('- Current Game:', currentGameId.toString())
     console.log('- Seconds to unlock', lockTo-timestamp)
 
@@ -1625,8 +1625,8 @@ const printTeamStatus = async (hre: HardhatRuntimeEnvironment, team: number) => 
     console.log('- Defense crabada reinforcements', defId1.toString(), defId2.toString())
 
     console.log('Miner info:')
-    console.log('Team ID', minerTeam.toString())
-    console.log('- bp:', minerBattlePoint, '| rbp:', minerBattlePoint.getRelativeBP(battlePoint.teamFaction), '| mp:', minerTimePoint)
+    console.log('Team ID', minerTeam.toString(), minerBattlePoint.teamFaction)
+    console.log('- bp:', minerBattlePoint.realBP, '| rbp:', minerBattlePoint.getRelativeBP(battlePoint.teamFaction), '| mp:', minerTimePoint)
 
 }
 
