@@ -1604,26 +1604,28 @@ const printTeamStatus = async (hre: HardhatRuntimeEnvironment, team: number) => 
 
     console.log('Team', team);
 
-    const { crabadaId1, crabadaId2, crabadaId3, battlePoint, timePoint, currentGameId, lockTo } = await idleGame.getTeamInfo(team)
+    const { crabadaId1, crabadaId2, crabadaId3, timePoint, currentGameId, lockTo } = await idleGame.getTeamInfo(team)
+    const battlePoint = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, team)
+
+    const { attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId);
+
+    const { teamId: minerTeam } = await idleGame.getGameBasicInfo(currentGameId)
+    const { timePoint: minerTimePoint } = await idleGame.getTeamInfo(minerTeam)
+    const minerBattlePoint = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, minerTeam)
+
     console.log('Team info:')
     console.log('- Members', [crabadaId1, crabadaId2, crabadaId3].map(x=>x.toString()))
-    console.log('- bp:', battlePoint, '| mp:', timePoint)
+    console.log('- bp:', battlePoint, '| rbp:', battlePoint.getRelativeBP(minerBattlePoint.teamFaction), '| mp:', timePoint)
     console.log('- Current Game:', currentGameId.toString())
     console.log('- Seconds to unlock', lockTo-timestamp)
 
-    const { attackTime, lastAttackTime, lastDefTime, attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId);
     console.log('Game info:')
-    // console.log('- Attack time (seconds ago)', timestamp-attackTime)
-    // console.log('- lastAttackTime (seconds ago)', timestamp-lastAttackTime)
-    // console.log('- lastDefTime (seconds ago)', timestamp-lastDefTime)
     console.log('- Attack crabada reinforcements', attackId1.toString(), attackId2.toString())
     console.log('- Defense crabada reinforcements', defId1.toString(), defId2.toString())
 
-    const { teamId: minerTeam } = await idleGame.getGameBasicInfo(currentGameId)
-    const { battlePoint: minerBattlePoint, timePoint: minerTimePoint } = await idleGame.getTeamInfo(minerTeam)
     console.log('Miner info:')
     console.log('Team ID', minerTeam.toString())
-    console.log('- bp:', minerBattlePoint, '| mp:', minerTimePoint)
+    console.log('- bp:', minerBattlePoint, '| rbp:', minerBattlePoint.getRelativeBP(battlePoint.teamFaction), '| mp:', minerTimePoint)
 
 }
 
