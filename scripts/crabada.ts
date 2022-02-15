@@ -1172,8 +1172,15 @@ export interface CrabadaInTabern{
     mine_point: number
 }
 
-const BORROW_ADDITIONAL_PRICE = parseEther('2')
-const BORROW_MAX_PRICE = parseEther('35')
+const BORROW_STEP_PRICE_IN_TUS = 2
+const BORROW_MAX_PRICE_IN_TUS = 36
+const BORROW_PRICE_STEPS = Math.floor((BORROW_MAX_PRICE_IN_TUS/BORROW_STEP_PRICE_IN_TUS)+0.5)
+const PRICE_RANGES = Array.from(Array(BORROW_PRICE_STEPS).keys())
+.map( step => ({minPriceInTus: step*BORROW_STEP_PRICE_IN_TUS, maxPriceInTus: (step+1)*BORROW_STEP_PRICE_IN_TUS}) )
+.map( ({minPriceInTus, maxPriceInTus}) => ({
+    minPrice: parseEther(String(minPriceInTus)),
+    maxPrice: parseEther(String(maxPriceInTus)),
+}))
 
 export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise<CrabadaToBorrow[]> => {
 
@@ -1186,18 +1193,18 @@ export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise
 
     console.log('possibleCrabadasToBorrowOrderByPrice', possibleCrabadasToBorrowOrderByPrice.length);
 
-    const basePrice = possibleCrabadasToBorrowOrderByPrice[0].price
-
-    const additionalPrice = basePrice.add(BORROW_ADDITIONAL_PRICE)
-
-    const maxPrice = additionalPrice.lt(BORROW_MAX_PRICE) ? additionalPrice : BORROW_MAX_PRICE
-
-    const crabadasToBorrow = possibleCrabadasToBorrowOrderByPrice
-        .filter( x => x.price.lte(maxPrice))
-        .sort( (a,b) => 
-            a.battle_point<b.battle_point ? 1 : a.battle_point>b.battle_point ? -1 : // battle_point descending
-            a.price.lt(b.price) ? -1 : a.price.gt(b.price) ? 1 : 0 // price ascending
-            )
+    const crabadasToBorrow: CrabadaInTabern[] = PRICE_RANGES
+        .map( ({minPrice, maxPrice}) => {
+            const crabadasToBorrow = possibleCrabadasToBorrowOrderByPrice
+                .filter( x => x.price.gt(minPrice))
+                .filter( x => x.price.lte(maxPrice))
+                .sort( (a,b) => 
+                    a.battle_point<b.battle_point ? 1 : a.battle_point>b.battle_point ? -1 : // battle_point descending
+                    a.price.lt(b.price) ? -1 : a.price.gt(b.price) ? 1 : 0 // price ascending
+                    )
+            return crabadasToBorrow
+        })
+        .flat()
 
     console.log('crabadasToBorrow', crabadasToBorrow.length);
 
