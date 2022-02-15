@@ -1312,19 +1312,25 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
 
     const { currentGameId } = await idleGame.getTeamInfo(looterTeamId)
 
+    log('currentGameId', currentGameId.toString())
+
     if (currentGameId.isZero())
         return
 
     const { attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId)
 
+    log('attackId1, attackId2, defId1, defId2', [ attackId1, attackId2, defId1, defId2 ].map(x => x.toString()))
+
     if (!_shoudReinforce(attackId1, attackId2, defId1, defId2))
         return
+
+    log('_shoudReinforce', true)
 
     const reinforcementMinBattlePoints: number = await getReinforcementMinBattlePoints(
         hre, BigNumber.from(looterTeamId), classNameByCrabada
     )
-    
-    console.log('reinforcementMinBattlePoints', reinforcementMinBattlePoints);
+
+    log('reinforcementMinBattlePoints', reinforcementMinBattlePoints)
 
     return await doReinforce(hre, currentGameId, reinforcementMinBattlePoints, signer, player, testMode)
 
