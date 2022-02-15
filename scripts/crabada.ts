@@ -1053,18 +1053,20 @@ export class CrabadaAPI{
             result: { 
                 data: ResponseObject[] 
             } 
-        }[] = []
-
-        for (let i=1; i<=Math.floor((quanResponse.result.totalRecord/50)+0.5); i++){
-            try {
-                const url = `https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${i}`
-                console.log(url);
-                responses.push((await axios.get(url))
-                .data)
-            } catch (error) {
-                error(`ERROR getting page for lending API`)
-            }
-        }
+        }[] = (await Promise.all(
+            (new Array(Math.floor((quanResponse.result.totalRecord/50)+0.5)))
+            .map( (value: undefined, index: number) => index+1 )
+            .map( async (page: number) => {
+                try {
+                    const url = `https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
+                    console.log(url);
+                    return (await axios.get(url)).data
+                } catch (error) {
+                    error(`ERROR getting page for lending API`)
+                    return undefined
+                }
+            })
+        )).filter(x=>x)
 
         return responses.map( response => {
             return response.result.data.map( o => ({
