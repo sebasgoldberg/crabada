@@ -6,7 +6,7 @@ import { API, attachAttackRouter, baseFee, compareBigNumbers, compareBigNumbersD
 import { types } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
-import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig, player1, player2, player3, player4,  } from "../config/nodes";
+import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig, player1, player2, player3, player4, player5,  } from "../config/nodes";
 
 import "./player"
 import { logTransactionAndWait, withdrawTeam } from "../test/utils";
@@ -456,7 +456,8 @@ const REINFORCE_CONFIG: AccountConfig[] = [
     player1,
     player2,
     player3,
-    player4
+    player4,
+    player5
 ]
 
 task(
@@ -551,6 +552,10 @@ export const LOOT_PENDING_CONFIG: LootPendingConfig = {
         {
             address: player4.player,
             teams: player4.teams
+        },
+        {
+            address: player5.player,
+            teams: player5.teams
         },
     ]
 }
