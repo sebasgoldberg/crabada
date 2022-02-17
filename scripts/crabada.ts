@@ -343,6 +343,13 @@ export const attachAttackRouter = async (hre: HardhatRuntimeEnvironment, contrac
     return Router.attach(contractAddress)
 }
 
+export const attachSettler = async (hre: HardhatRuntimeEnvironment, contractAddress: string): Promise<Contract> => {
+
+    const Settler = (await hre.ethers.getContractFactory("Settler"));
+
+    return Settler.attach(contractAddress)
+}
+
 export const deployPlayer = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress | undefined): Promise<Contract> => {
 
     const { idleGame, crabada } = getCrabadaContracts(hre)
@@ -365,6 +372,16 @@ export const deployAttackRouter = async (hre: HardhatRuntimeEnvironment, signer:
     const router = await AttackRouter.deploy(override)
 
     return router
+}
+
+export const deploySettler = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress | undefined): Promise<Contract> => {
+
+    const Settler = (await hre.ethers.getContractFactory("Settler")).connect(signer);
+    const override = await getOverride(hre)
+    override.gasLimit = 2500000
+    const settler = await Settler.deploy(override)
+
+    return settler
 }
 
 export const getOverride = async (hre: HardhatRuntimeEnvironment) => {

@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { API, attachAttackRouter, baseFee, compareBigNumbers, compareBigNumbersDescending, currentBlockTimeStamp, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, loot, mineStep, ONE_GWEI, queryFilterByPage, reinforce, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
+import { API, attachAttackRouter, attachSettler, baseFee, compareBigNumbers, compareBigNumbersDescending, currentBlockTimeStamp, deploySettler, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, loot, mineStep, ONE_GWEI, queryFilterByPage, reinforce, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
@@ -250,6 +250,36 @@ task(
     })
     .addParam("teamid", "Team ID which have a game to settle.", undefined, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
+task(
+    "settleandwin",
+    "Settle current game for team id and wins.",
+    async ({ settler, gameid, winner, testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const { idleGame, tusToken } = getCrabadaContracts(hre)
+
+        //const { currentGameId } = await idleGame.getTeamInfo(teamid)
+
+        //await settleGame(idleGame.connect(signer), currentGameId, 3)
+        const _settler = await attachSettler(hre, settler)
+
+        await _settler.settleGame(
+            idleGame.address,
+            gameid,
+            winner,
+            tusToken.address,
+            parseEther('200')
+            )
+
+    })
+    .addParam("settler", "Settler contract.", undefined, types.string)
+    //.addParam("teamid", "Team ID which have a game to settle.", undefined, types.int)
+    .addParam("gameid", "Game ID to settle.", undefined, types.int)
+    .addParam("winner", "Address that shoul win the reward for winning the game.", undefined, types.string)
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+
 
 
 task(
@@ -1713,4 +1743,21 @@ task(
 
     })
     .addParam("team", "Team ID.", undefined, types.int)
+
+
+task(
+    "settlerdeploy",
+    "Deploy of Settler.",
+    async ({ testaccount }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre, testaccount)
+
+        const settler = await deploySettler(hre, signer)
+        console.log(`Settler created: ${settler.address}`);
+        console.log(settler.deployTransaction.hash);
+
+        await settler.deployed()
+    
+    })
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
