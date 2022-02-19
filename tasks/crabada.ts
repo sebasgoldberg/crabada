@@ -533,7 +533,7 @@ export const LOOT_PENDING_CONFIG: LootPendingConfig = {
         override: {
             gasLimit: 1000000,
             maxFeePerGas: BigNumber.from(ONE_GWEI*400),
-            maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*20)
+            maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*35)
         }
     },        
     players: [
