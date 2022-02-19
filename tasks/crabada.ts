@@ -1322,7 +1322,7 @@ task(
     .addOptionalParam("fromblock", "Blocks from.", undefined , types.int)
     .addOptionalParam("toblock", "To from.", undefined , types.int)
     .addOptionalParam("blocksquan", "Quantity ob blocks from fromblock.", 43200 /* 24 hours */ , types.int)
-    .addOptionalParam("teams", "Teams to be considered in the analysis.", "10471,10472,10515,10654,10655,10656,10658,10659,10661" , types.string)
+    .addOptionalParam("teams", "Teams to be considered in the analysis.", LOOT_PENDING_CONFIG.players.flatMap((p)=>p.teams).join(',') , types.string)
     .addOptionalParam("steps", "Step to consider in the distance analysis.", 10 , types.int)
 
 task(
