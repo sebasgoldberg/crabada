@@ -1,0 +1,16 @@
+[Unit]
+Description=Crabada service to provide a Telegram bot.
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Environment="BOT_TOKEN=<Telegram bot token>"
+Type=simple
+Restart=always
+User=cerebro
+ExecStart=/home/cerebro/crabada/services/crabada.telegram.sh
+WorkingDirectory=/home/cerebro/crabada
+
+
+[Install]
+WantedBy=multi-user.target
