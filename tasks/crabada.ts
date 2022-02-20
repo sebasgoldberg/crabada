@@ -695,7 +695,7 @@ task(
 
         // Set interval for updating teams' lock status.
 
-        const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, ()=>{}), 2000);
+        const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, ()=>{}), 1000);
 
         // Listen for CloseGame events to register team for looting
 
