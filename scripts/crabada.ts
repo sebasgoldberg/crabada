@@ -368,7 +368,7 @@ export const deployAttackRouter = async (hre: HardhatRuntimeEnvironment, signer:
 }
 
 export const getOverride = async (hre: HardhatRuntimeEnvironment) => {
-    return ({maxFeePerGas: 40*ONE_GWEI, maxPriorityFeePerGas: ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
+    return ({maxFeePerGas: 100*ONE_GWEI, maxPriorityFeePerGas: ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
 }
 
 export interface TeamInfo {
