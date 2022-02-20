@@ -84,6 +84,7 @@ ${ rewards.CRA }
                     ctx.reply(`
 Team ${ team.id } ${ team.faction }
 props: ${ team.info.props.bp }(${ team.info.props.rbp }) ${ team.info.props.mp }
+secondsToUnlock: ${ team.info.secondsToUnlock }
 
 currentGame: ${ team.info.currentGame }
 attackReinforcements: ${ team.info.gameInfo.attackReinforcements }
