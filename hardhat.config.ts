@@ -39,6 +39,7 @@ const forkingData = FORK_FUJI ? {
 } : undefined
 
 import "./tasks/crabada"
+import "./tasks/telegram"
 import "./tasks/utils"
 
 task("accounts", "Prints the list of accounts", async (args, hre): Promise<void> => {

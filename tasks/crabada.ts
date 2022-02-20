@@ -1635,72 +1635,257 @@ const printTeamStatus = async (hre: HardhatRuntimeEnvironment, team: number) => 
 
 }
 
+interface IDashboardAvaxAccount {
+    address: string,
+    balance: string
+}
+
+interface IDashboardAvax {
+    avaxConsumed: string,
+    looters: IDashboardAvaxAccount[],
+    settler: IDashboardAvaxAccount,
+    reinforcer: IDashboardAvaxAccount
+}
+
+interface IDashboardTeamProps {
+    bp:number,
+    rbp: number,
+    mp: number
+}
+
+interface IDashboardTeam {
+    id: string,
+    faction: TeamFaction,
+    info: {
+        members: string[],
+        props: IDashboardTeamProps,
+        currentGame: string,
+        secondsToUnlock: number,
+        gameInfo: {
+            attackReinforcements: string[],
+            defenseReinforcements: string[],
+            miner: {
+                id: string,
+                faction: TeamFaction,
+                props: IDashboardTeamProps,
+            }
+        }
+    }
+}
+
+interface IDashboardPlayer{
+    rewards: IDashboardRewards,
+    address: string,
+    teams: IDashboardTeam[]
+}
+
+interface IDashboardRewards{
+    TUS: string,
+    CRA: string
+}
+
+interface IDashboardContent {
+    avax: IDashboardAvax,
+    rewards: IDashboardRewards,
+    players: IDashboardPlayer[],
+}
+
+export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardContent> => {
+
+    const getDashboardAvax = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardAvax> => {
+            
+        let avaxConsumed = SETTLER_TARGET_BALANCE
+            .add(REINFORCE_TARGET_BALANCE)
+            .add(LOOTER_TARGET_BALANCE.mul(LOOT_PENDING_AVAX_ACCOUNTS.length))
+        
+        const getAvaxBalance = async (address: string): Promise<IDashboardAvaxAccount> => {
+            return {
+                address,
+                balance: formatEther(await hre.ethers.provider.getBalance(address))
+            }
+        }
+
+        const lootersPromise: Promise<IDashboardAvaxAccount[]> = Promise.all(
+            LOOT_PENDING_AVAX_ACCOUNTS.map(getAvaxBalance)
+        )
+
+        const settlerPromise = getAvaxBalance(SETTLER_ACCOUNT)
+
+        const reinforcerPromise = getAvaxBalance(REINFORCE_ACCOUNT)
+
+        const looters = await lootersPromise
+        const settler = await settlerPromise
+        const reinforcer = await reinforcerPromise
+
+        const avax: IDashboardAvax = {
+            avaxConsumed: formatEther(avaxConsumed
+                .sub(looters.reduce((prev: BigNumber, { balance }) => prev.add(parseEther(balance)), ethers.constants.Zero))
+                .sub(parseEther(settler.balance))
+                .sub(parseEther(reinforcer.balance))
+                ),
+            looters,
+            settler,
+            reinforcer
+        }
+
+        return avax
+    }
+
+    const { tusToken, craToken } = getCrabadaContracts(hre)
+
+    const getDashboardPlayers =async (hre: HardhatRuntimeEnvironment): Promise<IDashboardPlayer[]> => {
+
+        return Promise.all(
+            LOOT_PENDING_CONFIG.players.map( async (player): Promise<IDashboardPlayer> => {
+
+                const playerTusBalancePromise: Promise<BigNumber> = tusToken.balanceOf(player.address)
+                    
+                const playerCraBalancePromise = craToken.balanceOf(player.address)
+    
+                const teamsPromise: Promise<IDashboardTeam[]> = Promise.all(
+                    player.teams.map(async (team): Promise<IDashboardTeam> => {
+                        const { idleGame } = getCrabadaContracts(hre)
+
+                        const timestamp = await currentBlockTimeStamp(hre)
+                    
+                        const { crabadaId1, crabadaId2, crabadaId3, timePoint, currentGameId, lockTo } = await idleGame.getTeamInfo(team)
+                        const battlePoint = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, team)
+                    
+                        const { attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId);
+                    
+                        const { teamId: minerTeam } = await idleGame.getGameBasicInfo(currentGameId)
+                        const { timePoint: minerTimePoint } = await idleGame.getTeamInfo(minerTeam)
+                        const minerBattlePoint = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, minerTeam)
+                    
+                        return {
+                            id: String(team),
+                            faction: battlePoint.teamFaction,
+                            info: {
+                                members: [crabadaId1, crabadaId2, crabadaId3].map(x=>x.toString()),
+                                props: {
+                                    bp: battlePoint.realBP,
+                                    rbp: battlePoint.getRelativeBP(minerBattlePoint.teamFaction),
+                                    mp:timePoint
+                                },
+                                currentGame: currentGameId.toString(),
+                                secondsToUnlock: lockTo-timestamp,
+                                gameInfo:{
+                                    attackReinforcements: [attackId1.toString(), attackId2.toString()],
+                                    defenseReinforcements: [defId1.toString(), defId2.toString()],
+                                    miner: {
+                                        id: minerTeam.toString(),
+                                        faction: minerBattlePoint.teamFaction,
+                                        props: {
+                                            bp: minerBattlePoint.realBP,
+                                            rbp: minerBattlePoint.getRelativeBP(battlePoint.teamFaction),
+                                            mp: minerTimePoint
+                                        }
+                                    }
+                                },
+
+                            }
+                        }
+
+                    })
+                )
+    
+                return {
+                    address: player.address,
+                    rewards: {
+                        TUS: formatEther((await playerTusBalancePromise).sub(PLAYER_TUS_RESERVE)),
+                        CRA: formatEther(await playerCraBalancePromise)
+                    },
+                    teams: await teamsPromise
+                }
+                
+            })
+        )
+
+    }
+
+    const avaxPromise: Promise<IDashboardAvax> = getDashboardAvax(hre)
+    const players: IDashboardPlayer[] = await getDashboardPlayers(hre)
+
+    return {
+        avax: await avaxPromise,
+        rewards: {
+            TUS: formatEther(
+                players.reduce(
+                    (prev, { rewards: { TUS }}) => prev.add(parseEther(TUS)), 
+                    ethers.constants.Zero
+                )
+            ),
+            CRA: formatEther(
+                players.reduce(
+                    (prev, { rewards: { CRA }}) => prev.add(parseEther(CRA)), 
+                    ethers.constants.Zero
+                )
+            )
+        },
+        players,
+    }
+
+}
+
 task(
     "dashboard",
     "Display dashboard with team status.",
     async ({ }, hre: HardhatRuntimeEnvironment) => {
 
-        const { tusToken, craToken } = getCrabadaContracts(hre)
+        const dashboard = await getDashboardContent(hre)
 
         console.log('LOOT_PENDING_AVAX_ACCOUNTS');
 
-        let avaxConsumed = SETTLER_TARGET_BALANCE
-            .add(REINFORCE_TARGET_BALANCE)
-        
-        for (const address of LOOT_PENDING_AVAX_ACCOUNTS){
-            const looterBalance = await hre.ethers.provider.getBalance(address)
-            avaxConsumed = avaxConsumed.add(LOOTER_TARGET_BALANCE).sub(looterBalance)
-            console.log('-', address, formatEther(looterBalance));
+        for (const { address, balance } of dashboard.avax.looters){
+            console.log('-', address, balance);
         }
 
         console.log('SETTLER_ACCOUNT');
-        const settlerBalance = await hre.ethers.provider.getBalance(SETTLER_ACCOUNT)
-        avaxConsumed = avaxConsumed.sub(settlerBalance)
-        console.log('-', SETTLER_ACCOUNT, formatEther(settlerBalance));
+        console.log('-', dashboard.avax.settler.address, dashboard.avax.settler.balance);
 
         console.log('REINFORCE_ACCOUNT');
-        const reinforceBalance = await hre.ethers.provider.getBalance(REINFORCE_ACCOUNT)
-        avaxConsumed = avaxConsumed.sub(reinforceBalance)
-        console.log('-', REINFORCE_ACCOUNT, formatEther(reinforceBalance));
-
-        console.log('');
-        console.log('avaxConsumed', formatEther(avaxConsumed));
-        
-        
+        console.log('-', dashboard.avax.reinforcer.address, dashboard.avax.reinforcer.balance);
 
         console.log('')
 
-        let playersTusBalance = ethers.constants.Zero
-        let playersCraBalance = ethers.constants.Zero
-
-        for (const player of LOOT_PENDING_CONFIG.players){
+        for (const player of dashboard.players){
 
             console.log('')
 
-            const playerTusBalance = ((await tusToken.balanceOf(player.address)) as BigNumber)
-                .sub(PLAYER_TUS_RESERVE)
-            const playerCraBalance = await craToken.balanceOf(player.address)
-
             console.log('Player contract', player.address);
-            console.log('TUS', formatEther(playerTusBalance));
-            console.log('CRA', formatEther(playerCraBalance));
+            console.log('TUS', player.rewards.TUS);
+            console.log('CRA', player.rewards.CRA);
 
             for (const team of player.teams){
 
                 console.log('')
 
-                await printTeamStatus(hre, team)
+                console.log('Team', team.id, team.faction);
+
+                console.log('Team info:')
+                console.log('- Members', team.info.members)
+                console.log('- bp:', team.info.props.bp, '| rbp:', team.info.props.rbp, '| mp:', team.info.props.mp)
+                console.log('- Current Game:', team.info.currentGame)
+                console.log('- Seconds to unlock', team.info.secondsToUnlock)
+            
+                console.log('Game info:')
+                console.log('- Attack crabada reinforcements', team.info.gameInfo.attackReinforcements)
+                console.log('- Defense crabada reinforcements', team.info.gameInfo.defenseReinforcements)
+            
+                console.log('Miner info:')
+                console.log('Team ID', team.info.gameInfo.miner.id, team.info.gameInfo.miner.faction)
+                console.log('- bp:', team.info.gameInfo.miner.props.bp, '| rbp:', team.info.gameInfo.miner.props.rbp, '| mp:', team.info.gameInfo.miner.props.mp)
 
             }
 
-            playersTusBalance = playersTusBalance.add(playerTusBalance)
-            playersCraBalance = playersCraBalance.add(playerCraBalance)
-
         }
 
+        console.log('');
+        console.log('avaxConsumed', dashboard.avax.avaxConsumed);
+
         console.log('')
-        console.log('TUS Balance:', formatEther(playersTusBalance))
-        console.log('CRA Balance:', formatEther(playersCraBalance))
+        console.log('TUS Balance:', dashboard.rewards.TUS)
+        console.log('CRA Balance:', dashboard.rewards.CRA)
 
     })
 
