@@ -42,7 +42,7 @@ export const player1: AccountConfig = {
 
 export const player2: AccountConfig = {
     accountIndex: 0,
-    teams: [ /*10654,*/ 10655, 10656 ],
+    teams: [ 10654, 10655, 10656 ],
     player: '0x24A73065af5991278e71fe0058cd602c502ba41e'
 }
 
@@ -60,7 +60,7 @@ export const player4: AccountConfig = {
 
 export const player5: AccountConfig = {
     accountIndex: 0,
-    teams: [ 12186, 13457 ],
+    teams: [ 12186, 13457, 13654 ],
     player: '0x891cd0c31130C2aF8e37C9bb32CB79770851d537'
 }
 
