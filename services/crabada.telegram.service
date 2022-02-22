@@ -4,6 +4,7 @@ After=network.target
 StartLimitIntervalSec=0
 
 [Service]
+Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<private key operation account>"
 Environment="BOT_TOKEN=<Telegram bot token>"
 Type=simple
 Restart=always

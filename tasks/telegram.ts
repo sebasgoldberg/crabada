@@ -2,14 +2,15 @@ import { task } from "hardhat/config";
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Context, Telegraf } from "telegraf";
-import { getDashboardContent } from "./crabada";
+import { getDashboardContent, getSigner, LOOT_PENDING_CONFIG } from "./crabada";
+import { playerWithdrawErc20 } from "./player";
 
 task(
     "telegram",
     "Run a telegram bot.",
     async ({  }, hre: HardhatRuntimeEnvironment) => {
 
-        const bot = new Telegraf(process.env.BOT_TOKEN)
+        const bot = new Telegraf(process.env.BOT_TOKEN,{handlerTimeout: 300_000 })
 
         function isValidUser(ctx:Context): boolean {
             if (ctx.from 
@@ -98,6 +99,25 @@ props: ${ team.info.gameInfo.miner.props.bp }(${ team.info.gameInfo.miner.props.
 
             })
         })
+
+        bot.hears('withdraw', async (ctx) => {
+
+            if (!isValidUser(ctx)){
+                return
+            }
+
+            const signer = await getSigner(hre)
+
+            const playerAddresses: string[] = LOOT_PENDING_CONFIG.players.map(p=>p.address)
+
+            await playerWithdrawErc20(hre, signer, playerAddresses, 
+                (...data: any[]) => {
+                    console.log(...data)
+                    ctx.reply(data.map(x=>String(x)).join('\n'))
+                }
+            )
+        })
+
 
         bot.launch()
 

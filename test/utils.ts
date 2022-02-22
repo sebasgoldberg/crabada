@@ -43,9 +43,9 @@ export const transferCrabadasFromTeam = async (hre: HardhatRuntimeEnvironment, t
 
   }
 
-  export const logTransactionAndWait = async(txrp: Promise<ethers.providers.TransactionResponse>, confirmations: number) => {
+  export const logTransactionAndWait = async(txrp: Promise<ethers.providers.TransactionResponse>, confirmations: number, log=console.log) => {
     const txr = await txrp
-    console.log(txr.nonce, txr.hash);
+    log(txr.nonce, txr.hash);
     await txr.wait(2)
   }
 

@@ -7,6 +7,7 @@ import { types } from "hardhat/config"
 import { evm_increaseTime, logTransactionAndWait, transferCrabadasFromTeam } from "../test/utils";
 import { BigNumber, Contract, ethers } from "ethers";
 import { getSigner, LOOT_PENDING_CONFIG } from "./crabada";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 task(
     "setupplayertest",
@@ -158,6 +159,40 @@ task(
 
 export const PLAYER_TUS_RESERVE = parseEther('120') 
 
+export const playerWithdrawErc20 = async (
+    hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, 
+    playerAddresses: string[], log=console.log ) => {
+    const pContracts: Contract[] = await Promise.all(
+        playerAddresses.map( pAddress => attachPlayer(hre, pAddress))
+    )
+
+    const override = await getOverride(hre)
+
+    for (const p of pContracts){
+
+        const { tusToken, craToken } = getCrabadaContracts(hre)
+
+        for (const erc20 of [tusToken, craToken]){
+
+            let value: BigNumber = await erc20.balanceOf(p.address)
+
+            if (erc20.address === tusToken.address)
+                value = value.sub(PLAYER_TUS_RESERVE) // Backup value for reinforcements
+
+            if (value.gt(0)){
+                log('player.withdrawERC20(erc20.address, signer.address, value)', erc20.address, signer.address, formatEther(value));
+                
+                await p.connect(signer).callStatic.withdrawERC20(erc20.address, signer.address, value, override)
+                await logTransactionAndWait(p.connect(signer).withdrawERC20(erc20.address, signer.address, value, override), 1, log)
+
+            }
+
+        }
+
+    }
+
+}
+
 task(
     "playerwithdrawerc20",
     "Withdraw TUS and CRA from players.",
@@ -165,36 +200,10 @@ task(
         
         const signer = await getSigner(hre, testaccount)
 
-        const pContracts: Contract[] = await Promise.all(
-            ( players ? 
-                (players as string).split(',') : LOOT_PENDING_CONFIG.players.map(p=>p.address) )
-                    .map( pAddress => attachPlayer(hre, pAddress))
-        )
+        const playerAddresses: string[] = 
+            players ? (players as string).split(',') : LOOT_PENDING_CONFIG.players.map(p=>p.address)
 
-        const override = await getOverride(hre)
-
-        for (const p of pContracts){
-
-            const { tusToken, craToken } = getCrabadaContracts(hre)
-
-            for (const erc20 of [tusToken, craToken]){
-
-                let value: BigNumber = await erc20.balanceOf(p.address)
-
-                if (erc20.address === tusToken.address)
-                    value = value.sub(PLAYER_TUS_RESERVE) // Backup value for reinforcements
-
-                if (value.gt(0)){
-                    console.log('player.withdrawERC20(erc20.address, signer.address, value)', erc20.address, signer.address, formatEther(value));
-                    
-                    await p.connect(signer).callStatic.withdrawERC20(erc20.address, signer.address, value, override)
-                    await logTransactionAndWait(p.connect(signer).withdrawERC20(erc20.address, signer.address, value, override), 1)
-
-                }
-
-            }
-
-        }
+        await playerWithdrawErc20(hre, signer, playerAddresses)
 
     })
     .addOptionalParam("players", "Player contracts addresses (coma separated).", undefined, types.string)

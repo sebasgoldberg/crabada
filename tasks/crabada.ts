@@ -22,7 +22,7 @@ task("gasprice", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await gasPrice(hre), 9))
 })
 
-export const getSigner = async (hre: HardhatRuntimeEnvironment, testaccount: string, signerIndex: number = 0): Promise<SignerWithAddress> => {
+export const getSigner = async (hre: HardhatRuntimeEnvironment, testaccount?: string, signerIndex: number = 0): Promise<SignerWithAddress> => {
     if (testaccount){
         await hre.ethers.provider.send('hardhat_impersonateAccount', [testaccount] );
         const signer: any = await hre.ethers.provider.getSigner(testaccount)
