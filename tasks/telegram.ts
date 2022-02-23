@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Context, Telegraf } from "telegraf";
-import { getDashboardContent, getSigner, LOOT_PENDING_CONFIG } from "./crabada";
+import { getDashboardContent, getSigner, LOOT_PENDING_AVAX_ACCOUNTS, LOOT_PENDING_CONFIG, refillavax, REINFORCE_ACCOUNT, SETTLER_ACCOUNT } from "./crabada";
 import { playerWithdrawErc20 } from "./player";
 
 task(
@@ -116,6 +116,23 @@ props: ${ team.info.gameInfo.miner.props.bp }(${ team.info.gameInfo.miner.props.
                     ctx.reply(data.map(x=>String(x)).join('\n'))
                 }
             )
+        })
+
+        bot.hears('refill', async (ctx) => {
+
+            if (!isValidUser(ctx)){
+                return
+            }
+
+            const signer = await getSigner(hre)
+
+            await refillavax(hre, signer, LOOT_PENDING_AVAX_ACCOUNTS, SETTLER_ACCOUNT, REINFORCE_ACCOUNT,
+                (...data: any[]) => {
+                    console.log(...data)
+                    ctx.reply(data.map(x=>String(x)).join('\n'))
+                }
+            )
+
         })
 
 

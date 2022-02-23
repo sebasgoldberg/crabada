@@ -1528,7 +1528,7 @@ task(
             "0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2",
         ].join(','), types.string)
 
-const LOOT_PENDING_AVAX_ACCOUNTS = [
+export const LOOT_PENDING_AVAX_ACCOUNTS = [
     "0xbfca579D0eB8e294DeAe8C8a94cD3eF3c4836634",
     "0x83Ff016a2e574b2c35d17Fe4302188b192b64344",
     "0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8",
@@ -1536,51 +1536,59 @@ const LOOT_PENDING_AVAX_ACCOUNTS = [
     "0xC72F8A49dfb612302c1F4628f12D2795482D6077"
 ]
 
-const SETTLER_ACCOUNT = "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4"
-const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
+export const SETTLER_ACCOUNT = "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4"
+export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
 const LOOTER_TARGET_BALANCE = parseEther('4')
 const SETTLER_TARGET_BALANCE = parseEther('5')
 const REINFORCE_TARGET_BALANCE = parseEther('2')
 
+export const  refillavax = async (
+    hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, 
+    lootPendingAddresses: string[], settler: string, reinforce: string, log=console.log ) => {
+
+    const override = await getOverride(hre)
+
+    const _refillAvax = async (signer: SignerWithAddress, destination: string, targetAmmount: BigNumber) => {
+        
+        const destinationBalance: BigNumber = await hre.ethers.provider.getBalance(destination);
+
+        const amountToTransfer = targetAmmount.sub(destinationBalance)
+
+        if (amountToTransfer.lte(0))
+            return
+
+        console.log('sendTransaction(to, value)', destination, formatEther(amountToTransfer));
+
+        const txr = await signer.sendTransaction({
+            to: destination, 
+            value: amountToTransfer,
+            ...override
+        })
+
+        console.log(txr.hash);
+
+    }
+
+    for (const destination of lootPendingAddresses)
+        await _refillAvax(signer, destination, LOOTER_TARGET_BALANCE)
+    
+    await _refillAvax(signer, settler, SETTLER_TARGET_BALANCE)
+
+    await _refillAvax(signer, reinforce, REINFORCE_TARGET_BALANCE)
+
+}
+
 task(
     "refillavax",
     "Refill accounts with avax.",
     async ({ lootpending, settler, reinforce }, hre: HardhatRuntimeEnvironment) => {
-        
-        const signer = (await hre.ethers.getSigners())[0]
 
-        const override = await getOverride(hre)
+        const signer = await getSigner(hre)
 
         const lootPendingAddresses: string[] = lootpending.split(',')
 
-        const refillAvax = async (signer: SignerWithAddress, destination: string, targetAmmount: BigNumber) => {
-            
-            const destinationBalance: BigNumber = await hre.ethers.provider.getBalance(destination);
-
-            const amountToTransfer = targetAmmount.sub(destinationBalance)
-
-            if (amountToTransfer.lte(0))
-                return
-
-            console.log('sendTransaction(to, value)', destination, formatEther(amountToTransfer));
-
-            const txr = await signer.sendTransaction({
-                to: destination, 
-                value: amountToTransfer,
-                ...override
-            })
-
-            console.log(txr.hash);
-
-        }
-
-        for (const destination of lootPendingAddresses)
-            await refillAvax(signer, destination, LOOTER_TARGET_BALANCE)
-        
-        await refillAvax(signer, settler, SETTLER_TARGET_BALANCE)
-
-        await refillAvax(signer, reinforce, REINFORCE_TARGET_BALANCE)
+        refillavax(hre, signer, lootPendingAddresses, settler, reinforce)
 
     })
     .addParam("lootpending", "Accounts used in loot pending transactions.", 
