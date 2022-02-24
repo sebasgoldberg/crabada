@@ -100,6 +100,13 @@ props: ${ team.info.gameInfo.miner.props.bp }(${ team.info.gameInfo.miner.props.
             })
         })
 
+        const telegramLogFunction = (ctx) => {
+            return (...data: any[]) => {
+                console.log(...data)
+                ctx.reply(data.map(x=>String(x)).join('\n'))
+            }
+        }
+
         bot.hears('withdraw', async (ctx) => {
 
             if (!isValidUser(ctx)){
@@ -111,10 +118,7 @@ props: ${ team.info.gameInfo.miner.props.bp }(${ team.info.gameInfo.miner.props.
             const playerAddresses: string[] = LOOT_PENDING_CONFIG.players.map(p=>p.address)
 
             await playerWithdrawErc20(hre, signer, playerAddresses, 
-                (...data: any[]) => {
-                    console.log(...data)
-                    ctx.reply(data.map(x=>String(x)).join('\n'))
-                }
+                telegramLogFunction(ctx)
             )
         })
 
@@ -127,10 +131,7 @@ props: ${ team.info.gameInfo.miner.props.bp }(${ team.info.gameInfo.miner.props.
             const signer = await getSigner(hre)
 
             await refillavax(hre, signer, LOOT_PENDING_AVAX_ACCOUNTS, SETTLER_ACCOUNT, REINFORCE_ACCOUNT,
-                (...data: any[]) => {
-                    console.log(...data)
-                    ctx.reply(data.map(x=>String(x)).join('\n'))
-                }
+                telegramLogFunction(ctx)
             )
 
         })

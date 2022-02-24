@@ -1558,7 +1558,7 @@ export const  refillavax = async (
         if (amountToTransfer.lte(0))
             return
 
-        console.log('sendTransaction(to, value)', destination, formatEther(amountToTransfer));
+        log('sendTransaction(to, value)', destination, formatEther(amountToTransfer));
 
         const txr = await signer.sendTransaction({
             to: destination, 
@@ -1566,7 +1566,7 @@ export const  refillavax = async (
             ...override
         })
 
-        console.log(txr.hash);
+        log(txr.hash);
 
     }
 
