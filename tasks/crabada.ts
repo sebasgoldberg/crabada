@@ -987,56 +987,67 @@ task(
 export const START_GAME_ENCODED_OPERATION = '0xe5ed1d59'
 export const START_GAME_EVENT_TOPIC ='0x0eef6f7452b7d2ee11184579c086fb47626e796a83df2b2e16254df60ab761eb'
 
+interface EthFilterLog {
+    transactionHash: string,
+    blockNumber: number,
+    data: string
+}
+interface StartGameEventLog {
+    gameId: BigNumber,
+    teamId: BigNumber,
+    log: EthFilterLog
+}
+
+type StartGameEventTask = (logs: StartGameEventLog[]) => void
+
+export const listenStartGameEvents = async (hre: HardhatRuntimeEnvironment, task: StartGameEventTask, interval: number = 50): Promise<NodeJS.Timer> => {
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    const filter = {
+        fromBlock: 'latest',
+        toBlock: 'latest',
+        address: idleGame.address,
+        topics: [ START_GAME_EVENT_TOPIC ]
+    };
+    
+    const provider = hre.ethers.provider
+    const filterId = await provider.send("eth_newFilter", [filter]);
+
+    return setInterval(async () => {
+        const logs = await provider.send("eth_getFilterChanges", [filterId]);
+
+        const startGameLogs: StartGameEventLog[] = (logs as EthFilterLog[]).map( log => {
+            
+            const gameId = BigNumber.from(log.data.slice(0,66))
+            const teamId = BigNumber.from('0x'+log.data.slice(66,130))
+
+            return {
+                gameId,
+                teamId,
+                log
+            }
+        })
+
+        task(startGameLogs)
+
+    }, interval)
+
+}
+
 task(
     "meassurestartgameevents",
     "Listen StartGame events and meassure the time between block and event reception.",
     async ({ }, hre: HardhatRuntimeEnvironment) => {
         
         await (new Promise(async () => {
-            const { idleGame } = getCrabadaContracts(hre)
-
-            hre.ethers.provider.on('latest', (tx: ethers.Transaction) =>{
-                if (tx.to === idleGame.address &&
-                    tx.data.slice(0,10) == START_GAME_ENCODED_OPERATION){
-
-                    const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
-                    console.log(+new Date()/1000, 'Pending transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
-
-                }
-            })
-
-            idleGame.on( idleGame.filters.StartGame(), async (gameId: BigNumber, teamId: BigNumber, duration: BigNumber, craReward: BigNumber, tusReward: BigNumber, { transactionHash, blockNumber, getBlock }) => {
-                const eventReceivedTimestamp = (+new Date())/1000
-                const { timestamp: blockTimestamp } = await getBlock()
-                const now = (+new Date())/1000
-                console.log(+new Date()/1000, 'StartGame event received.', eventReceivedTimestamp-blockTimestamp, now-blockTimestamp, teamId.toNumber())
-            })        
-
-
-            const filter = {
-                fromBlock: 'latest',
-                toBlock: 'latest',
-                address: idleGame.address,
-                topics: [ START_GAME_EVENT_TOPIC ]
-            };
             
-            const provider = hre.ethers.provider
-            const filterId = await provider.send("eth_newFilter", [filter]);
-            console.log(filterId);
-    
-            await (new Promise(() => {
-    
-                setInterval(async () => {
-                    const logs = await provider.send("eth_getFilterChanges", [filterId]);
-                    for (const log of logs){
-                        const gameId = BigNumber.from((log.data as string).slice(0,66))
-                        const teamId = BigNumber.from('0x'+(log.data as string).slice(66,130))
-                        console.log(+new Date()/1000, "eth_getFilterChanges", log.transactionHash, BigNumber.from(log.blockNumber).toNumber(), teamId.toNumber());
-                    }
-                }, 100)
-    
-            }))
-    
+            const listenInterval = listenStartGameEvents(hre, (logs) => {
+                logs.forEach( ({ log, teamId, gameId }) => {
+                    console.log(+new Date()/1000, "eth_getFilterChanges", log.transactionHash, log.blockNumber, teamId.toString(), gameId.toString());
+                })
+            }, 1000)
+
         }))
 
     })
