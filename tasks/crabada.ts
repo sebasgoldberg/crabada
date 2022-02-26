@@ -832,22 +832,22 @@ task(
 
         }
 
-        //const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
+        const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
 
-        const startGameEventsInterval = await listenStartGameEvents(hre, logs => {
+        // const startGameEventsInterval = await listenStartGameEvents(hre, logs => {
 
-            const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, log: {transactionHash, blockNumber}}) => {
+        //     const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, log: {transactionHash, blockNumber}}) => {
 
-                console.log('start game event', transactionHash, blockNumber, teamId.toString());
+        //         console.log('start game event', transactionHash, blockNumber, teamId.toString());
 
-                return {
-                    teamId,
-                    txHash: transactionHash
-                }
-            })
+        //         return {
+        //             teamId,
+        //             txHash: transactionHash
+        //         }
+        //     })
             
-            attackTeamsThatStartedAGame(teamsAndTheirTransaction)
-        }, 50)
+        //     attackTeamsThatStartedAGame(teamsAndTheirTransaction)
+        // }, 50)
 
 
 
@@ -1009,8 +1009,8 @@ task(
         })
 
         //clearInterval(attackTeamsInterval)
-        //clearInterval(pendingStartGameTransactionInterval)
-        clearInterval(startGameEventsInterval)
+        clearInterval(pendingStartGameTransactionInterval)
+        //clearInterval(startGameEventsInterval)
         idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
         clearInterval(updateLockStatusInterval)
         settleGameInterval && clearInterval(settleGameInterval)
