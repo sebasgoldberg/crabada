@@ -1588,7 +1588,7 @@ task(
 
         const lootPendingAddresses: string[] = lootpending.split(',')
 
-        refillavax(hre, signer, lootPendingAddresses, settler, reinforce)
+        await refillavax(hre, signer, lootPendingAddresses, settler, reinforce)
 
     })
     .addParam("lootpending", "Accounts used in loot pending transactions.", 
