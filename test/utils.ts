@@ -46,7 +46,7 @@ export const transferCrabadasFromTeam = async (hre: HardhatRuntimeEnvironment, t
   export const logTransactionAndWait = async(txrp: Promise<ethers.providers.TransactionResponse>, confirmations: number, log=console.log) => {
     const txr = await txrp
     log(txr.nonce, txr.hash);
-    await txr.wait(2)
+    await txr.wait(confirmations)
   }
 
   export const withdrawTeam = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, addressTo: string, teamId: number): Promise<BigNumber[]> =>{
