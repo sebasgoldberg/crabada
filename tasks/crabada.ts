@@ -710,19 +710,22 @@ task(
 
         let attackIteration = 0
 
-        const addTeamToLootTargets = (txs: ethers.Transaction[]) => {
+        interface TeamAndItsTransaction {
+            teamId: BigNumber,
+            txHash: string
+        }
 
-            if (txs.length == 0){
+        const attackTeamsThatStartedAGame = (teamsAndTheirTransactions: TeamAndItsTransaction[]) => {
+
+
+            if (teamsAndTheirTransactions.length == 0){
                 return
             }
 
             const startedGameTargetsByTeamId: StartedGameTargetsByTeamId = {}
 
-            txs.forEach( tx => {
+            teamsAndTheirTransactions.forEach( ({ teamId, txHash }) => {
 
-                const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
-                console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
-    
                 const targetTeamInfo = teamsThatPlayToLooseByTeamId[teamId.toString()]
     
                 if (!targetTeamInfo){
@@ -753,7 +756,7 @@ task(
                     attacksPerformed: 0,
                 }
     
-                console.log('Pending startGame', tx.hash, 
+                console.log('Pending startGame', txHash, 
                     'Added team to loot targets', teamId.toNumber()
                 );
     
@@ -811,7 +814,42 @@ task(
 
         }
 
-        const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
+        const addTeamToLootTargets = (txs: ethers.Transaction[]) => {
+
+            if (txs.length == 0){
+                return
+            }
+
+            const teamsAndTheirTransactions: TeamAndItsTransaction[] = txs.map( tx => {
+
+                const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
+                console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toNumber());
+                return { teamId, txHash: tx.hash }
+
+            })
+
+            attackTeamsThatStartedAGame(teamsAndTheirTransactions)
+
+        }
+
+        //const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
+
+        const startGameEventsInterval = await listenStartGameEvents(hre, logs => {
+
+            const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, log: {transactionHash, blockNumber}}) => {
+
+                console.log('start game event', transactionHash, blockNumber, teamId.toString());
+
+                return {
+                    teamId,
+                    txHash: transactionHash
+                }
+            })
+            
+            attackTeamsThatStartedAGame(teamsAndTheirTransaction)
+        }, 50)
+
+
 
 
         // Main interval to perform attacks considering the following conditions:
@@ -971,7 +1009,8 @@ task(
         })
 
         //clearInterval(attackTeamsInterval)
-        clearInterval(pendingStartGameTransactionInterval)
+        //clearInterval(pendingStartGameTransactionInterval)
+        clearInterval(startGameEventsInterval)
         idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
         clearInterval(updateLockStatusInterval)
         settleGameInterval && clearInterval(settleGameInterval)
