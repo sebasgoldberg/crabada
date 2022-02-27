@@ -843,7 +843,7 @@ task(
             const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, log: {transactionHash, blockNumber}}) => {
 
                 const _pendingTxDate = pendingTxDate[teamId.toString()]
-                console.log('start game event', transactionHash, blockNumber, teamId.toString(), '| dist:', _pendingTxDate ? ((+new Date())-(+pendingTxDate))/1000 : 0 );
+                console.log('start game event', transactionHash, blockNumber, teamId.toString(), '| dist:', _pendingTxDate ? ((+new Date())-(+_pendingTxDate))/1000 : 0 );
                 delete pendingTxDate[teamId.toString()]
 
                 return {
