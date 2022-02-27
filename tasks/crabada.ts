@@ -814,8 +814,6 @@ task(
 
         }
 
-        const pendingTxDate: { [transaction: string]: Date } = {}
-
         const addTeamToLootTargets = (txs: ethers.Transaction[]) => {
 
             if (txs.length == 0){
@@ -826,7 +824,6 @@ task(
 
                 const teamId = BigNumber.from(`0x${tx.data.slice(-64)}`)
                 console.log('Pending start game transaction', tx.hash, (tx as any).blockNumber, teamId.toString());
-                pendingTxDate[teamId.toString()] = new Date()
 
                 return { teamId, txHash: tx.hash }
 
@@ -838,22 +835,20 @@ task(
 
         const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
 
-        const startGameEventsInterval = await listenStartGameEvents(hre, logs => {
+        // const startGameEventsInterval = await listenStartGameEvents(hre, logs => {
 
-            const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, log: {transactionHash, blockNumber}}) => {
+        //     const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, log: {transactionHash, blockNumber}}) => {
 
-                const _pendingTxDate = pendingTxDate[teamId.toString()]
-                console.log('start game event', transactionHash, blockNumber, teamId.toString(), '| dist:', _pendingTxDate ? ((+new Date())-(+_pendingTxDate))/1000 : 0 );
-                delete pendingTxDate[teamId.toString()]
+        //         console.log('start game event', transactionHash, blockNumber, teamId.toString());
 
-                return {
-                    teamId,
-                    txHash: transactionHash
-                }
-            })
+        //         return {
+        //             teamId,
+        //             txHash: transactionHash
+        //         }
+        //     })
             
-            // attackTeamsThatStartedAGame(teamsAndTheirTransaction)
-        }, 50)
+        //     attackTeamsThatStartedAGame(teamsAndTheirTransaction)
+        // }, 50)
 
 
 
@@ -1016,7 +1011,7 @@ task(
 
         //clearInterval(attackTeamsInterval)
         clearInterval(pendingStartGameTransactionInterval)
-        clearInterval(startGameEventsInterval)
+        // clearInterval(startGameEventsInterval)
         idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
         clearInterval(updateLockStatusInterval)
         settleGameInterval && clearInterval(settleGameInterval)
