@@ -520,6 +520,8 @@ interface LootPendingConfig {
     }
 }
 
+const LOOT_PENDING_maxPriorityFeePerGas = BigNumber.from(ONE_GWEI*35)
+
 export const LOOT_PENDING_CONFIG: LootPendingConfig = {
     maxBlocksPerTeams: 55,
     maxStandardDeviation: 14,
@@ -534,7 +536,7 @@ export const LOOT_PENDING_CONFIG: LootPendingConfig = {
         override: {
             gasLimit: 1000000,
             maxFeePerGas: BigNumber.from(ONE_GWEI*400),
-            maxPriorityFeePerGas: BigNumber.from(ONE_GWEI*35)
+            maxPriorityFeePerGas: LOOT_PENDING_maxPriorityFeePerGas
         }
     },        
     players: [
@@ -565,10 +567,47 @@ export const LOOT_PENDING_CONFIG: LootPendingConfig = {
     ]
 }
 
+const LOOT_PENDING_maxGasPrice = LOOT_PENDING_maxPriorityFeePerGas
+    .add(BigNumber.from(ONE_GWEI*25))
+
+const updateGasPriceFunction = (hre: HardhatRuntimeEnvironment): (() => Promise<void>) =>{
+    return async () => {
+        const gasBaseFee = await baseFee(hre)
+        const maxPriorityFeePerGas = LOOT_PENDING_maxGasPrice
+            .sub(gasBaseFee)
+        LOOT_PENDING_CONFIG.attackTransaction.override.maxPriorityFeePerGas = maxPriorityFeePerGas.lt(ONE_GWEI) ?
+            BigNumber.from(ONE_GWEI) : maxPriorityFeePerGas
+        console.log('maxPriorityFeePerGas updated to', 
+            formatUnits(LOOT_PENDING_CONFIG.attackTransaction.override.maxPriorityFeePerGas, 9),
+            'gwei'
+        );
+    }
+}
+
+task(
+    "testupdategasprice",
+    "Test the update of gas price.",
+    async ({ }, hre: HardhatRuntimeEnvironment) => {
+
+        const updateGasPrice = updateGasPriceFunction(hre)
+        await updateGasPrice()
+
+        setInterval(updateGasPrice, 10_000)
+
+        await new Promise(()=>{
+
+        })
+
+    })
+
 task(
     "lootpending",
     "Loot pending startGame transactions.",
     async ({ blockstoanalyze, firstdefendwindow, testaccount, testmode, debug }, hre: HardhatRuntimeEnvironment) => {
+
+        const updateGasPrice = updateGasPriceFunction(hre)
+        const gasPriceUpdateInterval = setInterval(updateGasPrice, 10_000)
+        await updateGasPrice()
 
         // signer used to settle
         const settleSigner = await getSigner(hre, testaccount)
@@ -1014,6 +1053,7 @@ task(
             }, 1000)
         })
 
+        clearInterval(gasPriceUpdateInterval)
         //clearInterval(attackTeamsInterval)
         clearInterval(pendingStartGameTransactionInterval)
         // clearInterval(startGameEventsInterval)
