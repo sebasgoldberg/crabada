@@ -570,13 +570,16 @@ export const LOOT_PENDING_CONFIG: LootPendingConfig = {
 const LOOT_PENDING_maxGasPrice = LOOT_PENDING_maxPriorityFeePerGas
     .add(BigNumber.from(ONE_GWEI*25))
 
+const LOOT_PENDING_minPriorityFeePerGas = LOOT_PENDING_maxPriorityFeePerGas
+    .add(BigNumber.from(ONE_GWEI*5.1))
+
 const updateGasPriceFunction = (hre: HardhatRuntimeEnvironment): (() => Promise<void>) =>{
     return async () => {
         const gasBaseFee = await baseFee(hre)
         const maxPriorityFeePerGas = LOOT_PENDING_maxGasPrice
             .sub(gasBaseFee)
-        LOOT_PENDING_CONFIG.attackTransaction.override.maxPriorityFeePerGas = maxPriorityFeePerGas.lt(ONE_GWEI) ?
-            BigNumber.from(ONE_GWEI) : maxPriorityFeePerGas
+        LOOT_PENDING_CONFIG.attackTransaction.override.maxPriorityFeePerGas = maxPriorityFeePerGas.lt(LOOT_PENDING_minPriorityFeePerGas) ?
+            BigNumber.from(LOOT_PENDING_minPriorityFeePerGas) : maxPriorityFeePerGas
         console.log('maxPriorityFeePerGas updated to', 
             formatUnits(LOOT_PENDING_CONFIG.attackTransaction.override.maxPriorityFeePerGas, 9),
             'gwei'
