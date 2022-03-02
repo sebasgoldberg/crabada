@@ -36,7 +36,7 @@ export const looter2: AccountConfig = {
 
 export const player1: AccountConfig = {
     accountIndex: 0,
-    teams: [ /*10471,*/ 10472, 10515 ],
+    teams: [ 10471, 10472, 10515 ],
     player: '0xb972ADCAc416Fe6e6a3330c5c374b97046013796'
 }
 
@@ -66,7 +66,7 @@ export const player5: AccountConfig = {
 
 export const player6: AccountConfig = {
     accountIndex: 0,
-    teams: [ 15524 ],
+    teams: [ 15524, 15571 ],
     player: '0x34A872feB1196c324d362754f11939bbc0893b3e'
 }
 
