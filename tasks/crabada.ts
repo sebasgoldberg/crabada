@@ -1637,8 +1637,8 @@ export const LOOT_PENDING_AVAX_ACCOUNTS = [
 export const SETTLER_ACCOUNT = "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4"
 export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
-const LOOTER_TARGET_BALANCE = parseEther('4')
-const SETTLER_TARGET_BALANCE = parseEther('5')
+const LOOTER_TARGET_BALANCE = parseEther('5')
+const SETTLER_TARGET_BALANCE = parseEther('6')
 const REINFORCE_TARGET_BALANCE = parseEther('2')
 
 export const  refillavax = async (
