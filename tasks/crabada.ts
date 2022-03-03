@@ -520,7 +520,7 @@ interface LootPendingConfig {
     }
 }
 
-const LOOT_PENDING_maxPriorityFeePerGas = BigNumber.from(ONE_GWEI*35)
+const LOOT_PENDING_maxPriorityFeePerGas = BigNumber.from(ONE_GWEI*41)
 
 export const LOOT_PENDING_CONFIG: LootPendingConfig = {
     maxBlocksPerTeams: 55,
