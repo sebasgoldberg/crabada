@@ -575,11 +575,22 @@ const updateGasPriceFunction = (hre: HardhatRuntimeEnvironment): (() => Promise<
     return async () => {
         const gasBaseFee = await baseFee(hre)
         const gasPrice = gasBaseFee.add(LOOT_PENDING_maxPriorityFeePerGas)
-        LOOT_PENDING_CONFIG.attackTransaction.override.maxPriorityFeePerGas = LOOT_PENDING_maxGasPriceWithPriority.lt(gasPrice) ?
-            LOOT_PENDING_minPriorityFeePerGas : LOOT_PENDING_maxPriorityFeePerGas
+
+        if (gasPrice.lte(LOOT_PENDING_maxGasPriceWithPriority)){
+            LOOT_PENDING_CONFIG.attackTransaction.override.maxPriorityFeePerGas = LOOT_PENDING_maxPriorityFeePerGas
+        }
+        else{
+            const maxPriorityFeePerGas = LOOT_PENDING_maxGasPriceWithPriority.sub(gasBaseFee)
+            LOOT_PENDING_CONFIG.attackTransaction.override.maxPriorityFeePerGas = 
+                maxPriorityFeePerGas.lt(LOOT_PENDING_minPriorityFeePerGas) ?
+                    LOOT_PENDING_minPriorityFeePerGas : maxPriorityFeePerGas
+        }
+
         console.log('maxPriorityFeePerGas updated to', 
             formatUnits(LOOT_PENDING_CONFIG.attackTransaction.override.maxPriorityFeePerGas, 9),
-            'gwei'
+            'gwei',
+            '| base',
+            formatUnits(gasBaseFee, 9),
         );
     }
 }
