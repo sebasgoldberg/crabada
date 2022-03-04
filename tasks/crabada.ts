@@ -520,7 +520,7 @@ interface LootPendingConfig {
     }
 }
 
-const LOOT_PENDING_maxPriorityFeePerGas = BigNumber.from(ONE_GWEI*41)
+const LOOT_PENDING_maxPriorityFeePerGas = BigNumber.from(ONE_GWEI*35)
 
 export const LOOT_PENDING_CONFIG: LootPendingConfig = {
     maxBlocksPerTeams: 55,
@@ -616,9 +616,9 @@ task(
     "Loot pending startGame transactions.",
     async ({ blockstoanalyze, firstdefendwindow, testaccount, testmode, debug }, hre: HardhatRuntimeEnvironment) => {
 
-        const updateGasPrice = updateGasPriceFunction(hre)
-        const gasPriceUpdateInterval = setInterval(updateGasPrice, 10_000)
-        await updateGasPrice()
+        // const updateGasPrice = updateGasPriceFunction(hre)
+        // const gasPriceUpdateInterval = setInterval(updateGasPrice, 10_000)
+        // await updateGasPrice()
 
         // signer used to settle
         const settleSigner = await getSigner(hre, testaccount)
@@ -1064,7 +1064,7 @@ task(
             }, 1000)
         })
 
-        clearInterval(gasPriceUpdateInterval)
+        // clearInterval(gasPriceUpdateInterval)
         //clearInterval(attackTeamsInterval)
         clearInterval(pendingStartGameTransactionInterval)
         // clearInterval(startGameEventsInterval)
