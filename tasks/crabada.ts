@@ -620,6 +620,13 @@ task(
         // const gasPriceUpdateInterval = setInterval(updateGasPrice, 10_000)
         // await updateGasPrice()
 
+        const now = new Date()
+
+        if (now.getUTCDate()>=7 && now.getUTCHours()>=7){
+            console.log('Anti-Bot patch is LIVE!');
+            return
+        }
+
         // signer used to settle
         const settleSigner = await getSigner(hre, testaccount)
 
