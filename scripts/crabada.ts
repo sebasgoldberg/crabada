@@ -105,10 +105,10 @@ export const abi = {
 }
   
 export const contractAddress = {
-    IdleGame: '0x82a85407BD612f52577909F4A58bfC6873f14DA8',
-    tusToken: '0xf693248F96Fe03422FEa95aC0aFbBBc4a8FdD172',
-    craToken: '0xa32608e873f9ddef944b24798db69d80bbb4d1ed',
-    crabada: '0x1b7966315ef0259de890f38f1bdb95acc03cacdd',
+    IdleGame: '0x801B5Bb19e9052dB964b94ed5b4d6730D8FcCA25',
+    tusToken: '0x00000000000000000000000000000000000000F2',
+    craToken: '0xC1350BB5b4FDB0abcd83aFEc3ce68983cf4d11B9',
+    crabada: '0x4eC7DBB43c666aa264EE53e53E2BC21a1E00A204',
 }
 
 export const getCrabadaContracts = (hre: HardhatRuntimeEnvironment) => {
@@ -368,7 +368,7 @@ export const deployAttackRouter = async (hre: HardhatRuntimeEnvironment, signer:
 }
 
 export const getOverride = async (hre: HardhatRuntimeEnvironment) => {
-    return ({maxFeePerGas: 250*ONE_GWEI, maxPriorityFeePerGas: ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
+    return ({gasPrice: 25*ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
 }
 
 export interface TeamInfo {

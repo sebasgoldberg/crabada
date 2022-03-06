@@ -134,6 +134,14 @@ export default {
       chainId: 43114,
       accounts: USE_MAINNET_ACCOUNT ? [ ...MAINNET_AVAX_MAIN_ACCOUNTS_PKS, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS,
       timeout: 60000,
+    },
+
+    swimmertest: {
+      url: 'https://testnet-rpc.swimmer.network/ext/bc/2Sk6j8TYVQc2oR1TtUz64EWHAYjDUoDQ4hpbu6FMN2JBKC77xa/rpc',
+      gasPrice: 25000000000,
+      chainId: 73771,
+      accounts: USE_MAINNET_ACCOUNT ? [ ...MAINNET_AVAX_MAIN_ACCOUNTS_PKS, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS,
+      timeout: 60000,
     }
   },
   nodeId: NODE_ID,
