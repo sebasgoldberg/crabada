@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { API, attachAttackRouter, baseFee, compareBigNumbers, compareBigNumbersDescending, currentBlockTimeStamp, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, loot, mineStep, ONE_GWEI, queryFilterByPage, reinforce, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
+import { API, attachAttackRouter, baseFee, compareBigNumbers, compareBigNumbersDescending, currentBlockTimeStamp, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, loot, mineStep, ONE_GWEI, queryFilterByPage, reinforce, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
@@ -34,27 +34,163 @@ export const getSigner = async (hre: HardhatRuntimeEnvironment, testaccount?: st
         return (await hre.ethers.getSigners())[signerIndex]
 }
 
+task("transfercrabadas", "Transfer the specified creabadas.", async ({ to, crabadas }, hre): Promise<void> => {
+
+    const signer = await getSigner(hre);
+
+    const crabadasIds = (crabadas as string).split(',').map( x => Number(x) )
+
+    const { crabada } = getCrabadaContracts(hre)
+
+    const override = await getOverride(hre)
+
+    for (const c of crabadasIds){
+        try {
+            console.log("safeTransferFrom(signer.address, to, c)", signer.address, to, c);
+            await crabada.connect(signer).callStatic["safeTransferFrom(address,address,uint256)"](signer.address, to, c)
+            await logTransactionAndWait(
+                crabada.connect(signer)["safeTransferFrom(address,address,uint256)"](signer.address, to, c, override), 
+                1
+            )
+        } catch (error) {
+            console.error(error);
+        }
+    }
+    
+})
+    .addParam("to", "Destination address.", undefined, types.string)
+    .addParam("crabadas", "Crabadas to transfer.", undefined, types.string)
+
+task("depositcrabadas", "Deposit crabadas to idle game.", async ({ crabadas }, hre): Promise<void> => {
+
+    const signer = await getSigner(hre);
+
+    const crabadasIds = (crabadas as string).split(',').map( x => Number(x) )
+
+    const { idleGame, crabada } = getCrabadaContracts(hre)
+
+    const override = await getOverride(hre)
+
+    if (!(await crabada.isApprovedForAll(signer.address, idleGame.address))){
+        console.log('crabada.connect(signer).callStatic.setApprovalForAll(idleGame.address, true)', idleGame.address);
+        await crabada.connect(signer).callStatic.setApprovalForAll(idleGame.address, true, override)
+        await logTransactionAndWait(
+            crabada.connect(signer).setApprovalForAll(idleGame.address, true, override),
+            2
+        )
+    }
+
+    console.log("idleGame.callStatic.deposit(crabadasIds)", crabadasIds);
+    await idleGame.connect(signer).callStatic.deposit(crabadasIds, override);
+    await logTransactionAndWait(
+        idleGame.connect(signer).deposit(crabadasIds, override),
+        2
+    )
+
+})
+    .addParam("crabadas", "Crabadas to deposit.", undefined, types.string)
+
+task("addcrabadastoteam", "Add crabadas to team for the specified signer.", async ({ teamid, crabadas }, hre): Promise<void> => {
+
+    const signer = await getSigner(hre);
+
+    const crabadasIds = (crabadas as string).split(',').map( x => Number(x) )
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    const override = await getOverride(hre)
+
+    if (teamid) {
+
+        let position = 0
+
+        for (const c of crabadasIds){
+            console.log("iddleGame.addCrabadaToTeam(teamId, position, crabadaId);", teamid, position, c);
+            await idleGame.connect(signer).callStatic.addCrabadaToTeam(teamid, position, c, override)
+            await logTransactionAndWait(
+                idleGame.connect(signer).addCrabadaToTeam(teamid, position, c, override), 
+                1
+            )
+            position++
+        }
+
+    } else {
+
+        console.log("iddleGame.createTeam(crabadaId1, crabadaId2, crabadaId3, override)", ...crabadasIds);
+        await idleGame.connect(signer).callStatic.createTeam(...crabadasIds, override)
+        await logTransactionAndWait(
+            idleGame.connect(signer).createTeam(...crabadasIds, override),
+            1
+        )
+
+    }
+
+})
+    .addOptionalParam("teamid", "The Team ID. If not supplied, then the team will be created.", undefined, types.string)
+    .addParam("crabadas", "Crabadas to transfer.", undefined, types.string)
+
+
+interface MineConfig{
+    signerIndex: number,
+    teams: number[]
+}
+
+
+const MINE_CONFIG: MineConfig[] = [
+    {
+        signerIndex: 0,
+        teams: [ 3286, 3759, 5032 ],
+    },
+    {
+        signerIndex: 1,
+        teams: [ 5355, 5357, 6152 ],
+    },
+    {
+        signerIndex: 2,
+        teams: [ 7449, 8157, 9236 ],
+    },
+    {
+        signerIndex: 3,
+        teams: [ 16767, 16768, 16769 ],
+    },
+    {
+        signerIndex: 4,
+        teams: [ 16761, 16762, 16763 ],
+    },
+    {
+        signerIndex: 5,
+        teams: [ 16764, 16765, 16766 ],
+    },
+]
+
 // npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 task(
     "minestep",
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
     async ({ minerteamid, attackercontract, attackerteamid, wait, testmineraccount, testattackeraccounts, accountindex }, hre: HardhatRuntimeEnvironment) => {
         
-        const minerSigner = await getSigner(hre, testmineraccount, accountindex);
-        const attackSigners = attackerteamid ?
-            testattackeraccounts ? 
-                (await Promise.all((testattackeraccounts as string).split(',').map( testattackeraccount => getSigner(hre, testattackeraccount) )))
-                : (await hre.ethers.getSigners()).slice(accountindex+1)
-            : []
+        // const attackSigners = attackerteamid ?
+        //     testattackeraccounts ? 
+        //         (await Promise.all((testattackeraccounts as string).split(',').map( testattackeraccount => getSigner(hre, testattackeraccount) )))
+        //         : (await hre.ethers.getSigners()).slice(accountindex+1)
+        //     : []
 
-        try {
-            await mineStep(hre, minerteamid, attackercontract, attackerteamid, wait, minerSigner, attackSigners)
-        } catch (error) {
-            console.error(`ERROR: ${error.toString()}`)
-        }
+        await Promise.all(
+            MINE_CONFIG.map(async({signerIndex, teams}) => {
+                const minerSigner = await getSigner(hre, undefined, signerIndex);
+                try {
+                    for (const teamid of teams){
+                        await mineStep(hre, teamid, undefined, undefined, wait, minerSigner, [])
+                    }                        
+                } catch (error) {
+                    console.error(String(error));
+                }
+            })
+        ) 
+
 
     })
-    .addParam("minerteamid", "The team ID to use for mining.")
+    .addOptionalParam("minerteamid", "The teams IDs to use for mining. Separated by ','", undefined, types.string)
     .addOptionalParam("attackercontract", "The attacker contract address.", undefined, types.string)
     .addOptionalParam("attackerteamid", "The team ID to use for attack.", undefined, types.int)
     .addOptionalParam("wait", "Number of confirmation before continue execution.", 10, types.int)

@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { TeamBattlePoints } from "../scripts/teambp";
 
 // Start test block
-describe.only('Team BP & Factions', function () {
+describe('Team BP & Factions', function () {
 
   beforeEach(async function () {
 
