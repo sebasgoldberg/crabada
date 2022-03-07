@@ -620,13 +620,6 @@ task(
         // const gasPriceUpdateInterval = setInterval(updateGasPrice, 10_000)
         // await updateGasPrice()
 
-        const now = new Date()
-
-        if (now.getUTCDate()>=7 && now.getUTCHours()>=7){
-            console.log('Anti-Bot patch is LIVE!');
-            return
-        }
-
         // signer used to settle
         const settleSigner = await getSigner(hre, testaccount)
 
@@ -692,7 +685,7 @@ task(
         
         let settleInProgress = false
 
-        const settleGames = async(log: (typeof console.log))=>{
+        const settleGames = async(log: (typeof console.log) = ()=>{})=>{
 
             if (settleInProgress)
                 return
@@ -703,7 +696,7 @@ task(
 
                 for (const p of playerTeamPairs.filter(p=> (!p.locked && !p.settled))){
                     const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
-                    await settleGame(idleGame.connect(settleSigner), currentGameId, 1, ()=>{})
+                    await settleGame(idleGame.connect(settleSigner), currentGameId, 1, log)
                 }
                     
             } catch (error) {
@@ -717,6 +710,13 @@ task(
         }
 
         !testmode && (await settleGames(console.log))
+
+        const now = new Date()
+
+        if (now.getUTCDate()>=7 && now.getUTCHours()>=7){
+            console.log('Anti-Bot patch is LIVE!');
+            return
+        }
 
         const settleGameInterval = !testmode && setInterval(() => settleGames(()=>{}), 2000)
 
