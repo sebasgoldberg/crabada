@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { API, attachAttackRouter, baseFee, compareBigNumbers, compareBigNumbersDescending, currentBlockTimeStamp, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, loot, mineStep, ONE_GWEI, queryFilterByPage, reinforce, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
+import { API, attachAttackRouter, baseFee, compareBigNumbers, compareBigNumbersDescending, crabadaIdToBattlePointPromise, crabadaIdToMinePointPromise, currentBlockTimeStamp, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, loot, mineStep, ONE_GWEI, queryFilterByPage, reinforce, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
@@ -1967,6 +1967,7 @@ interface IDashboardTeam {
                 faction: TeamFaction,
                 props: IDashboardTeamProps,
             },
+            minersRevange?: number
         }
     }
 }
@@ -2181,6 +2182,25 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
                         const { timePoint: attackerTimePoint } = await idleGame.getTeamInfo(attackTeamId)
                         const attackerBattlePoint = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, attackTeamId)
                     
+                        const sum = (prev, current) => prev+current
+                    
+                        const attackReinforceBattlePoint = (await Promise.all([ attackId1, attackId2 ].map(crabadaIdToBattlePointPromise)))
+                            .reduce(sum,0)
+                        
+                        const defenseReinforceBattlePoint = (await Promise.all([ defId1, defId2 ].map( crabadaIdToBattlePointPromise )))
+                            .reduce(sum,0)
+
+                        const defenseReinforceMinePoint = (await Promise.all([ defId1, defId2 ].map( crabadaIdToMinePointPromise )))
+                            .reduce(sum,0)
+
+                        const bpDiff = attackerBattlePoint.getRelativeBP(battlePoint.teamFaction)+attackReinforceBattlePoint
+                            -battlePoint.getRelativeBP(attackerBattlePoint.teamFaction)-defenseReinforceBattlePoint
+                        const minersRevange = 
+                            bpDiff <=0 ? 
+                                100 :
+                                7 + (((timePoint+defenseReinforceMinePoint)/5)-56)*1.25
+                                    + 20/(bpDiff^0.5)
+
                         return {
                             id: String(team),
                             faction: battlePoint.teamFaction,
@@ -2204,7 +2224,8 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
                                             rbp: attackerBattlePoint.getRelativeBP(battlePoint.teamFaction),
                                             mp: attackerTimePoint
                                         }
-                                    }
+                                    },
+                                    minersRevange
                                 },
 
                             }
@@ -2352,6 +2373,7 @@ task(
                 console.log('Game info:')
                 console.log('- Attack crabada reinforcements', team.info.gameInfo.attackReinforcements)
                 console.log('- Defense crabada reinforcements', team.info.gameInfo.defenseReinforcements)
+                console.log("- Miner's revange %", team.info.gameInfo.minersRevange)
             
                 console.log('Other team info:')
                 console.log('Team ID', team.info.gameInfo.otherTeam.id, team.info.gameInfo.otherTeam.faction)

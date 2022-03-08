@@ -1002,11 +1002,17 @@ const _shoudReinforce = (attackId1: BigNumber, attackId2: BigNumber, defId1: Big
 interface CrabadaAPIInfo{ 
     hp: number, 
     damage: number, 
-    armor: number 
+    armor: number,
+    speed: number,
+    critical: number,
 }
 
 export const _battlePoint = ({ hp, damage, armor }: CrabadaAPIInfo): number => {
     return hp+damage+armor
+}
+
+export const _minePoint = ({ speed, critical }: CrabadaAPIInfo): number => {
+    return speed+critical
 }
 
 import axios from "axios";
@@ -1125,6 +1131,20 @@ export class CrabadaAPI{
 
 export const API = new CrabadaAPI()
 
+export const crabadaIdToBattlePointPromise = async(crabadaId): Promise<number> => {
+    if (crabadaId.isZero())
+        return 0
+    const crabadaInfo = await API.getCrabadaInfo(crabadaId) // https://api.crabada.com/public/crabada/info/18410 -> const { hp, damage, armor} response.result
+    return _battlePoint(crabadaInfo)
+}
+
+export const crabadaIdToMinePointPromise = async(crabadaId): Promise<number> => {
+    if (crabadaId.isZero())
+        return 0
+    const crabadaInfo = await API.getCrabadaInfo(crabadaId) // https://api.crabada.com/public/crabada/info/18410 -> const { hp, damage, armor} response.result
+    return _minePoint(crabadaInfo)
+}
+
 export const getReinforcementMinBattlePoints = async (hre: HardhatRuntimeEnvironment,
     teamId: BigNumber, reinforceAttack: boolean): Promise<number> => {
 
@@ -1147,13 +1167,6 @@ export const getReinforcementMinBattlePoints = async (hre: HardhatRuntimeEnviron
 
     const otherBattlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, otherTeam)
     
-    const crabadaIdToBattlePointPromise = async(crabadaId): Promise<number> => {
-        if (crabadaId.isZero())
-            return 0
-        const crabadaInfo = await API.getCrabadaInfo(crabadaId) // https://api.crabada.com/public/crabada/info/18410 -> const { hp, damage, armor} response.result
-        return _battlePoint(crabadaInfo)
-    }
-
     const sum = (prev, current) => prev+current
 
     const attackReinforceBattlePoint = (await Promise.all([ attackId1, attackId2 ].map(crabadaIdToBattlePointPromise)))
