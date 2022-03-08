@@ -13,6 +13,7 @@ import { logTransactionAndWait, withdrawTeam } from "../test/utils";
 import { ClassNameByCrabada, classNameFromDna, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { assert } from "console";
 import { PLAYER_TUS_RESERVE } from "./player";
+import express from "express"
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -1088,8 +1089,6 @@ task(
         // }, 50)
 
 
-
-
         // Main interval to perform attacks considering the following conditions:
         // 1) Apply only for looter teams are unlocked
         // 2) Targets should have battlePoint lower than the maximum looterTeam target battlePoint.
@@ -1314,8 +1313,8 @@ export const listenStartGameEvents = async (hre: HardhatRuntimeEnvironment, task
 }
 
 task(
-    "meassurestartgameevents",
-    "Listen StartGame events and meassure the time between block and event reception.",
+    "listenstartgameevents",
+    "Listen StartGame events.",
     async ({ }, hre: HardhatRuntimeEnvironment) => {
         
         await (new Promise(async () => {
