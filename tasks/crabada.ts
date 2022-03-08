@@ -146,7 +146,7 @@ const MINE_CONFIG: MineConfig[] = [
     {
         signerIndex: 1,
         address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-        teams: [ 5355, 5357, 6152 ],
+        teams: [ 5355, /*5357,*/ 6152 ],
     },
     {
         signerIndex: 2,
