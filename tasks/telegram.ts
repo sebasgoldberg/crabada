@@ -91,8 +91,8 @@ currentGame: ${ team.info.currentGame }
 attackReinforcements: ${ team.info.gameInfo.attackReinforcements }
 defenseReinforcements: ${ team.info.gameInfo.defenseReinforcements }
 
-Miner: ${ team.info.gameInfo.miner.id } ${ team.info.gameInfo.miner.faction }
-props: ${ team.info.gameInfo.miner.props.bp }(${ team.info.gameInfo.miner.props.rbp }) ${ team.info.gameInfo.miner.props.mp }
+Miner: ${ team.info.gameInfo.otherTeam.id } ${ team.info.gameInfo.otherTeam.faction }
+props: ${ team.info.gameInfo.otherTeam.props.bp }(${ team.info.gameInfo.otherTeam.props.rbp }) ${ team.info.gameInfo.otherTeam.props.mp }
                     `)
                     
                 })
