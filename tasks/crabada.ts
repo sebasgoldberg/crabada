@@ -609,8 +609,6 @@ task(
     "Reinforce process.",
     async ({ testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
-        const classNameByCrabada: ClassNameByCrabada = await getClassNameByCrabada(hre)
-
         for (const {accountIndex, teams, player} of REINFORCE_CONFIG){
 
             const signer = await getSigner(hre, testaccount, accountIndex)
@@ -623,7 +621,41 @@ task(
 
                 try {
 
-                    const tr = await reinforce(hre, looterTeamId, signer, player, classNameByCrabada, console.log, testmode);
+                    const tr = await reinforce(hre, looterTeamId, signer, player, console.log, testmode);
+
+                } catch (error) {
+                    
+                    console.error('ERROR', String(error));
+                    
+                }
+
+            }
+
+        }
+
+    })
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
+    .addOptionalParam("testmode", "Test mode", true, types.boolean)
+
+
+task(
+    "reinforcedefense",
+    "Reinforce defense process.",
+    async ({ testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+
+        for (const {signerIndex, teams} of MINE_CONFIG){
+
+            const signer = await getSigner(hre, testaccount, signerIndex)
+
+            console.log('Reinforce for signer', signer.address);
+
+            for (const minerTeamId of teams){
+    
+                console.log('Reinforce for team id', minerTeamId);
+
+                try {
+
+                    const tr = await reinforce(hre, minerTeamId, signer, undefined, console.log, testmode);
 
                 } catch (error) {
                     

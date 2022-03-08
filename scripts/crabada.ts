@@ -982,19 +982,19 @@ const createAttackStrategy = async (
     }
 
 
-const _shoudReinforce = (attackId1: BigNumber, attackId2: BigNumber, defId1: BigNumber, defId2: BigNumber): boolean => {
+const _shoudReinforce = (attackId1: BigNumber, attackId2: BigNumber, defId1: BigNumber, defId2: BigNumber, reinforceAttack: boolean): boolean => {
 
     if (defId1.isZero())
-        return false
+        return reinforceAttack ? false : true
 
     if (attackId1.isZero())
-        return true
+        return reinforceAttack ? true : false
 
     if (defId2.isZero())
-        return false
+        return reinforceAttack ? false : true
 
     if (attackId2.isZero())
-        return true
+        return reinforceAttack ? true : false
 
     return false
 }
@@ -1126,19 +1126,26 @@ export class CrabadaAPI{
 export const API = new CrabadaAPI()
 
 export const getReinforcementMinBattlePoints = async (hre: HardhatRuntimeEnvironment,
-    looterTeamId: BigNumber, classNameByCrabada: ClassNameByCrabada): Promise<number> => {
+    teamId: BigNumber, reinforceAttack: boolean): Promise<number> => {
 
-    const { idleGame, crabada } = getCrabadaContracts(hre)
+    const { idleGame } = getCrabadaContracts(hre)
 
-    const { currentGameId } = await idleGame.getTeamInfo(looterTeamId)
+    const { currentGameId } = await idleGame.getTeamInfo(teamId)
 
-    const looterBattlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamId(idleGame, looterTeamId, classNameByCrabada)
+    const teamBattlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, teamId)
 
-    const { teamId: minerTeamId } = await idleGame.getGameBasicInfo(currentGameId)
-
-    const { attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId)
+    const { attackId1, attackId2, defId1, defId2, attackTeamId } = await idleGame.getGameBattleInfo(currentGameId)
     
-    const minerBattlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamId(idleGame, minerTeamId, classNameByCrabada)
+    let otherTeam = hre.ethers.constants.Zero
+
+    if (reinforceAttack){
+        const { teamId } = await idleGame.getGameBasicInfo(currentGameId)
+        otherTeam = teamId
+    } else {
+        otherTeam = attackTeamId
+    }
+
+    const otherBattlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, otherTeam)
     
     const crabadaIdToBattlePointPromise = async(crabadaId): Promise<number> => {
         if (crabadaId.isZero())
@@ -1154,12 +1161,23 @@ export const getReinforcementMinBattlePoints = async (hre: HardhatRuntimeEnviron
     
     const defenseReinforceBattlePoint = (await Promise.all([ defId1, defId2 ].map( crabadaIdToBattlePointPromise )))
         .reduce(sum,0)
+
+    let otherReinforceBattlePoint = 0
+    let teamReinforceBattlePoint = 0
+
+    if (reinforceAttack){
+        teamReinforceBattlePoint = attackReinforceBattlePoint
+        otherReinforceBattlePoint = defenseReinforceBattlePoint
+    } else {
+        teamReinforceBattlePoint = defenseReinforceBattlePoint
+        otherReinforceBattlePoint = attackReinforceBattlePoint
+    }
     
-    const minBattlePointNeeded = minerBattlePoint.getRelativeBP(looterBattlePoint.teamFaction)
-        +defenseReinforceBattlePoint
+    const minBattlePointNeeded = otherBattlePoint.getRelativeBP(teamBattlePoint.teamFaction)
+        +otherReinforceBattlePoint
         +1
-        -looterBattlePoint.getRelativeBP(minerBattlePoint.teamFaction)
-        -attackReinforceBattlePoint
+        -teamBattlePoint.getRelativeBP(otherBattlePoint.teamFaction)
+        -teamReinforceBattlePoint
     
     return minBattlePointNeeded
 
@@ -1258,7 +1276,7 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 
 export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     currentGameId: BigNumber, minRealBattlePointNeeded: number,
-    signer: SignerWithAddress, player: string|undefined, testMode=true): Promise<TransactionResponse|undefined> => {
+    signer: SignerWithAddress, player: string|undefined, testMode=true, reinforceAttack: boolean): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
     
@@ -1270,6 +1288,8 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
         maxPriorityFeePerGas: ONE_GWEI
     }
 
+    const reinforceMethodName = reinforceAttack ? 'reinforceAttack' : 'reinforceDefense'
+
     for (const { id: crabadaId, price: borrowPrice } of borrowOptions){
 
         if (player){
@@ -1278,12 +1298,12 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     
             try {
     
-                console.log('playerContract.reinforceAttack(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
+                console.log('playerContract.', reinforceMethodName, '(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
     
-                await playerContract.connect(signer).callStatic.reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+                await playerContract.connect(signer).callStatic[reinforceMethodName](currentGameId, crabadaId, borrowPrice, override)
     
                 if (!testMode){
-                    const tr: TransactionResponse = await playerContract.connect(signer).reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+                    const tr: TransactionResponse = await playerContract.connect(signer)[reinforceMethodName](currentGameId, crabadaId, borrowPrice, override)
             
                     console.log('Transaction hash', tr.hash);
                 
@@ -1293,6 +1313,9 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
             } catch (error) {
                 
                 console.error('ERROR when trying to reinforce:', String(error));
+
+                if (testMode)
+                    return
 
             }
     
@@ -1300,12 +1323,12 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     
             try {
 
-                console.log('idleGame.reinforceAttack(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
+                console.log('idleGame.', reinforceMethodName, '(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
         
-                await idleGame.connect(signer).callStatic.reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+                await idleGame.connect(signer).callStatic[reinforceMethodName](currentGameId, crabadaId, borrowPrice, override)
         
                 if (!testMode){
-                    const tr: TransactionResponse = await idleGame.connect(signer).reinforceAttack(currentGameId, crabadaId, borrowPrice, override)
+                    const tr: TransactionResponse = await idleGame.connect(signer)[reinforceMethodName](currentGameId, crabadaId, borrowPrice, override)
             
                     console.log('Transaction hash', tr.hash);
                 
@@ -1315,6 +1338,9 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
             } catch (error) {
                 
                 console.error('ERROR when trying to reinforce:', String(error));
+
+                if (testMode)
+                    return
 
             }
         
@@ -1325,13 +1351,12 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
 }
 
 export const reinforce = async (hre: HardhatRuntimeEnvironment,
-    looterTeamId: number, signer: SignerWithAddress, player: string|undefined,
-    classNameByCrabada: ClassNameByCrabada,
+    teamId: number, signer: SignerWithAddress, player: string|undefined,
     log: (typeof console.log) = console.log, testMode=true): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre);
 
-    if (!(await isTeamLocked(hre, idleGame, looterTeamId)))
+    if (!(await isTeamLocked(hre, idleGame, teamId)))
         return
 
     if (!testMode){
@@ -1339,27 +1364,32 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
         await tr?.wait(5)
     }
 
-    const { currentGameId } = await idleGame.getTeamInfo(looterTeamId)
+    const { currentGameId } = await idleGame.getTeamInfo(teamId)
 
     log('currentGameId', currentGameId.toString())
 
     if (currentGameId.isZero())
         return
 
-    const { attackId1, attackId2, defId1, defId2 } = await idleGame.getGameBattleInfo(currentGameId)
+    const { attackId1, attackId2, defId1, defId2, attackTeamId } = await idleGame.getGameBattleInfo(currentGameId)
+
+    if ((attackTeamId as BigNumber).isZero())
+        return
+
+    const reinforceAttack = (attackTeamId as BigNumber).eq(teamId)
 
     log('attackId1, attackId2, defId1, defId2', [ attackId1, attackId2, defId1, defId2 ].map(x => x.toString()))
 
-    if (!_shoudReinforce(attackId1, attackId2, defId1, defId2))
+    if (!_shoudReinforce(attackId1, attackId2, defId1, defId2, reinforceAttack))
         return
 
     const reinforcementMinBattlePoints: number = await getReinforcementMinBattlePoints(
-        hre, BigNumber.from(looterTeamId), classNameByCrabada
+        hre, BigNumber.from(teamId), reinforceAttack
     )
 
     log('reinforcementMinBattlePoints', reinforcementMinBattlePoints)
 
-    return await doReinforce(hre, currentGameId, reinforcementMinBattlePoints, signer, player, testMode)
+    return await doReinforce(hre, currentGameId, reinforcementMinBattlePoints, signer, player, testMode, reinforceAttack)
 
 }
 
