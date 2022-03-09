@@ -478,6 +478,10 @@ const lootLoop = async (
 
 }
 
+const existsAnyTeamSettled = (playerTeamPairs: PlayerTeamPair[], testmode: boolean): boolean => {
+    return (playerTeamPairs.filter( p => p.settled || testmode ).length == 0)
+}
+
 const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
     players: [
         { 
@@ -506,6 +510,7 @@ class AttackServer {
     pendingResponses: PendingResponse[] = []
     pendingAttacks: PendingAttacks = {}
 
+    // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
     constructor(){
 
         this.app.use(express.json());
@@ -513,8 +518,17 @@ class AttackServer {
         this.app.use(express.static(`${ __dirname }/../frontend`));
 
         this.app.post('/captcha/load/', async (req, res) => {
+
             console.log('/captcha/load/')
             console.log(req.body);
+
+            // if (!existsAnyTeamSettled(playerTeamPairs, testmode)){
+            //     res.status(401)
+            //     res.json({
+            //         message: "ALL TEAMS ARE BUSY."
+            //     })
+            // }
+
             await new Promise(resolve => {
                 this.pendingResponses.push({
                     requester: req.body.requester,
