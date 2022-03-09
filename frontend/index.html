@@ -22,7 +22,7 @@
             $.ajax({
                 url: '/captcha/verify/',
                 method: 'POST',
-                data: {
+                data: JSON.stringify({
                     game_id: gameId,
                     user_address: looterAddress, // OK
                     team_id: looterTeamId, // OK
@@ -30,8 +30,9 @@
                     pass_token: captchaResult.pass_token, // OK(2.response.pass_token)
                     gen_time: captchaResult.gen_time, // OK(2.response.gen_time)
                     captcha_output: captchaResult.captcha_output, // OK(2.response.captcha_output)
-                },
+                }),
                 dataType: 'json',
+                contentType: "application/json; charset=utf-8",
                 success: function (data) {
                     console.log(data);
                 },
@@ -96,10 +97,11 @@
         $.ajax({
                 url: '/captcha/load/',
                 method: 'GET',
-                data: {
+                data: JSON.stringify({
                     requester: 'test',
-                },
+                }),
                 dataType: 'json',
+                contentType: "application/json; charset=utf-8",
                 success: function (data) {
                     console.log(data);
                     loadCaptcha(+new Date(), data.game_id, data.user_address, data.team_id)
