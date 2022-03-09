@@ -32,8 +32,8 @@
                     captcha_output: captchaResult.captcha_output, // OK(2.response.captcha_output)
                 },
                 dataType: 'json',
-                success: function (res) {
-                    console.log(res);
+                success: function (data) {
+                    console.log(data);
                 },
                 error: function (error){
                     console.error(error);
@@ -101,7 +101,7 @@
                 },
                 dataType: 'json',
                 success: function (data) {
-                    console.log(res);
+                    console.log(data);
                     loadCaptcha(+new Date(), data.game_id, data.user_address, data.team_id)
                 },
                 error: function (error){
