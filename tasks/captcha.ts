@@ -589,16 +589,21 @@ class AttackServer {
 
     }
 
-    hasPendingAttack(requester: string, gameId: string, looterTeamId: string){
+    hasPendingAttack(requester: string, gameId: string, looterTeamId: string): boolean{
+        console.log('this.pendingAttacks', this.pendingAttacks);
+        console.log('gameId', gameId);
+        console.log('looterTeamId', looterTeamId);
+
         return (
             this.pendingAttacks[gameId] 
-            && (this.pendingAttacks[gameId].indexOf(looterTeamId) >= 0)
+            && (this.pendingAttacks[gameId].includes(looterTeamId))
         )
     }
 
     addPendingAttack(requester: string, gameId: string, looterTeamId: string){
         this.pendingAttacks[gameId] = this.pendingAttacks[gameId] || []
         this.pendingAttacks[gameId].push(looterTeamId)
+        console.log('this.pendingAttacks', this.pendingAttacks);
     }
 
     sendCaptchaDataResponse(p: PlayerTeamPair, t: Target){
