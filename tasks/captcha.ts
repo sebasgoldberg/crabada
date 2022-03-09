@@ -3,7 +3,7 @@ import { assert } from "console";
 import { BigNumber, Contract, ethers } from "ethers";
 import { task, types } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { getCrabadaContracts, getTeamsThatPlayToLooseByTeamId, isTeamLocked, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
+import { getCrabadaContracts, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { getClassNameByCrabada, getSigner, listenStartGameEvents } from "./crabada";
 
@@ -18,6 +18,14 @@ interface Player {
 
 interface LootCaptchaConfig {
     players: Player[],
+    attackTransaction: {
+        override: {
+            gasLimit: number,
+            // gasPrice: BigNumber,
+            maxFeePerGas: BigNumber,
+            maxPriorityFeePerGas: BigNumber,
+        }
+    }
 }
 
 type LootFunction = (
@@ -489,7 +497,14 @@ const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
             teams: [ 5357 ],
             signerIndex: 2,
         }
-    ]
+    ],
+    attackTransaction: {
+        override: {
+            gasLimit: 1000000,
+            maxFeePerGas: BigNumber.from(ONE_GWEI*400),
+            maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
+        }
+    }
 }
 
 interface PendingResponse {
@@ -511,7 +526,9 @@ class AttackServer {
     pendingAttacks: PendingAttacks = {}
 
     // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
-    constructor(){
+    constructor(hre: HardhatRuntimeEnvironment){
+
+        const { idleGame } = getCrabadaContracts(hre)
 
         this.app.use(express.json());
 
@@ -586,16 +603,37 @@ class AttackServer {
                     }
                 })
     
-                console.log(attackResponse.data);
+                console.log('SUCCESS trying to register attack', attackResponse.data);
                 res.status(attackResponse.status)
                 res.json(attackResponse.data)
 
+                // TODO Move attack transaction code to an independent task.
+                const { signature, expire_time } = attackResponse.data
+
+                const looterSigner = (await hre.ethers.getSigners()).filter( s => s.address == user_address)[0]
+
+                try {
+                    console.log('looterSigner', looterSigner.address)
+                    console.log('idleGame.attack(game_id, team_id, expire_time, signature)', game_id, team_id, expire_time, signature);
+                    await idleGame.connect(looterSigner).callStatic.attack(
+                        BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature, 
+                        LOOT_CAPTCHA_CONFIG.attackTransaction.override
+                    )
+                    const txr: ethers.providers.TransactionResponse = await idleGame.connect(looterSigner).attack(
+                        BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature,
+                        LOOT_CAPTCHA_CONFIG.attackTransaction.override
+                    )
+                    console.log('txr.hash', txr.hash);
+                } catch (error) {
+                    console.error('Error trying to attack', String(error));
+                }
+
             } catch (error) {
 
-                console.error('ERROR trying to register attack', error);
+                console.error('ERROR trying to register attack', error.response.data);
                 
-                res.status(401)
-                res.json(String(error))
+                res.status(error.response.status)
+                res.json(String(error.response.data))
 
             }
 
@@ -671,7 +709,7 @@ task(
     "Loot using captcha.",
     async ({ blockstoanalyze, firstdefendwindow, testmode }, hre: HardhatRuntimeEnvironment) => {
 
-        const attackServer = new AttackServer()
+        const attackServer = new AttackServer(hre)
 
         const returnCaptchaData: LootFunction = (
             unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
