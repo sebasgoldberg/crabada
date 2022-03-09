@@ -608,7 +608,7 @@ class AttackServer {
                 res.json(attackResponse.data)
 
                 // TODO Move attack transaction code to an independent task.
-                const { signature, expire_time } = attackResponse.data
+                const { signature, expire_time } = attackResponse.data.result
 
                 const looterSigner = (await hre.ethers.getSigners()).filter( s => s.address == user_address)[0]
 
