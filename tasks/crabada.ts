@@ -396,6 +396,25 @@ task(
     .addParam("teamid", "Team ID which have a game to settle.", undefined, types.int)
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
+task(
+    "closegame",
+    "Close current game for team id.",
+    async ({ teamid }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre)
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        const { currentGameId } = await idleGame.getTeamInfo(teamid)
+
+        const override = await getOverride(hre)
+
+        console.log(`closeGame(gameId: ${currentGameId})`);
+        await idleGame.connect(signer).callStatic.closeGame(currentGameId, override)
+        await logTransactionAndWait(idleGame.connect(signer).closeGame(currentGameId, override), 1)
+
+    })
+    .addParam("teamid", "Team ID which have a game to settle.", undefined, types.int)
 
 task(
     "ownerof",

@@ -493,9 +493,34 @@ const existsAnyTeamSettled = (playerTeamPairs: PlayerTeamPair[], testmode: boole
 export const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
     players: [
         {
+            signerIndex: 1,
+            address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
+            teams: [ 3286, 3759, 5032 ],
+        },
+        {
             signerIndex: 2,
             address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-            teams: [ 5357, ],
+            teams: [ 5355, 5357, 6152 ],
+        },
+        {
+            signerIndex: 3,
+            address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
+            teams: [ 7449, 8157, 9236 ],
+        },
+        {
+            signerIndex: 4,
+            address: '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4',
+            teams: [ 16767, 16768, 16769 ],
+        },
+        {
+            signerIndex: 5,
+            address: '0x83Ff016a2e574b2c35d17Fe4302188b192b64344',
+            teams: [ 16761, 16762, 16763 ],
+        },
+        {
+            signerIndex: 6,
+            address: '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8',
+            teams: [ 16764, 16765, 16766 ],
         },
     ],
     attackTransaction: {
@@ -690,13 +715,28 @@ class AttackServer {
         pendingResponse.resolveResponse(undefined)
     }
 
+    recentTeams = []
+
     returnCaptchaData(unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[], targets: Target[]){
 
         const targetsOrderByGameIdDescending = targets.sort((a, b) => b.gameId < a.gameId ? -1 : b.gameId > a.gameId ? 1 : 0 )
+
+        const playerTeamPairsOrderByNotInRecentTeams = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.sort((a, b) => {
+            const aInRecentTeams = this.recentTeams.includes(a.teamId.toString())
+            const bInRecentTeams = this.recentTeams.includes(b.teamId.toString())
+            return aInRecentTeams == bInRecentTeams ? 0 : aInRecentTeams ? 1 : -1
+        })
+
         for (const t of targetsOrderByGameIdDescending){
-            for (const p of unlockedPlayerTeamPairsWithEnoughBattlePointSorted){
-                if (p.battlePoint.gt(t.battlePoint))
+            for (const p of playerTeamPairsOrderByNotInRecentTeams){
+                if (p.battlePoint.gt(t.battlePoint)){
                     this.sendCaptchaDataResponse(p, t);
+                    this.recentTeams.push(p.teamId.toString())
+                    if (this.recentTeams.length>2){
+                        this.recentTeams.pop()
+                    }
+                    return
+                }
             }
         }
 
