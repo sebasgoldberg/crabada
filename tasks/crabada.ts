@@ -9,11 +9,11 @@ import { BigNumber, Contract, ethers } from "ethers";
 import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig, player1, player2, player3, player4, player5, player6,  } from "../config/nodes";
 
 import "./player"
+import "./captcha"
 import { logTransactionAndWait, withdrawTeam } from "../test/utils";
 import { ClassNameByCrabada, classNameFromDna, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { assert } from "console";
 import { PLAYER_TUS_RESERVE } from "./player";
-import express from "express"
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -462,7 +462,7 @@ const MIN_BATTLE_POINTS = 564
 const MAX_BATTLE_POINTS = 712
 const STEP_BATTLE_POINTS = (MAX_BATTLE_POINTS-MIN_BATTLE_POINTS)/10
 
-const getClassNameByCrabada = async (hre: HardhatRuntimeEnvironment): Promise<ClassNameByCrabada> => {
+export const getClassNameByCrabada = async (hre: HardhatRuntimeEnvironment): Promise<ClassNameByCrabada> => {
 
     const { crabada } = getCrabadaContracts(hre)
 

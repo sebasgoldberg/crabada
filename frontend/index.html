@@ -20,11 +20,12 @@
         function getTransactionAndSendIt(captchaResult, gameId, looterAddress, looterTeamId){
 
             $.ajax({
-                url: '/public/idle/attack/'+gameId,
+                url: '/captcha/verify/',
                 method: 'POST',
                 data: {
-                    user_address: "0xe90a22064f415896f1f72e041874da419390cc6d", // OK
-                    team_id: "5357", // OK
+                    game_id: gameId,
+                    user_address: looterAddress, // OK
+                    team_id: looterTeamId, // OK
                     lot_number: captchaResult.lot_number, // OK(2.response.lot_number)
                     pass_token: captchaResult.pass_token, // OK(2.response.pass_token)
                     gen_time: captchaResult.gen_time, // OK(2.response.gen_time)
@@ -41,7 +42,7 @@
 
         }
 
-        function loadCaptcha(timestamp, gameId) {
+        function loadCaptcha(timestamp, gameId, looterAddress, looterTeamId) {
 
             initGeetest4({
                 captchaId: CAPTCHA_ID,
@@ -79,7 +80,7 @@
                     console.log(captchaResult);
 
                     // TODO set looter address and looter team ID.
-                    getTransactionAndSendIt(captchaResult, gameId, "0xe90a22064f415896f1f72e041874da419390cc6d", "5357")
+                    getTransactionAndSendIt(captchaResult, gameId, looterAddress, looterTeamId)
 
                 }).onError(function () {
 
@@ -92,8 +93,21 @@
 
         }
 
-        // TODO set game ID.
-        loadCaptcha(+new Date(), 2111618)
+        $.ajax({
+                url: '/captcha/load/',
+                method: 'GET',
+                data: {
+                    requester: 'test',
+                },
+                dataType: 'json',
+                success: function (res) {
+                    console.log(res);
+                    loadCaptcha(+new Date(), 2111618, "0xe90a22064f415896f1f72e041874da419390cc6d", "5357")
+                },
+                error: function (error){
+                    console.error(error);
+                }
+        })
 
     </script>
 </body>
