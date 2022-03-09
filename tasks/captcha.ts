@@ -608,8 +608,8 @@ class AttackServer {
         this.addPendingAttack(pendingResponse.requester, t.gameId.toString(), p.teamId.toString())
         const captchaData = {
             user_address: p.playerAddress,
-            team_id: p.teamId,
-            game_id: t.gameId
+            team_id: p.teamId.toString(),
+            game_id: t.gameId.toString()
         }
         pendingResponse.res.json(captchaData)
         console.log('Sent captcha data to', pendingResponse.requester, captchaData);

@@ -100,9 +100,9 @@
                     requester: 'test',
                 },
                 dataType: 'json',
-                success: function (res) {
+                success: function (data) {
                     console.log(res);
-                    loadCaptcha(+new Date(), 2111618, "0xe90a22064f415896f1f72e041874da419390cc6d", "5357")
+                    loadCaptcha(+new Date(), data.game_id, data.user_address, data.team_id)
                 },
                 error: function (error){
                     console.error(error);
