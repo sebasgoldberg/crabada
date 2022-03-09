@@ -490,13 +490,13 @@ const existsAnyTeamSettled = (playerTeamPairs: PlayerTeamPair[], testmode: boole
     return (playerTeamPairs.filter( p => p.settled || testmode ).length == 0)
 }
 
-const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
+export const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
     players: [
-        { 
-            address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-            teams: [ 5357 ],
+        {
             signerIndex: 2,
-        }
+            address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
+            teams: [ 5357, ],
+        },
     ],
     attackTransaction: {
         override: {

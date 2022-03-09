@@ -14,6 +14,7 @@ import { logTransactionAndWait, withdrawTeam } from "../test/utils";
 import { ClassNameByCrabada, classNameFromDna, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { assert } from "console";
 import { PLAYER_TUS_RESERVE } from "./player";
+import { LOOT_CAPTCHA_CONFIG } from "./captcha";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -608,11 +609,11 @@ const REINFORCE_CONFIG: AccountConfig[] = [
 task(
     "reinforce",
     "Reinforce process.",
-    async ({ testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
+    async ({ testmode }, hre: HardhatRuntimeEnvironment) => {
 
-        for (const {accountIndex, teams, player} of REINFORCE_CONFIG){
+        for (const {teams, signerIndex} of LOOT_CAPTCHA_CONFIG.players){
 
-            const signer = await getSigner(hre, testaccount, accountIndex)
+            const signer = await getSigner(hre, undefined, signerIndex)
 
             console.log('Reinforce for signer', signer.address);
 
@@ -622,7 +623,7 @@ task(
 
                 try {
 
-                    const tr = await reinforce(hre, looterTeamId, signer, player, console.log, testmode);
+                    const tr = await reinforce(hre, looterTeamId, signer, undefined, console.log, testmode);
 
                 } catch (error) {
                     
@@ -635,7 +636,6 @@ task(
         }
 
     })
-    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
 
 
