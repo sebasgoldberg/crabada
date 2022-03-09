@@ -513,6 +513,8 @@ class AttackServer {
         this.app.use(express.static(`${ __dirname }/../frontend`));
 
         this.app.get('/captcha/load/', async (req, res) => {
+            console.log('/captcha/load/')
+            console.log(req.body);
             await new Promise(resolve => {
                 this.pendingResponses.push({
                     requester: req.body.requester,
@@ -535,6 +537,8 @@ class AttackServer {
 
         this.app.post('/captcha/verify/', async (req, res) => {
             const reqData: AttackRequestData = req.body
+            console.log('/captcha/verify/')
+            console.log(reqData);
             const { requester, game_id, user_address, team_id, lot_number, pass_token, gen_time, captcha_output } = reqData
             if (!this.hasPendingAttack(requester, game_id, team_id)){
                 res.json({
