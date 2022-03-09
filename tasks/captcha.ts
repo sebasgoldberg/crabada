@@ -512,7 +512,7 @@ class AttackServer {
 
         this.app.use(express.static(`${ __dirname }/../frontend`));
 
-        this.app.get('/captcha/load/', async (req, res) => {
+        this.app.post('/captcha/load/', async (req, res) => {
             console.log('/captcha/load/')
             console.log(req.body);
             await new Promise(resolve => {
@@ -559,21 +559,34 @@ class AttackServer {
                 }
             }
 
-            const attackResponse = await axios.put(`https://idle-api.crabada.com/public/idle/attack/${ game_id }`, {
-                user_address, team_id, lot_number, pass_token, gen_time, captcha_output
-            }, {
-                headers: {
-                    authority: 'idle-api.crabada.com',
-                    // TODO Add mechanism to autenticate.
-                    authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDY3Mzg4MjMsImV4cCI6MTY0OTMzMDgyMywiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.Ojcg4qWlVI87PtAPsyy7f3EEVU57etATDgYsdCfIJM0',
-                    origin: 'https://play.crabada.com'
-                }
-            })
+            try {
 
-            console.log(attackResponse.data);
+                const attackResponse = await axios.put(`https://idle-api.crabada.com/public/idle/attack/${ game_id }`, {
+                    user_address, team_id, lot_number, pass_token, gen_time, captcha_output
+                }, {
+                    headers: {
+                        authority: 'idle-api.crabada.com',
+                        // TODO Add mechanism to autenticate.
+                        authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDY3Mzg4MjMsImV4cCI6MTY0OTMzMDgyMywiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.Ojcg4qWlVI87PtAPsyy7f3EEVU57etATDgYsdCfIJM0',
+                        origin: 'https://play.crabada.com'
+                    }
+                })
+    
+                console.log(attackResponse.data);
+                res.status(attackResponse.status)
+                res.json(attackResponse.data)
 
-            res.status(attackResponse.status)
-            res.json(attackResponse.data)
+            } catch (error) {
+
+                console.error('ERROR trying to register attack', error);
+                
+                res.status(401)
+                res.json(String(error))
+
+            }
+
+            
+
 
             // ERROR: {"error_code":"BAD_REQUEST","message":"Captcha validate failed"}
             // OK: {
