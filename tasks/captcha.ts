@@ -748,7 +748,7 @@ class AttackServer {
     }
 
     sendCaptchaDataResponse(p: PlayerTeamPair, t: Target){
-        const pendingResponse = this.pendingResponses.pop()
+        const pendingResponse = this.pendingResponses.shift()
         if (!pendingResponse)
             return
         this.addPendingAttack(pendingResponse.requester, t.gameId.toString(), p.teamId.toString())
@@ -776,14 +776,20 @@ class AttackServer {
 
         for (const t of targetsOrderByGameIdDescending){
             for (const p of playerTeamPairsOrderByNotInRecentTeams){
+
                 if (p.battlePoint.gt(t.battlePoint)){
+
                     this.sendCaptchaDataResponse(p, t);
                     this.recentTeams.push(p.teamId.toString())
-                    if (this.recentTeams.length>2){
-                        this.recentTeams.pop()
-                    }
-                    return
+
+                    if (this.recentTeams.length>2)
+                        this.recentTeams.shift()
+
+                    if (this.pendingResponses.length == 0)
+                        return
+
                 }
+
             }
         }
 
