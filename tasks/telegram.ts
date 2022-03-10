@@ -44,6 +44,7 @@ task(
             const {
                 avax,
                 rewards,
+                players
             } = await getDashboardContent(hre)
 
             ctx.reply(`
@@ -55,9 +56,6 @@ ${ avax.looters.map( l => l.balance ).join('\n') }
 
 SETTLER 
 ${ avax.settler.balance }
-
-REINFORCER 
-${ avax.reinforcer.balance }
             `)
 
             ctx.reply(`
@@ -67,6 +65,18 @@ ${ rewards.TUS }
 CRA Rewards
 ${ rewards.CRA }
             `)
+
+            const secondsToUnlock: number[] = players
+                .flatMap( ({ teams }) => teams.map( ({ info: { secondsToUnlock }}) => secondsToUnlock ) )
+
+            ctx.reply(`
+Players unlocked
+${ secondsToUnlock.filter( x => x < 0 ).length }
+
+Seconds To Unlock
+${ secondsToUnlock.sort() }
+            `)
+
         })
 
         bot.command('players', async (ctx) => {
