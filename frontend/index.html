@@ -7,6 +7,7 @@
 
 <body>
     <div id="status"></div>
+    <div id="result"></div>
     <div id="captcha"></div>
     <script>
 
@@ -36,11 +37,13 @@
                 contentType: "application/json; charset=utf-8",
                 success: function (data) {
                     console.log(data);
-                    setTimeout(()=>{ location.reload(); }, 3000)
+                    setTimeout(()=>{ location.reload(); }, 1500)
+                    $('#result').text('GANASTE!!! 🤑')
                 },
                 error: function (error){
                     console.error(error);
-                    setTimeout(()=>{ location.reload(); }, 3000)
+                    setTimeout(()=>{ location.reload(); }, 1500)
+                    $('#result').text('SEGUI PARTICIPANDO... 😒')
                 }
             })
 
