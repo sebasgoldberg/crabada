@@ -75,7 +75,7 @@ Players unlocked
 ${ secondsToUnlock.filter( x => x < 0 ).length }
 
 Seconds To Unlock
-${ secondsToUnlock.sort() }
+${ secondsToUnlock.sort((a,b)=> a<b?-1:a>b?1:0) }
             `)
 
         })
