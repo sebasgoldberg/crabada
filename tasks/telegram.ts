@@ -2,7 +2,8 @@ import { task } from "hardhat/config";
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Context, Telegraf } from "telegraf";
-import { getDashboardContent, getSigner, LOOT_PENDING_AVAX_ACCOUNTS, LOOT_PENDING_CONFIG, refillavax, REINFORCE_ACCOUNT, SETTLER_ACCOUNT } from "./crabada";
+import { LOOT_CAPTCHA_CONFIG } from "./captcha";
+import { getDashboardContent, getSigner, LOOT_PENDING_AVAX_ACCOUNTS, LOOT_PENDING_CONFIG, refillavax, REINFORCE_ACCOUNT, SETTLER_ACCOUNT, withdrawRewards } from "./crabada";
 import { playerWithdrawErc20 } from "./player";
 
 task(
@@ -123,13 +124,12 @@ props: ${ team.info.gameInfo.otherTeam.props.bp }(${ team.info.gameInfo.otherTea
                 return
             }
 
-            const signer = await getSigner(hre)
+            try {
+                await withdrawRewards(hre, telegramLogFunction(ctx))                
+            } catch (error) {
+                telegramLogFunction(ctx)(String(error))
+            }
 
-            const playerAddresses: string[] = LOOT_PENDING_CONFIG.players.map(p=>p.address)
-
-            await playerWithdrawErc20(hre, signer, playerAddresses, 
-                telegramLogFunction(ctx)
-            )
         })
 
         bot.hears('refill', async (ctx) => {
@@ -138,11 +138,11 @@ props: ${ team.info.gameInfo.otherTeam.props.bp }(${ team.info.gameInfo.otherTea
                 return
             }
 
-            const signer = await getSigner(hre)
-
-            await refillavax(hre, signer, LOOT_PENDING_AVAX_ACCOUNTS, SETTLER_ACCOUNT, REINFORCE_ACCOUNT,
-                telegramLogFunction(ctx)
-            )
+            try {
+                await refillavax(hre, telegramLogFunction(ctx))
+            } catch (error) {
+                telegramLogFunction(ctx)(String(error))
+            }
 
         })
 

@@ -1813,47 +1813,47 @@ task(
     })
     .addOptionalParam("operationaddress", "Operation account address.", OPERATION_ADDRESS, types.string)
 
-task(
-    "withdrawrewards",
-    "Withdraw rewards to operation account.",
-    async ({ rewardsfrom }, hre: HardhatRuntimeEnvironment) => {
-        
-        const { tusToken, craToken } = getCrabadaContracts(hre)
+export const withdrawRewards = async (hre: HardhatRuntimeEnvironment, log=console.log) => {
 
-        const signer = (await hre.ethers.getSigners())[0]
+    const { tusToken, craToken } = getCrabadaContracts(hre)
 
-        const rewardsTo = signer.address
+    const signer = (await hre.ethers.getSigners())[0]
 
-        const override = await getOverride(hre)
+    const rewardsTo = signer.address
 
-        const fromAddresses = rewardsfrom.split(',')
+    const override = await getOverride(hre)
 
-        for (const from of fromAddresses){
+    const fromAddresses = LOOT_CAPTCHA_CONFIG.players.map(p=>p.address)
 
-            for (const erc20 of [tusToken, craToken]){
+    for (const from of fromAddresses){
 
-                    let value: BigNumber = await erc20.balanceOf(from)
+        for (const erc20 of [tusToken, craToken]){
 
-                    if (erc20.address === tusToken.address)
-                        value = value.sub(parseEther('240')) // Backup value for reinforcements
+                let value: BigNumber = await erc20.balanceOf(from)
 
-                    if (value.gt(0)){
-                        console.log('erc20.transferFrom(from, rewardsto, value)', from, rewardsTo, formatEther(value));
-                        
-                        await erc20.connect(signer).callStatic.transferFrom(from, rewardsTo, value, override)
-                        await erc20.connect(signer).transferFrom(from, rewardsTo, value, override)
-                    }
+                if (erc20.address === tusToken.address)
+                    value = value.sub(parseEther('120')) // Backup value for reinforcements
 
-            }
+                if (value.gt(0)){
+                    log('erc20.transferFrom(from, rewardsto, value)', from, rewardsTo, formatEther(value));
+                    await erc20.connect(signer).callStatic.transferFrom(from, rewardsTo, value, override)
+                    await logTransactionAndWait(erc20.connect(signer).transferFrom(from, rewardsTo, value, override), 1, log)
+                }
 
         }
 
+    }
+
+}
+
+task(
+    "withdrawrewards",
+    "Withdraw rewards to operation account.",
+    async ({  }, hre: HardhatRuntimeEnvironment) => {
+        
+        await withdrawRewards(hre)
+
     })
-    .addParam("rewardsfrom", "Accounts that recieves the rewards (',': coma separeted).", 
-        [
-            "0xE90A22064F415896F1F72e041874Da419390CC6D",
-            "0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2",
-        ].join(','), types.string)
 
 export const LOOT_PENDING_AVAX_ACCOUNTS = [
     "0xbfca579D0eB8e294DeAe8C8a94cD3eF3c4836634",
@@ -1866,12 +1866,14 @@ export const LOOT_PENDING_AVAX_ACCOUNTS = [
 export const SETTLER_ACCOUNT = "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4"
 export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
-const LOOTER_TARGET_BALANCE = parseEther('3')
+const LOOTER_TARGET_BALANCE = parseEther('2')
 const SETTLER_TARGET_BALANCE = parseEther('6')
 
-export const  refillavax = async (
-    hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, 
-    lootPendingAddresses: string[], settler: string, reinforce: string, log=console.log ) => {
+export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.log ) => {
+
+    const signer = await getSigner(hre)
+
+    const lootPendingAddresses: string[] = LOOT_CAPTCHA_CONFIG.players.map(p=>p.address)
 
     const override = await getOverride(hre)
 
@@ -1886,20 +1888,18 @@ export const  refillavax = async (
 
         log('sendTransaction(to, value)', destination, formatEther(amountToTransfer));
 
-        const txr = await signer.sendTransaction({
+        await logTransactionAndWait(signer.sendTransaction({
             to: destination, 
             value: amountToTransfer,
             ...override
-        })
-
-        log(txr.hash);
+        }), 1, log) 
 
     }
 
     for (const destination of lootPendingAddresses)
         await _refillAvax(signer, destination, LOOTER_TARGET_BALANCE)
     
-    await _refillAvax(signer, settler, SETTLER_TARGET_BALANCE)
+    await _refillAvax(signer, SETTLER_ACCOUNT, SETTLER_TARGET_BALANCE)
 
 }
 
@@ -1908,17 +1908,9 @@ task(
     "Refill accounts with avax.",
     async ({ lootpending, settler, reinforce }, hre: HardhatRuntimeEnvironment) => {
 
-        const signer = await getSigner(hre)
-
-        const lootPendingAddresses: string[] = lootpending.split(',')
-
-        await refillavax(hre, signer, lootPendingAddresses, settler, reinforce)
+        await refillavax(hre)
 
     })
-    .addParam("lootpending", "Accounts used in loot pending transactions.", 
-        LOOT_PENDING_AVAX_ACCOUNTS.join(','), types.string)
-    .addParam("settler", "Settler account.", SETTLER_ACCOUNT, types.string)
-    .addParam("reinforce", "Reinforce account.", REINFORCE_ACCOUNT, types.string)
 
 task(
     "withdrawteam",
