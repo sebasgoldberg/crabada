@@ -94,11 +94,15 @@
 
         }
 
+        const params = new Proxy(new URLSearchParams(window.location.search), {
+            get: (searchParams, prop) => searchParams.get(prop),
+        });
+
         $.ajax({
                 url: '/captcha/load/',
                 method: 'POST',
                 data: JSON.stringify({
-                    requester: 'test',
+                    requester: params.requester || 'no-identity',
                 }),
                 dataType: 'json',
                 contentType: "application/json; charset=utf-8",

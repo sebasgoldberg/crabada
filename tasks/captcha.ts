@@ -571,12 +571,36 @@ class AttackServer {
             //     })
             // }
 
+            const { requester }: { requester: string } = req.body
+            let indexToDelete: number = undefined
+
             await new Promise(resolve => {
-                this.pendingResponses.push({
-                    requester: req.body.requester,
-                    res,
-                    resolveResponse: resolve
-                })    
+                
+                this.pendingResponses.forEach( (value, index) => {
+                    if (value.requester == requester){
+                        indexToDelete = index
+                    }
+                })
+
+                if (indexToDelete == undefined){
+
+                    this.pendingResponses.push({
+                        requester: req.body.requester,
+                        res,
+                        resolveResponse: resolve
+                    })
+
+                } else {
+
+                    this.pendingResponses[indexToDelete].resolveResponse(undefined)
+                    this.pendingResponses[indexToDelete] = {
+                        requester: req.body.requester,
+                        res,
+                        resolveResponse: resolve
+                    }
+
+                }
+
             })
         })
 

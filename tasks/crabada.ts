@@ -1802,7 +1802,7 @@ task(
                 if (allowance.lt(hre.ethers.constants.MaxUint256.div(2))){
 
                     await erc20.connect(signer).callStatic.approve(operationaddress, hre.ethers.constants.MaxUint256, override)
-                    await erc20.connect(signer).approve(operationaddress, hre.ethers.constants.MaxUint256, override)
+                    await logTransactionAndWait(erc20.connect(signer).approve(operationaddress, hre.ethers.constants.MaxUint256, override), 1)
 
                 }
 
