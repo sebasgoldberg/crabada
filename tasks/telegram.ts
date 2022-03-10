@@ -15,8 +15,11 @@ task(
 
         function isValidUser(ctx:Context): boolean {
             if (ctx.from 
-                && ctx.from.username 
-                && ( ctx.from.username == 'sebasgoldberg' || String(ctx.from.id) == '1166897567' ) ){
+                && ( 
+                    ( ctx.from.username && ctx.from.username == 'sebasgoldberg' )
+                    || ( ctx.from.id == 1166897567 ) 
+                    ) 
+                ){
                 return true;
             }
 
