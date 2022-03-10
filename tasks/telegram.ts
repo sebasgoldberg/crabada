@@ -16,11 +16,11 @@ task(
         function isValidUser(ctx:Context): boolean {
             if (ctx.from 
                 && ctx.from.username 
-                && ( ctx.from.username == 'sebasgoldberg' || ctx.from.id == 1166897567 ) ){
+                && ( ctx.from.username == 'sebasgoldberg' ) ){
                 return true;
             }
 
-            ctx.reply(`ERROR: Invalid user '${ctx.from.username}' or ID '${ctx.from.id}'.`);
+            ctx.reply(`ERROR: Invalid user '${JSON.stringify(ctx.from)}'.`);
             return false
         
         }
