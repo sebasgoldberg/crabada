@@ -642,6 +642,8 @@ class AttackServer {
                 })
                 res.status(401)
                 return
+            } else {
+                // TODO remove pending attack.
             }
 
             interface AttackResponseData {
@@ -677,7 +679,8 @@ class AttackServer {
                     }
                 })
     
-                console.log('SUCCESS trying to register attack', attackResponse.data);
+                console.log('SUCCESS trying to register attack', requester);
+                console.log(attackResponse.data);
                 res.status(attackResponse.status)
                 res.json(attackResponse.data)
 
@@ -733,10 +736,6 @@ class AttackServer {
     }
 
     hasPendingAttack(requester: string, gameId: string, looterTeamId: string): boolean{
-        console.log('this.pendingAttacks', this.pendingAttacks);
-        console.log('gameId', gameId);
-        console.log('looterTeamId', looterTeamId);
-
         return (
             this.pendingAttacks[gameId] 
             && (this.pendingAttacks[gameId].includes(looterTeamId))
@@ -746,7 +745,6 @@ class AttackServer {
     addPendingAttack(requester: string, gameId: string, looterTeamId: string){
         this.pendingAttacks[gameId] = this.pendingAttacks[gameId] || []
         this.pendingAttacks[gameId].push(looterTeamId)
-        console.log('this.pendingAttacks', this.pendingAttacks);
     }
 
     sendCaptchaDataResponse(p: PlayerTeamPair, t: Target){

@@ -7,11 +7,15 @@
 
 <body>
     <div id="status"></div>
-    <div id="result"></div>
+    <h2 id="result"></h2>
     <div id="captcha"></div>
     <script>
 
         const CAPTCHA_ID = 'a9cd95e65fc75072dadea93e3d60b0e6'
+
+        const params = new Proxy(new URLSearchParams(window.location.search), {
+            get: (searchParams, prop) => searchParams.get(prop),
+        });
 
         function uuidv4() {
             return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
@@ -25,6 +29,7 @@
                 url: '/captcha/verify/',
                 method: 'POST',
                 data: JSON.stringify({
+                    requester: params.requester,
                     game_id: gameId,
                     user_address: looterAddress, // OK
                     team_id: looterTeamId, // OK
@@ -99,10 +104,6 @@
             });
 
         }
-
-        const params = new Proxy(new URLSearchParams(window.location.search), {
-            get: (searchParams, prop) => searchParams.get(prop),
-        });
 
         $.ajax({
                 url: '/captcha/load/',
