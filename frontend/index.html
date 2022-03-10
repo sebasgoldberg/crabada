@@ -122,7 +122,8 @@
                 }
         })
 
-        $.ajax({
+        function refreshStatus() {
+            $.ajax({
                 url: '/status/',
                 method: 'GET',
                 data: JSON.stringify({
@@ -136,7 +137,13 @@
                 error: function (error){
                     console.error(error);
                 }
-        })
+            })
+        }
+
+        refreshStatus()
+
+        setTimeout(()=>refreshStatus(), 10000)
+
 
     </script>
 </body>
