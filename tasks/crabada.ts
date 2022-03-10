@@ -417,6 +417,26 @@ task(
     .addParam("teamid", "Team ID which have a game to settle.", undefined, types.int)
 
 task(
+    "attack",
+    "Attack.",
+    async ({ gameid, teamid, expire, signature }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = await getSigner(hre)
+
+        const { idleGame } = getCrabadaContracts(hre)
+
+        await idleGame.connect(signer).callStatic.attack(gameid, teamid, expire, signature, LOOT_CAPTCHA_CONFIG.attackTransaction.override)
+        await logTransactionAndWait(
+            idleGame.connect(signer).attack(gameid, teamid, expire, signature, LOOT_CAPTCHA_CONFIG.attackTransaction.override)
+        , 1)
+
+    })
+    .addParam("gameid", "Team ID which have a game to settle.", undefined, types.int)
+    .addParam("teamid", "Team ID which have a game to settle.", undefined, types.int)
+    .addParam("expire", "Team ID which have a game to settle.", undefined, types.int)
+    .addParam("signature", "Team ID which have a game to settle.", undefined, types.string)
+
+task(
     "ownerof",
     "Remove of crabadas from team.",
     async ({ crabadaid }, hre: HardhatRuntimeEnvironment) => {
@@ -1846,9 +1866,8 @@ export const LOOT_PENDING_AVAX_ACCOUNTS = [
 export const SETTLER_ACCOUNT = "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4"
 export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
-const LOOTER_TARGET_BALANCE = parseEther('5')
+const LOOTER_TARGET_BALANCE = parseEther('3')
 const SETTLER_TARGET_BALANCE = parseEther('6')
-const REINFORCE_TARGET_BALANCE = parseEther('2')
 
 export const  refillavax = async (
     hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, 
@@ -1881,8 +1900,6 @@ export const  refillavax = async (
         await _refillAvax(signer, destination, LOOTER_TARGET_BALANCE)
     
     await _refillAvax(signer, settler, SETTLER_TARGET_BALANCE)
-
-    await _refillAvax(signer, reinforce, REINFORCE_TARGET_BALANCE)
 
 }
 
@@ -2012,7 +2029,7 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
     const getDashboardAvax = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardAvax> => {
             
         let avaxConsumed = SETTLER_TARGET_BALANCE
-            .add(REINFORCE_TARGET_BALANCE)
+            // .add(REINFORCE_TARGET_BALANCE)
             .add(LOOTER_TARGET_BALANCE.mul(LOOT_PENDING_AVAX_ACCOUNTS.length))
         
         const getAvaxBalance = async (address: string): Promise<IDashboardAvaxAccount> => {
@@ -2023,26 +2040,26 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
         }
 
         const lootersPromise: Promise<IDashboardAvaxAccount[]> = Promise.all(
-            LOOT_PENDING_AVAX_ACCOUNTS.map(getAvaxBalance)
+            LOOT_CAPTCHA_CONFIG.players.map(p => p.address).map(getAvaxBalance)
         )
 
         const settlerPromise = getAvaxBalance(SETTLER_ACCOUNT)
 
-        const reinforcerPromise = getAvaxBalance(REINFORCE_ACCOUNT)
+        //const reinforcerPromise = getAvaxBalance(REINFORCE_ACCOUNT)
 
         const looters = await lootersPromise
         const settler = await settlerPromise
-        const reinforcer = await reinforcerPromise
+        //const reinforcer = await reinforcerPromise
 
         const avax: IDashboardAvax = {
             avaxConsumed: formatEther(avaxConsumed
                 .sub(looters.reduce((prev: BigNumber, { balance }) => prev.add(parseEther(balance)), ethers.constants.Zero))
                 .sub(parseEther(settler.balance))
-                .sub(parseEther(reinforcer.balance))
+                //.sub(parseEther(reinforcer.balance))
                 ),
             looters,
             settler,
-            reinforcer
+            //reinforcer
         }
 
         return avax
@@ -2053,7 +2070,7 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
     const getDashboardPlayers =async (hre: HardhatRuntimeEnvironment): Promise<IDashboardPlayer[]> => {
 
         return Promise.all(
-            LOOT_PENDING_CONFIG.players.map( async (player): Promise<IDashboardPlayer> => {
+            LOOT_CAPTCHA_CONFIG.players.map( async (player): Promise<IDashboardPlayer> => {
 
                 const playerTusBalancePromise: Promise<BigNumber> = tusToken.balanceOf(player.address)
                     
@@ -2306,8 +2323,8 @@ task(
         console.log('SETTLER_ACCOUNT');
         console.log('-', dashboard.avax.settler.address, dashboard.avax.settler.balance);
 
-        console.log('REINFORCE_ACCOUNT');
-        console.log('-', dashboard.avax.reinforcer.address, dashboard.avax.reinforcer.balance);
+        // console.log('REINFORCE_ACCOUNT');
+        // console.log('-', dashboard.avax.reinforcer.address, dashboard.avax.reinforcer.balance);
 
         console.log('')
 
