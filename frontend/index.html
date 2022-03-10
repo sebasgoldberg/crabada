@@ -36,11 +36,11 @@
                 contentType: "application/json; charset=utf-8",
                 success: function (data) {
                     console.log(data);
-                    location.reload();
+                    setTimeout(()=>{ location.reload(); }, 3000)
                 },
                 error: function (error){
                     console.error(error);
-                    location.reload();
+                    setTimeout(()=>{ location.reload(); }, 3000)
                 }
             })
 
