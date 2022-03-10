@@ -5,7 +5,7 @@ import { task, types } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getCrabadaContracts, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
-import { getClassNameByCrabada, getSigner, listenStartGameEvents } from "./crabada";
+import { getClassNameByCrabada, getDashboardContent, getSigner, listenStartGameEvents } from "./crabada";
 
 import * as express from "express"
 import axios from "axios";
@@ -558,6 +558,22 @@ class AttackServer {
         this.app.use(express.json());
 
         this.app.use(express.static(`${ __dirname }/../frontend`));
+
+        this.app.get('/status/', async (req, res) => {
+
+            const {
+                players
+            } = await getDashboardContent(hre)
+
+            const secondsToUnlock: number[] = players
+                .flatMap( ({ teams }) => teams.map( ({ info: { secondsToUnlock }}) => secondsToUnlock ) )
+
+            res.json({
+                unlocked: secondsToUnlock.filter( x => x < 0 ).length,
+                secondsToUnlock: secondsToUnlock.sort((a,b)=> a<b?-1:a>b?1:0)
+            })
+
+        })
 
         this.app.post('/captcha/load/', async (req, res) => {
 

@@ -6,6 +6,7 @@
 </head>
 
 <body>
+    <div id="status"></div>
     <div id="captcha"></div>
     <script>
 
@@ -109,6 +110,22 @@
                 success: function (data) {
                     console.log(data);
                     loadCaptcha(+new Date(), data.game_id, data.user_address, data.team_id)
+                },
+                error: function (error){
+                    console.error(error);
+                }
+        })
+
+        $.ajax({
+                url: '/status/',
+                method: 'GET',
+                data: JSON.stringify({
+                    requester: params.requester || 'no-identity',
+                }),
+                dataType: 'json',
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    $('#status').text(JSON.stringify(data))
                 },
                 error: function (error){
                     console.error(error);
