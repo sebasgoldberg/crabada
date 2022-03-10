@@ -20,7 +20,7 @@ task(
                 return true;
             }
 
-            ctx.reply(`ERROR: Invalid user '${ctx.from.username}'.`);
+            ctx.reply(`ERROR: Invalid user '${ctx.from.username}' or ID '${ctx.from.id}'.`);
             return false
         
         }
