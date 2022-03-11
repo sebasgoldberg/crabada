@@ -9,6 +9,7 @@ import { getClassNameByCrabada, getDashboardContent, getSigner, listenStartGameE
 
 import * as express from "express"
 import axios from "axios";
+import { game } from "telegraf/typings/button";
 
 interface Player {
     address: string,
@@ -544,11 +545,90 @@ interface PendingAttacks{
     [gameId: string]: PendingAttackLooterTeams
 }
 
+interface AttackTransactionData{
+    game_id: any,
+    user_address: any,
+    team_id: any,
+    expire_time: any, 
+    signature: any,
+}
+
+interface AttackTransactionDataByGameId{
+    [game_id: string]: AttackTransactionData
+}
+
+class AttackExecutor{
+
+    hre: HardhatRuntimeEnvironment
+    attackTransactionsDataByGameId: AttackTransactionDataByGameId = {}
+    idleGame: Contract
+
+    constructor(hre: HardhatRuntimeEnvironment){
+        this.hre = hre
+    }
+
+    addAttackTransactionData(attackTransactionData: AttackTransactionData){
+        this.attackTransactionsDataByGameId[attackTransactionData.game_id] = attackTransactionData
+    }
+
+    async attackTransaction({user_address, game_id, team_id, expire_time, signature}: AttackTransactionData){
+
+        const { idleGame } = getCrabadaContracts(this.hre)
+
+        const looterSigner = (await this.hre.ethers.getSigners()).filter( s => s.address == user_address)[0]
+
+        try {
+            console.log('looterSigner', looterSigner.address)
+            console.log('idleGame.attack(game_id, team_id, expire_time, signature)', game_id, team_id, expire_time, signature);
+            await idleGame.connect(looterSigner).callStatic.attack(
+                BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature, 
+                LOOT_CAPTCHA_CONFIG.attackTransaction.override
+            )
+            const txr: ethers.providers.TransactionResponse = await idleGame.connect(looterSigner).attack(
+                BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature,
+                LOOT_CAPTCHA_CONFIG.attackTransaction.override
+            )
+            console.log('txr.hash', txr.hash);
+            delete this.attackTransactionsDataByGameId[game_id]
+        } catch (error) {
+            console.error('Error trying to attack', String(error));
+            if ((+new Date()/1000)>Number(expire_time))
+                delete this.attackTransactionsDataByGameId[game_id]
+        }
+
+    }
+
+    beginAttackInterval(): NodeJS.Timer {
+
+        let attackInExecution = false
+
+        return setInterval(async ()=>{
+
+            if (attackInExecution)
+                return
+
+            attackInExecution = true
+
+            for (const gameId in this.attackTransactionsDataByGameId){
+                const attackTransactionData: AttackTransactionData = this.attackTransactionsDataByGameId[gameId]
+                await this.attackTransaction(attackTransactionData)
+            }
+            
+
+            attackInExecution = false
+
+        },2000)
+
+    }
+
+}
+
 class AttackServer {
 
     app = express();
     pendingResponses: PendingResponse[] = []
     pendingAttacks: PendingAttacks = {}
+    attackExecutor: AttackExecutor
 
     // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
     constructor(hre: HardhatRuntimeEnvironment){
@@ -687,23 +767,7 @@ class AttackServer {
                 // TODO Move attack transaction code to an independent task.
                 const { signature, expire_time } = attackResponse.data.result
 
-                const looterSigner = (await hre.ethers.getSigners()).filter( s => s.address == user_address)[0]
-
-                try {
-                    console.log('looterSigner', looterSigner.address)
-                    console.log('idleGame.attack(game_id, team_id, expire_time, signature)', game_id, team_id, expire_time, signature);
-                    await idleGame.connect(looterSigner).callStatic.attack(
-                        BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature, 
-                        LOOT_CAPTCHA_CONFIG.attackTransaction.override
-                    )
-                    const txr: ethers.providers.TransactionResponse = await idleGame.connect(looterSigner).attack(
-                        BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature,
-                        LOOT_CAPTCHA_CONFIG.attackTransaction.override
-                    )
-                    console.log('txr.hash', txr.hash);
-                } catch (error) {
-                    console.error('Error trying to attack', String(error));
-                }
+                this.attackExecutor.addAttackTransactionData({user_address, game_id, team_id, expire_time, signature})
 
             } catch (error) {
 
@@ -731,6 +795,8 @@ class AttackServer {
 
         })
 
+        this.attackExecutor = new AttackExecutor(hre)
+        this.attackExecutor.beginAttackInterval()
         this.app.listen(3000)
 
     }
