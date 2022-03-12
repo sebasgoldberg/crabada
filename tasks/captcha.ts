@@ -840,8 +840,14 @@ class AttackServer {
             return aInRecentTeams == bInRecentTeams ? 0 : aInRecentTeams ? 1 : -1
         })
 
+        const teamIdsAlreadyUsed: number[] = []
+
         for (const t of targetsOrderByGameIdDescending){
             for (const p of playerTeamPairsOrderByNotInRecentTeams){
+
+                // Do not use same team for different targets.
+                if (teamIdsAlreadyUsed.includes(p.teamId))
+                    continue
 
                 if (p.battlePoint.gt(t.battlePoint)){
 
@@ -853,6 +859,11 @@ class AttackServer {
 
                     if (this.pendingResponses.length == 0)
                         return
+                    
+                    teamIdsAlreadyUsed.push(p.teamId)
+
+                    // Do not use same target for different teams.
+                    break
 
                 }
 
