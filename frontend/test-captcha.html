@@ -4,11 +4,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="jquery-3.6.0.min.js"></script>
     <script src="gt4.js"></script>
+    <style>
+        #status {
+            word-wrap: break-word;
+        }
+    </style>
 </head>
 
 <body>
-    <div id="status">{"unlocked":0,"secondsToUnlock":[1049,1060,1101,1116,1184,1199,1215,1232,1257,1283,1313,1349,1367,1405,1420,1455,1472,1509]}</div>
     <h2 id="result">SEGUI PARTICIPANDO, LO VAS A CONSEGUIR!!! 😉</h2>
+    <div id="status">{"unlocked":0,"secondsToUnlock":[1049,1060,1101,1116,1184,1199,1215,1232,1257,1283,1313,1349,1367,1405,1420,1455,1472,1509]}</div>
     <div id="captcha"></div>
     <script>
 
@@ -66,29 +71,6 @@
         }
 
         loadCaptcha(+new Date(), '1000', '0x987f1387059bAD70Bf53a9A7854B7661965637C5', '100')
-
-        function refreshStatus() {
-            $.ajax({
-                url: '/status/',
-                method: 'GET',
-                data: JSON.stringify({
-                    requester: params.requester || 'no-identity',
-                }),
-                dataType: 'json',
-                contentType: "application/json; charset=utf-8",
-                success: function (data) {
-                    $('#status').text(JSON.stringify(data))
-                },
-                error: function (error){
-                    console.error(error);
-                }
-            })
-        }
-
-        refreshStatus()
-
-        setInterval(()=>refreshStatus(), 10000)
-
 
     </script>
 </body>
