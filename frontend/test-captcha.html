@@ -1,0 +1,96 @@
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="jquery-3.6.0.min.js"></script>
+    <script src="gt4.js"></script>
+</head>
+
+<body>
+    <div id="status">{"unlocked":0,"secondsToUnlock":[1049,1060,1101,1116,1184,1199,1215,1232,1257,1283,1313,1349,1367,1405,1420,1455,1472,1509]}</div>
+    <h2 id="result">SEGUI PARTICIPANDO, LO VAS A CONSEGUIR!!! 😉</h2>
+    <div id="captcha"></div>
+    <script>
+
+        const CAPTCHA_ID = 'a9cd95e65fc75072dadea93e3d60b0e6'
+
+        const params = new Proxy(new URLSearchParams(window.location.search), {
+            get: (searchParams, prop) => searchParams.get(prop),
+        });
+
+        function uuidv4() {
+            return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+            );
+        }
+
+        function loadCaptcha(timestamp, gameId, looterAddress, looterTeamId) {
+
+            initGeetest4(
+            {
+                captchaId: CAPTCHA_ID,
+                product: "popup",
+                // TODO Verify if uuidv4() it is the same than window.uuid()
+                challenge: "".concat(timestamp).concat(gameId).concat(uuidv4()),
+                // riskType
+                riskType: "icon",
+                apiServers: ["https://idle-api.crabada.com/public"]
+            }, function (captcha) {
+
+                captcha.appendTo("#captcha");// call appendTo to insert the verification code into a certain element of the page, which can be customized by the user 
+
+                captcha.onReady(function () {
+
+                    var clickInterval = setInterval(() => {
+                        $('.geetest_btn_click').click()
+                    }, 500)
+
+                    setTimeout(() => {
+                        clearInterval(clickInterval)
+                    }, 3000)
+
+
+                }).onSuccess(function () {
+
+                    $('#result').text('GANASTE!!! 🤑')
+
+                }).onError(function () {
+
+                    alert('ERROR')
+
+                })
+
+
+            });
+
+        }
+
+        loadCaptcha(+new Date(), '1000', '0x987f1387059bAD70Bf53a9A7854B7661965637C5', '100')
+
+        function refreshStatus() {
+            $.ajax({
+                url: '/status/',
+                method: 'GET',
+                data: JSON.stringify({
+                    requester: params.requester || 'no-identity',
+                }),
+                dataType: 'json',
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    $('#status').text(JSON.stringify(data))
+                },
+                error: function (error){
+                    console.error(error);
+                }
+            })
+        }
+
+        refreshStatus()
+
+        setInterval(()=>refreshStatus(), 10000)
+
+
+    </script>
+</body>
+
+</html>
