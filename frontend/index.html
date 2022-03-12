@@ -107,22 +107,27 @@
 
         }
 
-        $.ajax({
-                url: '/captcha/load/',
-                method: 'POST',
-                data: JSON.stringify({
-                    requester: params.requester || 'no-identity',
-                }),
-                dataType: 'json',
-                contentType: "application/json; charset=utf-8",
-                success: function (data) {
-                    console.log(data);
-                    loadCaptcha(+new Date(), data.game_id, data.user_address, data.team_id)
-                },
-                error: function (error){
-                    console.error(error);
-                }
-        })
+        function sendCaptchaRequest(){
+            $.ajax({
+                    url: '/captcha/load/',
+                    method: 'POST',
+                    data: JSON.stringify({
+                        requester: params.requester || 'no-identity',
+                    }),
+                    dataType: 'json',
+                    contentType: "application/json; charset=utf-8",
+                    success: function (data) {
+                        console.log(data);
+                        loadCaptcha(+new Date(), data.game_id, data.user_address, data.team_id)
+                    },
+                    error: function (error){
+                        console.error(error);
+                        sendCaptchaRequest()
+                    }
+            })
+        }
+
+        sendCaptchaRequest();
 
         function refreshStatus() {
             $.ajax({
