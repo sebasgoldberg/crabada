@@ -2022,7 +2022,7 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
             
         let avaxConsumed = SETTLER_TARGET_BALANCE
             // .add(REINFORCE_TARGET_BALANCE)
-            .add(LOOTER_TARGET_BALANCE.mul(LOOT_PENDING_AVAX_ACCOUNTS.length))
+            .add(LOOTER_TARGET_BALANCE.mul(LOOT_CAPTCHA_CONFIG.players.length))
         
         const getAvaxBalance = async (address: string): Promise<IDashboardAvaxAccount> => {
             return {
