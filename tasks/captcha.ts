@@ -802,6 +802,9 @@ class AttackServer {
                     console.log('req.query.challenge',  req.query.challenge);
                     const challenge = req.query.challenge as string
                     const { user_address, game_id, team_id, requester } = this.pendingChallenge[challenge]
+
+                    console.log('this.pendingChallenge[challenge]', this.pendingChallenge[challenge]);
+
                     const { 
                         data: { 
                             lot_number, 
@@ -810,6 +813,9 @@ class AttackServer {
                             } 
                         }
                     }: CaptchaResult = parsedData
+
+                    console.log('parsedData', parsedData);
+                    
 
                     try {
 
@@ -936,7 +942,7 @@ class AttackServer {
 
     }
 
-    async registerAttack(user_address, game_id, team_id, lot_number, pass_token, gen_time, captcha_output){
+    async registerAttack(user_address, team_id, game_id, lot_number, pass_token, gen_time, captcha_output){
 
         const access_token = {
             '0xB2f4C513164cD12a1e121Dc4141920B805d024B8': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4YjJmNGM1MTMxNjRjZDEyYTFlMTIxZGM0MTQxOTIwYjgwNWQwMjRiOCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6ImNlcmVicm8iLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NDUxLCJleHAiOjE2NDk3NTk0NTEsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.4zDy9JrcLymHjFAs6ZDi2tTsuuHIY43rBex9RL6BHW0',
