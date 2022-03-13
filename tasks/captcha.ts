@@ -711,10 +711,31 @@ class AttackServer {
         this.app.get('/proxy/captcha/load/', async (req, res) => {
 
             console.log('/proxy/captcha/load/')
-            console.log('req.baseUrl', req.baseUrl);
-            console.log('req.url', req.url);
-            console.log('req.headers', req.headers);
-            console.log('req.body', req.body);
+            console.log('req.baseUrl', req.baseUrl); // ''
+            console.log('req.url', req.url); // '/proxy/captcha/load/?captcha_id=a9cd95e65fc75072dadea93e3d60b0e6&challenge=16471805841662330581e891e709-1e56-4e70-9b6d-996385914a5f&client_type=web&risk_type=icon&lang=pt-br&callback=geetest_1647180585657'
+            console.log('req.headers', req.headers); // {...}
+            console.log('req.body', req.body); // {}
+
+            const url = `https://idle-api.crabada.com${req.url.replace('proxy/captcha', 'public')}`
+            const headers = {
+                ...JSON.parse(JSON.stringify(req.headers)),
+                'sec-fetch-site': 'same-site',
+                'referer': 'https://play.crabada.com/',
+            }
+
+            delete headers['x-forwarded-for']
+            delete headers['x-forwarded-host']
+            delete headers['x-forwarded-server']
+            
+            console.log('proxy url', url);
+            console.log('proxy headers', headers);
+
+            const response = await axios.get(url,{
+                headers
+            })
+
+            res.status(response.status)
+            res.json(response.data)
 
         })
 
