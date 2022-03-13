@@ -711,10 +711,10 @@ class AttackServer {
         this.app.get('/proxy/captcha/load/', async (req, res) => {
 
             console.log('/proxy/captcha/load/')
-            console.log('req.baseUrl');
-            console.log('req.url');
-            console.log('req.headers');
-            console.log('req.body');
+            console.log('req.baseUrl', req.baseUrl);
+            console.log('req.url', req.url);
+            console.log('req.headers', req.headers);
+            console.log('req.body', req.body);
 
         })
 
