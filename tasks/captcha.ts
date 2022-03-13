@@ -705,6 +705,19 @@ class AttackServer {
             })
         })
 
+        /**
+         * 
+         */
+        this.app.post('/proxy/captcha/load/', async (req, res) => {
+
+            console.log('/proxy/captcha/load/')
+            console.log('req.baseUrl');
+            console.log('req.url');
+            console.log('req.headers');
+            console.log('req.body');
+
+        })
+
         interface AttackRequestData {
             requester: string,
             game_id: string,
@@ -760,7 +773,8 @@ class AttackServer {
                         authority: 'idle-api.crabada.com',
                         // TODO Add mechanism to autenticate.
                         authorization: `Bearer ${access_token[user_address]}`,
-                        origin: 'https://play.crabada.com'
+                        origin: 'https://play.crabada.com',
+                        referer: 'https://play.crabada.com/'
                     }
                 })
     

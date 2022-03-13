@@ -62,6 +62,10 @@
 
         function loadCaptcha(timestamp, gameId, looterAddress, looterTeamId) {
 
+            const apiServer = params.captcha_server_same_origin ?
+                window.location.origin+'/proxy/captcha' :
+                'https://idle-api.crabada.com/public'
+
             initGeetest4(
             {
                 captchaId: CAPTCHA_ID,
@@ -70,7 +74,7 @@
                 challenge: "".concat(timestamp).concat(gameId).concat(uuidv4()),
                 // riskType
                 riskType: "icon",
-                apiServers: ["https://idle-api.crabada.com/public"]
+                apiServers: [ apiServer ]
             }, function (captcha) {
 
                 captcha.appendTo("#captcha");// call appendTo to insert the verification code into a certain element of the page, which can be customized by the user 
