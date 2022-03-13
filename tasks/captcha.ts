@@ -756,7 +756,7 @@ class AttackServer {
                     console.log('error.response.status', error.response.status);
                     console.log('error.response.data', error.response.data);
                     res.status(error.response.status)
-                    res.json(String(error.response.data))    
+                    res.json(error.response.data)
                 } else {
                     throw error
                 }
@@ -819,9 +819,23 @@ class AttackServer {
                     headers: {
                         authority: 'idle-api.crabada.com',
                         // TODO Add mechanism to autenticate.
+                        'pragma': 'no-cache',
+                        'cache-control': 'no-cache',
+                        'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
+                        'accept': 'application/json, text/plain, */*',
+                        'content-type': 'application/json',
                         authorization: `Bearer ${access_token[user_address]}`,
+                        'sec-ch-ua-mobile': '?0',
+                        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
+                        'sec-ch-ua-platform': '"Windows"',
                         origin: 'https://play.crabada.com',
-                        referer: 'https://play.crabada.com/'
+                        'sec-fetch-site': 'same-site',
+                        'sec-fetch-mode': 'cors',
+                        'sec-fetch-dest': 'empty',
+                        referer: 'https://play.crabada.com/',
+                        'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
+        
+                        
                     }
                 })
     
@@ -840,7 +854,7 @@ class AttackServer {
                 console.error('ERROR trying to register attack', error.response.data);
                 
                 res.status(error.response.status)
-                res.json(String(error.response.data))
+                res.json(error.response.data)
 
             }
 
