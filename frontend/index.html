@@ -60,18 +60,20 @@
 
         }
 
-        function loadCaptcha(timestamp, gameId, looterAddress, looterTeamId) {
+        function loadCaptcha(challenge) {
 
             const apiServer = params.captcha_server_same_origin ?
                 window.location.origin+'/proxy/captcha' :
                 'https://idle-api.crabada.com/public'
 
+            // To get the captcha: GET `${apiServer}/load/`
+            // After resolving captcha: GET `${apiServer}/verify/`
             initGeetest4(
             {
                 captchaId: CAPTCHA_ID,
                 product: "popup",
                 // TODO Verify if uuidv4() it is the same than window.uuid()
-                challenge: "".concat(timestamp).concat(gameId).concat(uuidv4()),
+                challenge: challenge,
                 // riskType
                 riskType: "icon",
                 apiServers: [ apiServer ]
@@ -103,8 +105,9 @@
 
                     console.log(captchaResult);
 
-                    // TODO set looter address and looter team ID.
-                    getTransactionAndSendIt(captchaResult, gameId, looterAddress, looterTeamId)
+                    // getTransactionAndSendIt(challenge)
+
+                    // TODO query attack transaction result to notify success if applies.
 
                 }).onError(function () {
 
@@ -128,7 +131,7 @@
                     contentType: "application/json; charset=utf-8",
                     success: function (data) {
                         console.log(data);
-                        loadCaptcha(+new Date(), data.game_id, data.user_address, data.team_id)
+                        loadCaptcha(data.challenge)
                     },
                     error: function (error){
                         console.error(error);

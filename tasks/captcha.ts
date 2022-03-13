@@ -6,6 +6,8 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { getClassNameByCrabada, getDashboardContent, getSigner, listenStartGameEvents } from "./crabada";
+import { v4 as uuidv4 } from 'uuid';
+
 
 import * as express from "express"
 import axios from "axios";
@@ -458,7 +460,7 @@ const lootLoop = async (
                 gameId
             }
         })
-        
+
         attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
 
     }, 50)
@@ -628,6 +630,18 @@ class AttackExecutor{
 
 }
 
+
+interface PendingTransaction {
+    user_address: string,
+    team_id: string,
+    game_id: string,
+    requester: string
+}
+
+interface PendingTransactionByChallenge {
+    [challenge: string]: PendingTransaction
+}
+
 class AttackServer {
 
     app = express();
@@ -676,7 +690,7 @@ class AttackServer {
             let indexToDelete: number = undefined
 
             await new Promise(resolve => {
-                
+
                 this.pendingResponses.forEach( (value, index) => {
                     if (value.requester == requester){
                         indexToDelete = index
@@ -708,7 +722,7 @@ class AttackServer {
         /**
          * Proxy the load/verify of captcha lib data to idle-api.crabada.com/public
          */
-         this.app.get('/proxy/captcha/*', async (req, res) => {
+        this.app.get('/proxy/captcha/*', async (req, res) => {
 
             console.log('/proxy/captcha/*')
             console.log('req.baseUrl', req.baseUrl); // ''
@@ -747,6 +761,80 @@ class AttackServer {
 
                 res.status(response.status)
                 res.send(response.data)
+
+                if (response.status == 200 && req.url.indexOf('/proxy/captcha/verify/') >= 0) {
+
+                    const parsedData = JSON.parse(/geetest_[\d]*\((.*)\)/g.exec(response.data)[1])
+
+                    // captchaResult
+                    // {
+                    //     status: 'success',
+                    //     data: {
+                    //       lot_number: '5d446171577e41628a92020cf0934662',
+                    //       result: 'success',
+                    //       fail_count: 0,
+                    //       seccode: {
+                    //         captcha_id: 'a9cd95e65fc75072dadea93e3d60b0e6',
+                    //         lot_number: '5d446171577e41628a92020cf0934662',
+                    //         pass_token: '1028ee82d98fad3764c2c26876cec5cb9ad368fa0ae272951f60a442a2ea17ac',
+                    //         gen_time: '1647200920',
+                    //         captcha_output: 'zrZmJMfbTd-SNVauvuKQVIyiHDrhc0qA7X376FbYLLVWdiFFVPdPmNPvBm5vxyHJPFz4ckTN-bm4Qedatt659nL0ciDcEpV403sXQbVuCKIp1k0dpCw7shc7RfmWLY1W'
+                    //       },
+                    //       score: '4'
+                    //     }
+                    //   }
+                    interface CaptchaResult {
+                        status: string,
+                        data: {
+                            lot_number: string,
+                            result: string,
+                            fail_count: number,
+                            seccode: {
+                                captcha_id: string,
+                                lot_number: string,
+                                pass_token: string,
+                                gen_time: string,
+                                captcha_output: string
+                            },
+                        }
+                    }
+
+                    const challenge = req.query.challenge as string
+                    const { user_address, game_id, team_id, requester } = this.pendingChallenge[challenge]
+                    const { 
+                        data: { 
+                            lot_number, 
+                            seccode: { 
+                                captcha_output, pass_token, gen_time 
+                            } 
+                        }
+                    }: CaptchaResult = parsedData
+
+                    try {
+
+                        const attackResponse = await this.registerAttack(user_address, team_id, game_id, lot_number, pass_token, gen_time, captcha_output)
+        
+                        console.log('SUCCESS trying to register attack', requester);
+                        console.log(attackResponse.data);
+        
+                        const { signature, expire_time } = attackResponse.data.result
+        
+                        this.attackExecutor.addAttackTransactionData({ user_address, game_id, team_id, expire_time, signature })
+        
+                    } catch (error) {
+        
+                        // error.response.data
+                        // { error_code: 'BAD_REQUEST', message: 'Game doest not exists' }
+
+                        // TODO Retry call when error.response.data.message == 'Game doest not exists'
+
+
+                        console.error('ERROR trying to register attack', error.response.data);
+        
+                    }
+
+                }
+
 
             } catch (error) {
 
@@ -804,47 +892,13 @@ class AttackServer {
 
             try {
 
-                const access_token = {
-                    '0xB2f4C513164cD12a1e121Dc4141920B805d024B8': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4YjJmNGM1MTMxNjRjZDEyYTFlMTIxZGM0MTQxOTIwYjgwNWQwMjRiOCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6ImNlcmVicm8iLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NDUxLCJleHAiOjE2NDk3NTk0NTEsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.4zDy9JrcLymHjFAs6ZDi2tTsuuHIY43rBex9RL6BHW0',
-                    '0xE90A22064F415896F1F72e041874Da419390CC6D': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDcxNjc2NzYsImV4cCI6MTY0OTc1OTY3NiwiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.kf90amZVjrnYHpmNzBuvbUDx0qi_kkPzmSCJlK3Y9xg',
-                    '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4YzdjOTY2NzU0ZGJlNTJhMjlkZmQxY2NjY2JmZDJmZmJlMDZiMjNiMiIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNmFjYjQ5Njg2N2EiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NzQ3LCJleHAiOjE2NDk3NTk3NDcsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.H1BhKzlVD2NP8BNEVcCBnKiUUrD7CVDjhE77_38KRfg',
-                    '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4OTU2OGJkMWVlYWVjY2YyM2YwYTE0NzQ3OGNlZjg3NDM0YWYwYjVkNCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAxYWRhMzBhY2JiM2EiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NzczLCJleHAiOjE2NDk3NTk3NzMsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.dEFYnZpR_GVaTmnTRrsBf0NqU-xblP8YkXR6L6NkFD4',
-                    '0x83Ff016a2e574b2c35d17Fe4302188b192b64344': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ODNmZjAxNmEyZTU3NGIyYzM1ZDE3ZmU0MzAyMTg4YjE5MmI2NDM0NCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyZDBhY2Q5ODIxOGUiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3ODQwLCJleHAiOjE2NDk3NTk4NDAsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.n9fOVIOOOpohxwz7X8sOGE71T3Fut8bZnSaYVDy0snM',
-                    '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4NjMxNWY5M2RlZjQ4YzIxZmZhZGQ1Y2JlMDc4Y2RiMTliYWE2NjFmOCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAxMmFhYjZlNWQxOTUiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3ODczLCJleHAiOjE2NDk3NTk4NzMsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.-lsJLlIUX6WCnEVr75pTG2ls7j12UViBLaXNnKxvP60'
-                }
+                const attackResponse = await this.registerAttack(user_address, team_id, game_id, lot_number, pass_token, gen_time, captcha_output)
 
-                const attackResponse = await axios.put(`https://idle-api.crabada.com/public/idle/attack/${ game_id }`, {
-                    user_address, team_id, lot_number, pass_token, gen_time, captcha_output
-                }, {
-                    headers: {
-                        authority: 'idle-api.crabada.com',
-                        // TODO Add mechanism to autenticate.
-                        'pragma': 'no-cache',
-                        'cache-control': 'no-cache',
-                        'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
-                        'accept': 'application/json, text/plain, */*',
-                        'content-type': 'application/json',
-                        authorization: `Bearer ${access_token[user_address]}`,
-                        'sec-ch-ua-mobile': '?0',
-                        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
-                        'sec-ch-ua-platform': '"Windows"',
-                        origin: 'https://play.crabada.com',
-                        'sec-fetch-site': 'same-site',
-                        'sec-fetch-mode': 'cors',
-                        'sec-fetch-dest': 'empty',
-                        referer: 'https://play.crabada.com/',
-                        'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
-        
-                        
-                    }
-                })
-    
                 console.log('SUCCESS trying to register attack', requester);
                 console.log(attackResponse.data);
                 res.status(attackResponse.status)
                 res.json(attackResponse.data)
 
-                // TODO Move attack transaction code to an independent task.
                 const { signature, expire_time } = attackResponse.data.result
 
                 this.attackExecutor.addAttackTransactionData({user_address, game_id, team_id, expire_time, signature})
@@ -852,13 +906,13 @@ class AttackServer {
             } catch (error) {
 
                 console.error('ERROR trying to register attack', error.response.data);
-                
+
                 res.status(error.response.status)
                 res.json(error.response.data)
 
             }
 
-            
+
 
 
             // ERROR: {"error_code":"BAD_REQUEST","message":"Captcha validate failed"}
@@ -881,7 +935,48 @@ class AttackServer {
 
     }
 
-    hasPendingAttack(requester: string, gameId: string, looterTeamId: string): boolean{
+    async registerAttack(user_address, game_id, team_id, lot_number, pass_token, gen_time, captcha_output){
+
+        const access_token = {
+            '0xB2f4C513164cD12a1e121Dc4141920B805d024B8': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4YjJmNGM1MTMxNjRjZDEyYTFlMTIxZGM0MTQxOTIwYjgwNWQwMjRiOCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6ImNlcmVicm8iLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NDUxLCJleHAiOjE2NDk3NTk0NTEsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.4zDy9JrcLymHjFAs6ZDi2tTsuuHIY43rBex9RL6BHW0',
+            '0xE90A22064F415896F1F72e041874Da419390CC6D': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDcxNjc2NzYsImV4cCI6MTY0OTc1OTY3NiwiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.kf90amZVjrnYHpmNzBuvbUDx0qi_kkPzmSCJlK3Y9xg',
+            '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4YzdjOTY2NzU0ZGJlNTJhMjlkZmQxY2NjY2JmZDJmZmJlMDZiMjNiMiIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNmFjYjQ5Njg2N2EiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NzQ3LCJleHAiOjE2NDk3NTk3NDcsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.H1BhKzlVD2NP8BNEVcCBnKiUUrD7CVDjhE77_38KRfg',
+            '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4OTU2OGJkMWVlYWVjY2YyM2YwYTE0NzQ3OGNlZjg3NDM0YWYwYjVkNCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAxYWRhMzBhY2JiM2EiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NzczLCJleHAiOjE2NDk3NTk3NzMsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.dEFYnZpR_GVaTmnTRrsBf0NqU-xblP8YkXR6L6NkFD4',
+            '0x83Ff016a2e574b2c35d17Fe4302188b192b64344': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ODNmZjAxNmEyZTU3NGIyYzM1ZDE3ZmU0MzAyMTg4YjE5MmI2NDM0NCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyZDBhY2Q5ODIxOGUiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3ODQwLCJleHAiOjE2NDk3NTk4NDAsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.n9fOVIOOOpohxwz7X8sOGE71T3Fut8bZnSaYVDy0snM',
+            '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4NjMxNWY5M2RlZjQ4YzIxZmZhZGQ1Y2JlMDc4Y2RiMTliYWE2NjFmOCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAxMmFhYjZlNWQxOTUiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3ODczLCJleHAiOjE2NDk3NTk4NzMsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.-lsJLlIUX6WCnEVr75pTG2ls7j12UViBLaXNnKxvP60'
+        }
+
+        const attackResponse = await axios.put(`https://idle-api.crabada.com/public/idle/attack/${game_id}`, {
+            user_address, team_id, lot_number, pass_token, gen_time, captcha_output
+        }, {
+            headers: {
+                authority: 'idle-api.crabada.com',
+                // TODO Add mechanism to autenticate.
+                'pragma': 'no-cache',
+                'cache-control': 'no-cache',
+                'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
+                'accept': 'application/json, text/plain, */*',
+                'content-type': 'application/json',
+                authorization: `Bearer ${access_token[user_address]}`,
+                'sec-ch-ua-mobile': '?0',
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
+                'sec-ch-ua-platform': '"Windows"',
+                origin: 'https://play.crabada.com',
+                'sec-fetch-site': 'same-site',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-dest': 'empty',
+                referer: 'https://play.crabada.com/',
+                'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
+
+
+            }
+        })
+
+        return attackResponse
+
+    }
+
+    hasPendingAttack(requester: string, gameId: string, looterTeamId: string): boolean {
         return (
             this.pendingAttacks[gameId] 
             && (this.pendingAttacks[gameId].includes(looterTeamId))
@@ -893,19 +988,37 @@ class AttackServer {
         this.pendingAttacks[gameId].push(looterTeamId)
     }
 
+    pendingChallenge: PendingTransactionByChallenge = {}
+
     sendCaptchaDataResponse(p: PlayerTeamPair, t: Target){
+
         const pendingResponse = this.pendingResponses.shift()
         if (!pendingResponse)
             return
+        
         this.addPendingAttack(pendingResponse.requester, t.gameId.toString(), p.teamId.toString())
+
+        const challenge = "".concat(String(+new Date())).concat(t.gameId.toString()).concat(uuidv4())
+
+        // TODO delete pendingChallenge[challenge] after resolve it.
+        this.pendingChallenge[challenge] = {
+            user_address: p.playerAddress,
+            team_id: p.teamId.toString(),
+            game_id: t.gameId.toString(),
+            requester: pendingResponse.requester,
+        }
+
         const captchaData = {
             user_address: p.playerAddress,
             team_id: p.teamId.toString(),
-            game_id: t.gameId.toString()
+            game_id: t.gameId.toString(),
+            challenge,
         }
+
         pendingResponse.res.json(captchaData)
         console.log('Sent captcha data to', pendingResponse.requester, captchaData);
         pendingResponse.resolveResponse(undefined)
+
     }
 
     recentTeams = []
@@ -939,7 +1052,7 @@ class AttackServer {
 
                     if (this.pendingResponses.length == 0)
                         return
-                    
+
                     teamIdsAlreadyUsed.push(p.teamId)
 
                     // Do not use same target for different teams.
