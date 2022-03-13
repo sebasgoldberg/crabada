@@ -48,12 +48,12 @@
                 contentType: "application/json; charset=utf-8",
                 success: function (data) {
                     console.log(data);
-                    setTimeout(()=>{ location.reload(); }, 1500)
+                    (!params.no_refresh) && setTimeout(()=>{ location.reload(); }, 1500)
                     $('#result').text('GANASTE!!!')
                 },
                 error: function (error){
                     console.error(error);
-                    setTimeout(()=>{ location.reload(); }, 1500)
+                    (!params.no_refresh) && setTimeout(()=>{ location.reload(); }, 1500)
                     $('#result').text('SEGUI PARTICIPANDO, LO VAS A CONSEGUIR!!!')
                 }
             })
