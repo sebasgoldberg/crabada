@@ -3,7 +3,7 @@ import { assert } from "console";
 import { BigNumber, Contract, ethers } from "ethers";
 import { task, types } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { getCrabadaContracts, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
+import { getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { getClassNameByCrabada, getDashboardContent, getSigner, listenStartGameEvents } from "./crabada";
 
@@ -26,7 +26,8 @@ interface LootCaptchaConfig {
             maxFeePerGas: BigNumber,
             maxPriorityFeePerGas: BigNumber,
         }
-    }
+    },
+    attackOnlyTeamsThatPlayToLoose: boolean
 }
 
 type LootFunction = (
@@ -399,8 +400,11 @@ const lootLoop = async (
     
     // Teams that play to loose...
 
-    const teamsThatPlayToLooseByTeamId: TeamInfoByTeam = 
-        await getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow, classNameByCrabada)
+    const teamsThatPlayToLooseByTeamId = await (
+        LOOT_CAPTCHA_CONFIG.attackOnlyTeamsThatPlayToLoose ? 
+            getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow, classNameByCrabada)
+            : getTeamsBattlePoint(hre, blockstoanalyze, classNameByCrabada)
+    )
 
     console.log('teamsThatPlayToLooseByTeamId', Object.keys(teamsThatPlayToLooseByTeamId).length);
 
@@ -530,7 +534,8 @@ export const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
             maxFeePerGas: BigNumber.from(ONE_GWEI*400),
             maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
         }
-    }
+    },
+    attackOnlyTeamsThatPlayToLoose: false
 }
 
 interface PendingResponse {
