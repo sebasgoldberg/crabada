@@ -730,12 +730,27 @@ class AttackServer {
             console.log('proxy url', url);
             console.log('proxy headers', headers);
 
-            const response = await axios.get(url,{
-                headers
-            })
+            try {
 
-            res.status(response.status)
-            res.json(response.data)
+                const response = await axios.get(url,{
+                    headers
+                })
+
+                console.log(response.status);
+                console.log(response.data);
+
+                res.status(response.status)
+                res.json(response.data)
+
+            } catch (error) {
+
+                console.log(error.response.status);
+                console.log(error.response.data);
+
+                res.status(error.response.status)
+                res.json(String(error.response.data))
+
+            }
 
         })
 
