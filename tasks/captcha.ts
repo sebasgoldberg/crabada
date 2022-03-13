@@ -706,11 +706,11 @@ class AttackServer {
         })
 
         /**
-         * 
+         * Proxy the load/verify of captcha lib data to idle-api.crabada.com/public
          */
-        this.app.get('/proxy/captcha/load/', async (req, res) => {
+         this.app.get('/proxy/captcha/*', async (req, res) => {
 
-            console.log('/proxy/captcha/load/')
+            console.log('/proxy/captcha/*')
             console.log('req.baseUrl', req.baseUrl); // ''
             console.log('req.url', req.url); // '/proxy/captcha/load/?captcha_id=a9cd95e65fc75072dadea93e3d60b0e6&challenge=16471805841662330581e891e709-1e56-4e70-9b6d-996385914a5f&client_type=web&risk_type=icon&lang=pt-br&callback=geetest_1647180585657'
             console.log('req.headers', req.headers); // {...}
