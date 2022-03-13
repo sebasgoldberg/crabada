@@ -708,7 +708,7 @@ class AttackServer {
         /**
          * 
          */
-        this.app.post('/proxy/captcha/load/', async (req, res) => {
+        this.app.get('/proxy/captcha/load/', async (req, res) => {
 
             console.log('/proxy/captcha/load/')
             console.log('req.baseUrl');
