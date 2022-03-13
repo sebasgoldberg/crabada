@@ -535,7 +535,7 @@ export const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
             maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
         }
     },
-    attackOnlyTeamsThatPlayToLoose: false
+    attackOnlyTeamsThatPlayToLoose: true
 }
 
 interface PendingResponse {
