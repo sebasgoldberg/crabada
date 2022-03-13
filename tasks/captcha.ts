@@ -762,7 +762,7 @@ class AttackServer {
                 res.status(response.status)
                 res.send(response.data)
 
-                if (response.status == 200 && req.url.indexOf('/proxy/captcha/verify/') >= 0) {
+                if (response.status == 200 && req.url.indexOf('/proxy/captcha/verify') >= 0) {
 
                     const parsedData = JSON.parse(/geetest_[\d]*\((.*)\)/g.exec(response.data)[1])
 
@@ -799,6 +799,7 @@ class AttackServer {
                         }
                     }
 
+                    console.log('req.query.challenge',  req.query.challenge);
                     const challenge = req.query.challenge as string
                     const { user_address, game_id, team_id, requester } = this.pendingChallenge[challenge]
                     const { 
