@@ -746,7 +746,7 @@ class AttackServer {
                 console.log(response.data);
 
                 res.status(response.status)
-                res.json(response.data)
+                res.send(response.data)
 
             } catch (error) {
 
