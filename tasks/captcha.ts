@@ -718,15 +718,21 @@ class AttackServer {
 
             const url = `https://idle-api.crabada.com${req.url.replace('proxy/captcha', 'public')}`
             const headers = {
-                ...JSON.parse(JSON.stringify(req.headers)),
+                'authority': 'idle-api.crabada.com',
+                'pragma': 'no-cache',
+                'cache-control': 'no-cache',
+                'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
+                'sec-ch-ua-mobile': '?0',
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
+                'sec-ch-ua-platform': '"Windows"',
+                'accept': '*/*',
                 'sec-fetch-site': 'same-site',
+                'sec-fetch-mode': 'no-cors',
+                'sec-fetch-dest': 'script',
                 'referer': 'https://play.crabada.com/',
+                'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
             }
 
-            delete headers['x-forwarded-for']
-            delete headers['x-forwarded-host']
-            delete headers['x-forwarded-server']
-            
             console.log('proxy url', url);
             console.log('proxy headers', headers);
 
@@ -744,11 +750,16 @@ class AttackServer {
 
             } catch (error) {
 
-                console.log(error.response.status);
-                console.log(error.response.data);
+                console.log('ERROR', String(error))
 
-                res.status(error.response.status)
-                res.json(String(error.response.data))
+                if (error.response){
+                    console.log('error.response.status', error.response.status);
+                    console.log('error.response.data', error.response.data);
+                    res.status(error.response.status)
+                    res.json(String(error.response.data))    
+                } else {
+                    throw error
+                }
 
             }
 
