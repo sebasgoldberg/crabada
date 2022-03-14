@@ -3,7 +3,7 @@ import { assert } from "console";
 import { BigNumber, Contract, ethers } from "ethers";
 import { task, types } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
+import { CanLootGameFromApi, getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, listenCanLootGamesFromApi, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { getClassNameByCrabada, getDashboardContent, getSigner, listenStartGameEvents } from "./crabada";
 import { v4 as uuidv4 } from 'uuid';
@@ -156,7 +156,7 @@ let attackIteration = 0
 
 interface TeamAndItsTransaction {
     teamId: BigNumber,
-    txHash: string,
+    txHash?: string,
     gameId: BigNumber,
 }
 
@@ -427,6 +427,7 @@ const lootLoop = async (
 
     // Listen pending startGame transactions or StartGame events.
 
+
     // const addTeamToLootTargets = (txs: ethers.Transaction[]) => {
 
     //     if (txs.length == 0){
@@ -448,22 +449,38 @@ const lootLoop = async (
 
     // const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
 
-    const startGameEventsInterval = await listenStartGameEvents(hre, logs => {
 
-        const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, gameId, log: {transactionHash, blockNumber}}) => {
+    // const startGameEventsInterval = await listenStartGameEvents(hre, logs => {
 
-            console.log('start game event', transactionHash, blockNumber, teamId.toString());
+    //     const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, gameId, log: {transactionHash, blockNumber}}) => {
 
-            return {
-                teamId,
-                txHash: transactionHash,
-                gameId
-            }
-        })
+    //         console.log('start game event', transactionHash, blockNumber, teamId.toString());
+
+    //         return {
+    //             teamId,
+    //             txHash: transactionHash,
+    //             gameId
+    //         }
+    //     })
+
+    //     attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
+
+    // }, 50)
+
+
+    const listenCanLootGamesFromApiInterval = await listenCanLootGamesFromApi(hre, (canLootGamesFromApi: CanLootGameFromApi[]) => {
+
+        const teamsAndTheirTransaction: TeamAndItsTransaction[] = canLootGamesFromApi
+            // Latest have the priority
+            .sort(({start_time: a}, { start_time: b}) => a < b ? 1 : a > b ? -1 : 0)
+            .map(({game_id, team_id})=>({
+                gameId: BigNumber.from(game_id), 
+                teamId: BigNumber.from(team_id)
+            }))
 
         attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
 
-    }, 50)
+    }, 500)
 
     // Never finish
     await new Promise((resolve) => {
@@ -486,7 +503,8 @@ const lootLoop = async (
     // clearInterval(gasPriceUpdateInterval)
     //clearInterval(attackTeamsInterval)
     // clearInterval(pendingStartGameTransactionInterval)
-    clearInterval(startGameEventsInterval)
+    // clearInterval(startGameEventsInterval)
+    clearInterval(listenCanLootGamesFromApiInterval)
     idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
     clearInterval(updateLockStatusInterval)
     settleGameInterval && clearInterval(settleGameInterval)

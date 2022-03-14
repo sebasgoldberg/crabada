@@ -519,6 +519,8 @@ export const getClassNameByCrabada = async (hre: HardhatRuntimeEnvironment): Pro
     })
 
     try {
+
+        throw new Error('Disabled class retrieval from hatch events.')
         
         console.log('Getting Hatch events to obtain class names of crabadas from dna.');
         

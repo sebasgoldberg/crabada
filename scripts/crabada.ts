@@ -1019,7 +1019,49 @@ import axios from "axios";
 import { CONFIG_BY_NODE_ID, NodeConfig } from "../config/nodes";
 import { ClassNameByCrabada, CrabadaClassName, TeamBattlePoints } from "./teambp";
 
+export interface CanLootGameFromApi{
+    game_id: number,
+    team_id: number,
+    start_time: number,
+}
+
 export class CrabadaAPI{
+
+   async getCanLootGames(): Promise<CanLootGameFromApi[]>{
+
+        const headers = {
+            'authority': 'idle-api.crabada.com',
+            'pragma': 'no-cache',
+            'cache-control': 'no-cache',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
+            accept: 'application/json, text/plain, */*',
+            // TODO authorization should use the bearer token for each player.
+            authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDcyNTQ3MDMsImV4cCI6MTY0OTg0NjcwMywiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.GFRl3lK53u45oG-lDx58paC6rtZFyPGgcQhCCDgi6sA',
+            'sec-ch-ua-mobile': '?0',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
+            'sec-ch-ua-platform': '"Windows"',
+            origin: 'https://play.crabada.com',
+            'sec-fetch-site': 'same-site',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-dest': 'empty',
+            'referer': 'https://play.crabada.com/',
+            'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
+        }
+
+        const { 
+            result: {
+                data
+            }
+        } = (await axios.get(
+                // TODO address should be for each player.
+                `https://idle-api.crabada.com/public/idle/mines?page=1&status=open&looter_address=0xe90a22064f415896f1f72e041874da419390cc6d&can_loot=1&limit=10`,
+                {
+                    headers
+                })
+            ).data
+
+        return (data as CanLootGameFromApi[])
+   }
 
     // TODO Read chain data using Crabada contract: const { dna } = await crabada.crabadaInfo(4887)
     async getCrabadaInfo(crabadaId: BigNumber): Promise<CrabadaAPIInfo>{
@@ -1130,6 +1172,51 @@ export class CrabadaAPI{
 }
 
 export const API = new CrabadaAPI()
+
+type CanLootGamesFromApiTask = (canLootGamesFromApi: CanLootGameFromApi[]) => void
+
+export const listenCanLootGamesFromApi = async (hre: HardhatRuntimeEnvironment, task: CanLootGamesFromApiTask, interval: number = 500): Promise<NodeJS.Timer> => {
+
+    const gameAlreadyProcessed: {
+        [game_id: number]: boolean
+    } = {}
+
+    let processing: boolean = false
+
+    return setInterval(async () => {
+
+        if (processing)
+            return
+        
+        processing = true
+
+        try {
+
+            const canLootGamesFromApi: CanLootGameFromApi[] = await API.getCanLootGames()
+
+            const newCanLootGamesFromApi = canLootGamesFromApi.filter(({game_id})=>!gameAlreadyProcessed[game_id])
+
+            task(newCanLootGamesFromApi)
+
+            // Remove games that are not returned any more by de API and were already processed.
+            for (const game_id in gameAlreadyProcessed){
+                if (!(game_id in canLootGamesFromApi))
+                    delete gameAlreadyProcessed[game_id]
+            }
+
+            newCanLootGamesFromApi.forEach( ({game_id}) =>{ 
+                gameAlreadyProcessed[game_id]=true 
+            })
+                
+        } catch (error) {
+            console.error('ERROR retrieving canLootGames', String(error));
+        }
+
+        processing = false
+
+    }, interval)
+
+}
 
 export const crabadaIdToBattlePointPromise = async(crabadaId): Promise<number> => {
     if (crabadaId.isZero())
