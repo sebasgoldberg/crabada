@@ -729,11 +729,7 @@ class AttackServer {
          */
         this.app.get('/proxy/captcha/*', async (req, res) => {
 
-            console.log('/proxy/captcha/*')
-            console.log('req.baseUrl', req.baseUrl); // ''
             console.log('req.url', req.url); // '/proxy/captcha/load/?captcha_id=a9cd95e65fc75072dadea93e3d60b0e6&challenge=16471805841662330581e891e709-1e56-4e70-9b6d-996385914a5f&client_type=web&risk_type=icon&lang=pt-br&callback=geetest_1647180585657'
-            console.log('req.headers', req.headers); // {...}
-            console.log('req.body', req.body); // {}
 
             const url = `https://idle-api.crabada.com${req.url.replace('proxy/captcha', 'public')}`
             const headers = {
@@ -752,17 +748,11 @@ class AttackServer {
                 'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
             }
 
-            console.log('proxy url', url);
-            console.log('proxy headers', headers);
-
             try {
 
                 const response = await axios.get(url,{
                     headers
                 })
-
-                console.log(response.status);
-                console.log(response.data);
 
                 res.status(response.status)
                 res.send(response.data)
@@ -804,12 +794,9 @@ class AttackServer {
                         }
                     }
 
-                    console.log('req.query.challenge',  req.query.challenge);
                     const challenge = req.query.challenge as string
                     const pendingChallenge = this.pendingChallenge[challenge]
                     const { user_address, game_id, team_id, requester } = pendingChallenge
-
-                    console.log('this.pendingChallenge[challenge]', this.pendingChallenge[challenge]);
 
                     const { 
                         data: { 
@@ -819,9 +806,6 @@ class AttackServer {
                             } 
                         }
                     }: CaptchaResult = parsedData
-
-                    console.log('parsedData', parsedData);
-                    
 
                     try {
 
@@ -950,17 +934,12 @@ class AttackServer {
         this.app.get('/captcha/status/', async (req, res) => {
 
             console.log('/captcha/status/')
-            console.log(req.query);
 
             const challenge = req.query.challenge as string
 
             const pendingChallenge = this.pendingChallenge[challenge]
 
-            console.log('challenge', challenge);
-            console.log('pendingChallenge', pendingChallenge);
-
             if (!pendingChallenge){
-                console.log('!pendingChallenge');
                 res.status(404)
                 return
             }
@@ -985,8 +964,6 @@ class AttackServer {
 
         const pendingChallenge = this.pendingChallenge[challenge]
 
-        console.log('respondStatusPendingChallenge', 'pendingChallenge', pendingChallenge);
-
         if (!pendingChallenge)
             return
         
@@ -996,9 +973,15 @@ class AttackServer {
         pendingChallenge.status.res.status(
             pendingChallenge.status.successfulAttackRegistration ? 200 : 400
         )
+
+        const {game_id, requester, team_id, user_address} = pendingChallenge
         pendingChallenge.status.res.json({
-            ...pendingChallenge,
-            challenge
+            challenge,
+            game_id, 
+            requester, 
+            team_id, 
+            user_address,
+            successfulAttackRegistration: pendingChallenge.status.successfulAttackRegistration,
         })
 
         pendingChallenge.status.resolveStatusResponse(undefined)
