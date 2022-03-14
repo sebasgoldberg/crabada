@@ -763,6 +763,7 @@ class AttackServer {
                 'sec-fetch-dest': 'script',
                 'referer': 'https://play.crabada.com/',
                 'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
+                cookie: '_hjSessionUser_2567432=eyJpZCI6IjFmMDRmZmRkLWYxMGMtNThjMi1iMWZjLTM0Zjg5MTFlNWNlNyIsImNyZWF0ZWQiOjE2MzgwMTA1MzY2NjksImV4aXN0aW5nIjp0cnVlfQ==; _ga_0JZ9C3M56S=GS1.1.1644169522.62.0.1644169522.0; amp_fef1e8=4a14c266-5a66-48f2-9614-e6282c8be872R...1ftker5j1.1ftkerd5k.bm.25.dr; _ga=GA1.1.311628077.1638010536; _ga_8LH6CFBN5P=GS1.1.1646881253.330.1.1646881507.0; _ga_J0F5RPFJF1=GS1.1.1647125967.36.1.1647125983.0; _ga_EKEKPKZ4L1=GS1.1.1647167093.7.0.1647167094.0; _ga_C6PTCE6QJM=GS1.1.1647178955.188.1.1647179135.0',
             }
 
             try {
