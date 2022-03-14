@@ -647,6 +647,23 @@ interface PendingTransactionByChallenge {
     [challenge: string]: PendingTransaction
 }
 
+interface CaptchaVerifyResult {
+    status: string,
+    data: {
+        lot_number: string,
+        result: string,
+        fail_count: number,
+        seccode: {
+            captcha_id: string,
+            lot_number: string,
+            pass_token: string,
+            gen_time: string,
+            captcha_output: string
+        },
+    }
+}
+
+
 class AttackServer {
 
     app = express();
@@ -759,79 +776,11 @@ class AttackServer {
 
                 if (response.status == 200 && req.url.indexOf('/proxy/captcha/verify') >= 0) {
 
-                    const parsedData = JSON.parse(/geetest_[\d]*\((.*)\)/g.exec(response.data)[1])
-
-                    // captchaResult
-                    // {
-                    //     status: 'success',
-                    //     data: {
-                    //       lot_number: '5d446171577e41628a92020cf0934662',
-                    //       result: 'success',
-                    //       fail_count: 0,
-                    //       seccode: {
-                    //         captcha_id: 'a9cd95e65fc75072dadea93e3d60b0e6',
-                    //         lot_number: '5d446171577e41628a92020cf0934662',
-                    //         pass_token: '1028ee82d98fad3764c2c26876cec5cb9ad368fa0ae272951f60a442a2ea17ac',
-                    //         gen_time: '1647200920',
-                    //         captcha_output: 'zrZmJMfbTd-SNVauvuKQVIyiHDrhc0qA7X376FbYLLVWdiFFVPdPmNPvBm5vxyHJPFz4ckTN-bm4Qedatt659nL0ciDcEpV403sXQbVuCKIp1k0dpCw7shc7RfmWLY1W'
-                    //       },
-                    //       score: '4'
-                    //     }
-                    //   }
-                    interface CaptchaResult {
-                        status: string,
-                        data: {
-                            lot_number: string,
-                            result: string,
-                            fail_count: number,
-                            seccode: {
-                                captcha_id: string,
-                                lot_number: string,
-                                pass_token: string,
-                                gen_time: string,
-                                captcha_output: string
-                            },
-                        }
-                    }
+                    const parsedData: CaptchaVerifyResult = JSON.parse(/geetest_[\d]*\((.*)\)/g.exec(response.data)[1])
 
                     const challenge = req.query.challenge as string
-                    const pendingChallenge = this.pendingChallenge[challenge]
-                    const { user_address, game_id, team_id, requester } = pendingChallenge
 
-                    const { 
-                        data: { 
-                            lot_number, 
-                            seccode: { 
-                                captcha_output, pass_token, gen_time 
-                            } 
-                        }
-                    }: CaptchaResult = parsedData
-
-                    try {
-
-                        const attackResponse = await this.registerAttack(user_address, team_id, game_id, lot_number, pass_token, gen_time, captcha_output)
-
-                        console.log('SUCCESS trying to register attack', requester);
-                        console.log(attackResponse.data);
-        
-                        const { signature, expire_time } = attackResponse.data.result
-        
-                        this.attackExecutor.addAttackTransactionData({ user_address, game_id, team_id, expire_time, signature })
-
-                        pendingChallenge.status.successfulAttackRegistration = true
-
-                    } catch (error) {
-        
-                        // error.response.data
-                        // { error_code: 'BAD_REQUEST', message: 'Game doest not exists' }
-
-                        // TODO Retry call when error.response.data.message == 'Game doest not exists'
-
-                        console.error('ERROR trying to register attack', error.response.data);
-
-                        pendingChallenge.status.successfulAttackRegistration = false
-        
-                    }
+                    await this.registerOrRetryAttack(challenge, parsedData)
 
                     this.respondStatusPendingChallenge(challenge)
 
@@ -957,6 +906,53 @@ class AttackServer {
         this.attackExecutor = new AttackExecutor(hre)
         this.attackExecutor.beginAttackInterval()
         this.app.listen(3000)
+
+    }
+
+    async registerOrRetryAttack(challenge: string, captchaVerifyResponse: CaptchaVerifyResult){
+
+        const pendingChallenge = this.pendingChallenge[challenge]
+        const { user_address, game_id, team_id, requester } = pendingChallenge
+
+        const { 
+            data: { 
+                lot_number, 
+                seccode: { 
+                    captcha_output, pass_token, gen_time 
+                } 
+            }
+        }: CaptchaVerifyResult = captchaVerifyResponse
+
+
+        try {
+
+            const attackResponse = await this.registerAttack(user_address, team_id, game_id, lot_number, pass_token, gen_time, captcha_output)
+
+            console.log('SUCCESS trying to register attack', requester);
+            console.log(attackResponse.data);
+
+            const { signature, expire_time } = attackResponse.data.result
+
+            this.attackExecutor.addAttackTransactionData({ user_address, game_id, team_id, expire_time, signature })
+
+            pendingChallenge.status.successfulAttackRegistration = true
+
+        } catch (error) {
+
+            // error.response.data
+            // { error_code: 'BAD_REQUEST', message: 'Game doest not exists' }
+
+            // TODO Retry call when error.response.data.message == 'Game doest not exists'
+
+            console.error('ERROR trying to register attack', error.response.data);
+
+            if (error.response.data.message == 'Game doest not exists'){
+                await this.registerOrRetryAttack(challenge, captchaVerifyResponse)
+            }else{
+                pendingChallenge.status.successfulAttackRegistration = false
+            }
+
+        }
 
     }
 
