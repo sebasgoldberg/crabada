@@ -23,26 +23,13 @@
             get: (searchParams, prop) => searchParams.get(prop),
         });
 
-        function uuidv4() {
-            return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
-                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-            );
-        }
-
-        function getTransactionAndSendIt(captchaResult, gameId, looterAddress, looterTeamId){
+        function getTransactionStatus(challenge){
 
             $.ajax({
-                url: '/captcha/verify/',
-                method: 'POST',
+                url: '/captcha/status/',
+                method: 'GET',
                 data: JSON.stringify({
-                    requester: params.requester,
-                    game_id: gameId,
-                    user_address: looterAddress, // OK
-                    team_id: looterTeamId, // OK
-                    lot_number: captchaResult.lot_number, // OK(2.response.lot_number)
-                    pass_token: captchaResult.pass_token, // OK(2.response.pass_token)
-                    gen_time: captchaResult.gen_time, // OK(2.response.gen_time)
-                    captcha_output: captchaResult.captcha_output, // OK(2.response.captcha_output)
+                    challenge: challenge,
                 }),
                 dataType: 'json',
                 contentType: "application/json; charset=utf-8",
@@ -105,9 +92,7 @@
 
                     console.log(captchaResult);
 
-                    // getTransactionAndSendIt(challenge)
-
-                    // TODO query attack transaction result to notify success if applies.
+                    getTransactionStatus(challenge)
 
                 }).onError(function () {
 

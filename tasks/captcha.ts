@@ -635,7 +635,12 @@ interface PendingTransaction {
     user_address: string,
     team_id: string,
     game_id: string,
-    requester: string
+    requester: string,
+    status: {
+        resolveStatusResponse?: (value: unknown) => void,
+        res?: typeof express.response,    
+        successfulAttackRegistration?: boolean|undefined
+    }
 }
 
 interface PendingTransactionByChallenge {
@@ -801,7 +806,8 @@ class AttackServer {
 
                     console.log('req.query.challenge',  req.query.challenge);
                     const challenge = req.query.challenge as string
-                    const { user_address, game_id, team_id, requester } = this.pendingChallenge[challenge]
+                    const pendingChallenge = this.pendingChallenge[challenge]
+                    const { user_address, game_id, team_id, requester } = pendingChallenge
 
                     console.log('this.pendingChallenge[challenge]', this.pendingChallenge[challenge]);
 
@@ -820,14 +826,16 @@ class AttackServer {
                     try {
 
                         const attackResponse = await this.registerAttack(user_address, team_id, game_id, lot_number, pass_token, gen_time, captcha_output)
-        
+
                         console.log('SUCCESS trying to register attack', requester);
                         console.log(attackResponse.data);
         
                         const { signature, expire_time } = attackResponse.data.result
         
                         this.attackExecutor.addAttackTransactionData({ user_address, game_id, team_id, expire_time, signature })
-        
+
+                        pendingChallenge.status.successfulAttackRegistration = true
+
                     } catch (error) {
         
                         // error.response.data
@@ -835,10 +843,13 @@ class AttackServer {
 
                         // TODO Retry call when error.response.data.message == 'Game doest not exists'
 
-
                         console.error('ERROR trying to register attack', error.response.data);
+
+                        pendingChallenge.status.successfulAttackRegistration = false
         
                     }
+
+                    this.respondStatusPendingChallenge(challenge)
 
                 }
 
@@ -847,14 +858,14 @@ class AttackServer {
 
                 console.log('ERROR', String(error))
 
-                if (error.response){
-                    console.log('error.response.status', error.response.status);
-                    console.log('error.response.data', error.response.data);
-                    res.status(error.response.status)
-                    res.json(error.response.data)
-                } else {
-                    throw error
-                }
+                // if (error.response){
+                //     console.log('error.response.status', error.response.status);
+                //     console.log('error.response.data', error.response.data);
+                //     res.status(error.response.status)
+                //     res.json(error.response.data)
+                // } else {
+                //     throw error
+                // }
 
             }
 
@@ -936,9 +947,63 @@ class AttackServer {
 
         })
 
+        this.app.get('/captcha/status/', async (req, res) => {
+
+            console.log('/captcha/status/')
+            console.log(req.query);
+
+            // if (!existsAnyTeamSettled(playerTeamPairs, testmode)){
+            //     res.status(401)
+            //     res.json({
+            //         message: "ALL TEAMS ARE BUSY."
+            //     })
+            // }
+
+            await new Promise(resolve => {
+
+                const challenge = req.query.challenge as string
+
+                const pendingChallenge = this.pendingChallenge[challenge]
+
+                if (!pendingChallenge)
+                    res.status(404)
+
+                pendingChallenge.status.res = res
+
+                pendingChallenge.status.resolveStatusResponse = resolve
+
+                this.respondStatusPendingChallenge(challenge)
+
+            })
+        })
+
         this.attackExecutor = new AttackExecutor(hre)
         this.attackExecutor.beginAttackInterval()
         this.app.listen(3000)
+
+    }
+
+    respondStatusPendingChallenge(challenge: string){
+
+        const pendingChallenge = this.pendingChallenge[challenge]
+
+        if (!pendingChallenge)
+            return
+        
+        if (!pendingChallenge.status.res || pendingChallenge.status.successfulAttackRegistration == undefined)
+            return
+
+        pendingChallenge.status.res.status(
+            pendingChallenge.status.successfulAttackRegistration ? 200 : 400
+        )
+        pendingChallenge.status.res.json({
+            ...pendingChallenge,
+            challenge
+        })
+
+        pendingChallenge.status.resolveStatusResponse(undefined)
+
+        delete pendingChallenge[challenge]
 
     }
 
@@ -1013,6 +1078,7 @@ class AttackServer {
             team_id: p.teamId.toString(),
             game_id: t.gameId.toString(),
             requester: pendingResponse.requester,
+            status: {}
         }
 
         const captchaData = {
