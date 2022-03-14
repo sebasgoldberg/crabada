@@ -26,11 +26,8 @@
         function getTransactionStatus(challenge){
 
             $.ajax({
-                url: '/captcha/status/',
+                url: '/captcha/status/?challenge='+challenge,
                 method: 'GET',
-                data: JSON.stringify({
-                    challenge: challenge,
-                }),
                 dataType: 'json',
                 contentType: "application/json; charset=utf-8",
                 success: function (data) {
