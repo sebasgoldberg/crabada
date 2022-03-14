@@ -952,24 +952,18 @@ class AttackServer {
             console.log('/captcha/status/')
             console.log(req.query);
 
-            // if (!existsAnyTeamSettled(playerTeamPairs, testmode)){
-            //     res.status(401)
-            //     res.json({
-            //         message: "ALL TEAMS ARE BUSY."
-            //     })
-            // }
+            const challenge = req.query.challenge as string
+
+            const pendingChallenge = this.pendingChallenge[challenge]
+
+            if (!pendingChallenge){
+                res.status(404)
+                return
+            }
 
             await new Promise(resolve => {
 
-                const challenge = req.query.challenge as string
-
-                const pendingChallenge = this.pendingChallenge[challenge]
-
-                if (!pendingChallenge)
-                    res.status(404)
-
                 pendingChallenge.status.res = res
-
                 pendingChallenge.status.resolveStatusResponse = resolve
 
                 this.respondStatusPendingChallenge(challenge)
