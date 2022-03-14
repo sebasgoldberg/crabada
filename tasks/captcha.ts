@@ -956,7 +956,11 @@ class AttackServer {
 
             const pendingChallenge = this.pendingChallenge[challenge]
 
+            console.log('challenge', challenge);
+            console.log('pendingChallenge', pendingChallenge);
+
             if (!pendingChallenge){
+                console.log('!pendingChallenge');
                 res.status(404)
                 return
             }
@@ -980,6 +984,8 @@ class AttackServer {
     respondStatusPendingChallenge(challenge: string){
 
         const pendingChallenge = this.pendingChallenge[challenge]
+
+        console.log('respondStatusPendingChallenge', 'pendingChallenge', pendingChallenge);
 
         if (!pendingChallenge)
             return
