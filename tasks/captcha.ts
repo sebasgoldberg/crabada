@@ -450,37 +450,37 @@ const lootLoop = async (
     // const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
 
 
-    // const startGameEventsInterval = await listenStartGameEvents(hre, logs => {
+    const startGameEventsInterval = await listenStartGameEvents(hre, logs => {
 
-    //     const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, gameId, log: {transactionHash, blockNumber}}) => {
+        const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, gameId, log: {transactionHash, blockNumber}}) => {
 
-    //         console.log('start game event', transactionHash, blockNumber, teamId.toString());
+            console.log('start game event', transactionHash, blockNumber, teamId.toString());
 
-    //         return {
-    //             teamId,
-    //             txHash: transactionHash,
-    //             gameId
-    //         }
-    //     })
+            return {
+                teamId,
+                txHash: transactionHash,
+                gameId
+            }
+        })
 
-    //     attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
+        attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
 
-    // }, 50)
+    }, 50)
 
 
     const listenCanLootGamesFromApiInterval = await listenCanLootGamesFromApi(hre, (canLootGamesFromApi: CanLootGameFromApi[]) => {
 
-        const teamsAndTheirTransaction: TeamAndItsTransaction[] = canLootGamesFromApi
-            // Latest have the priority
-            .sort(({start_time: a}, { start_time: b}) => a < b ? 1 : a > b ? -1 : 0)
-            .map(({game_id, team_id})=>({
-                gameId: BigNumber.from(game_id), 
-                teamId: BigNumber.from(team_id)
-            }))
+        // const teamsAndTheirTransaction: TeamAndItsTransaction[] = canLootGamesFromApi
+        //     // Latest have the priority
+        //     .sort(({start_time: a}, { start_time: b}) => a < b ? 1 : a > b ? -1 : 0)
+        //     .map(({game_id, team_id})=>({
+        //         gameId: BigNumber.from(game_id), 
+        //         teamId: BigNumber.from(team_id)
+        //     }))
 
-        attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
+        // attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
 
-    }, 500)
+    }, 2000)
 
     // Never finish
     await new Promise((resolve) => {
@@ -503,7 +503,7 @@ const lootLoop = async (
     // clearInterval(gasPriceUpdateInterval)
     //clearInterval(attackTeamsInterval)
     // clearInterval(pendingStartGameTransactionInterval)
-    // clearInterval(startGameEventsInterval)
+    clearInterval(startGameEventsInterval)
     clearInterval(listenCanLootGamesFromApiInterval)
     idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
     clearInterval(updateLockStatusInterval)
