@@ -1107,7 +1107,6 @@ export class CrabadaAPI{
             .map( async (page: number) => {
                 try {
                     const url = `https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
-                    console.log(url);
                     return (await axios.get(url)).data
                 } catch (error) {
                     error(`ERROR getting page for lending API`, String(error))
