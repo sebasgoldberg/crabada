@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Context, Telegraf } from "telegraf";
-import { getDashboard, refillavax, withdrawRewards } from "./crabada";
+import { ATTACK_MODE, getDashboard, MINE_MODE, refillavax, withdrawRewards } from "./crabada";
 
 task(
     "telegram",
@@ -49,7 +49,7 @@ task(
                 players
             } = await getDashboard(hre)
 
-            ctx.reply(`
+            ATTACK_MODE && ctx.reply(`
 AVAX consumed 
 ${ avax.avaxConsumed }
 
@@ -58,6 +58,15 @@ ${ avax.looters.map( l => l.balance ).join('\n') }
 
 SETTLER 
 ${ avax.settler.balance }
+            `)
+
+            MINE_MODE && ctx.reply(`
+AVAX consumed 
+${ avax.avaxConsumed }
+
+MINERS 
+${ avax.miners.map( l => l.balance ).join('\n') }
+
             `)
 
             ctx.reply(`
@@ -102,8 +111,9 @@ secondsToUnlock: ${ team.info.secondsToUnlock }
 currentGame: ${ team.info.currentGame }
 attackReinforcements: ${ team.info.gameInfo.attackReinforcements }
 defenseReinforcements: ${ team.info.gameInfo.defenseReinforcements }
+minersRevance: ${ team.info.gameInfo.minersRevange }
 
-Miner: ${ team.info.gameInfo.otherTeam.id } ${ team.info.gameInfo.otherTeam.faction }
+Other team: ${ team.info.gameInfo.otherTeam.id } ${ team.info.gameInfo.otherTeam.faction }
 props: ${ team.info.gameInfo.otherTeam.props.bp }(${ team.info.gameInfo.otherTeam.props.rbp }) ${ team.info.gameInfo.otherTeam.props.mp }
                     `)
                     
