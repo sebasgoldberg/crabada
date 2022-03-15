@@ -92,6 +92,31 @@ task("depositcrabadas", "Deposit crabadas to idle game.", async ({ crabadas }, h
 })
     .addParam("crabadas", "Crabadas to deposit.", undefined, types.string)
 
+task("removecrabadasfromteam", "Removes crabadas from team.", async ({ teamid, position }, hre): Promise<void> => {
+
+    const signer = await getSigner(hre);
+
+    const { idleGame } = getCrabadaContracts(hre)
+
+    const override = await getOverride(hre)
+
+    const positions = position ? [position] : [0,1,2]
+
+    for (const pos of positions){
+        console.log("iddleGame.removeCrabadaFromTeam(teamId, position);", teamid, position);
+        await idleGame.connect(signer).callStatic.removeCrabadaFromTeam(teamid, position, override)
+        await logTransactionAndWait(
+            idleGame.connect(signer).removeCrabadaFromTeam(teamid, position, override), 
+            1
+        )
+
+    }
+
+})
+    .addParam("teamid", "The Team ID. If not supplied, then the team will be created.", undefined, types.int)
+    .addOptionalParam("position", "Position to remove. From 0 to 2.", undefined, types.int)
+
+
 task("addcrabadastoteam", "Add crabadas to team for the specified signer.", async ({ teamid, crabadas }, hre): Promise<void> => {
 
     const signer = await getSigner(hre);

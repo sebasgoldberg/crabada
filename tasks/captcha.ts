@@ -522,11 +522,11 @@ export const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
         //     address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
         //     teams: [ 3286, 3759, 5032 ],
         // },
-        {
-            signerIndex: 2,
-            address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-            teams: [ /*5355,*/ 5357, /*6152*/ ],
-        },
+        // {
+        //     signerIndex: 2,
+        //     address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
+        //     teams: [ /*5355,*/ 5357, /*6152*/ ],
+        // },
         // {
         //     signerIndex: 3,
         //     address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
@@ -547,6 +547,11 @@ export const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
         //     address: '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8',
         //     teams: [ 16764, 16765, 16766 ],
         // },
+        {
+            signerIndex: 7,
+            address: '0xfa310944F9708DE3fd12A999Dfefe9B300C738cF',
+            teams: [ 18896, ],
+        },
     ],
     attackTransaction: {
         override: {
@@ -1013,7 +1018,8 @@ class AttackServer {
             '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4YzdjOTY2NzU0ZGJlNTJhMjlkZmQxY2NjY2JmZDJmZmJlMDZiMjNiMiIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNmFjYjQ5Njg2N2EiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NzQ3LCJleHAiOjE2NDk3NTk3NDcsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.H1BhKzlVD2NP8BNEVcCBnKiUUrD7CVDjhE77_38KRfg',
             '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4OTU2OGJkMWVlYWVjY2YyM2YwYTE0NzQ3OGNlZjg3NDM0YWYwYjVkNCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAxYWRhMzBhY2JiM2EiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NzczLCJleHAiOjE2NDk3NTk3NzMsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.dEFYnZpR_GVaTmnTRrsBf0NqU-xblP8YkXR6L6NkFD4',
             '0x83Ff016a2e574b2c35d17Fe4302188b192b64344': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ODNmZjAxNmEyZTU3NGIyYzM1ZDE3ZmU0MzAyMTg4YjE5MmI2NDM0NCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyZDBhY2Q5ODIxOGUiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3ODQwLCJleHAiOjE2NDk3NTk4NDAsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.n9fOVIOOOpohxwz7X8sOGE71T3Fut8bZnSaYVDy0snM',
-            '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4NjMxNWY5M2RlZjQ4YzIxZmZhZGQ1Y2JlMDc4Y2RiMTliYWE2NjFmOCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAxMmFhYjZlNWQxOTUiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3ODczLCJleHAiOjE2NDk3NTk4NzMsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.-lsJLlIUX6WCnEVr75pTG2ls7j12UViBLaXNnKxvP60'
+            '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4NjMxNWY5M2RlZjQ4YzIxZmZhZGQ1Y2JlMDc4Y2RiMTliYWE2NjFmOCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAxMmFhYjZlNWQxOTUiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3ODczLCJleHAiOjE2NDk3NTk4NzMsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.-lsJLlIUX6WCnEVr75pTG2ls7j12UViBLaXNnKxvP60',
+            '0xfa310944F9708DE3fd12A999Dfefe9B300C738cF': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZmEzMTA5NDRmOTcwOGRlM2ZkMTJhOTk5ZGZlZmU5YjMwMGM3MzhjZiIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiA1NTBmNjU0NzdiNDciLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MjgxODQ4LCJleHAiOjE2NDk4NzM4NDgsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.uHPB4HmoYmQskbNrhkux5HOkfkGh0yUA3Y6mtVu9t3A'
         }
 
         const attackResponse = await axios.put(`https://idle-api.crabada.com/public/idle/attack/${game_id}`, {
