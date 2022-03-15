@@ -1315,7 +1315,7 @@ export const getCrabadasToBorrow = async (minBattlePointNeeded: number, reinforc
     const possibleCrabadasToBorrowOrderByPrice = crabadasInTabernOrderByPrice
         .filter( x => x.battle_point >= minBattlePointNeeded)
         .filter( x => reinforceAttack ? 
-            true : (x.battle_point >= 220 && x.mine_point >= 79 && x.price <= MAX_REINFORCE_DEFENSE_PRICE)
+            true : (x.battle_point >= 220 && x.mine_point >= 79 && x.price.lte(MAX_REINFORCE_DEFENSE_PRICE))
         )
 
     console.log('possibleCrabadasToBorrowOrderByPrice', possibleCrabadasToBorrowOrderByPrice.length);
