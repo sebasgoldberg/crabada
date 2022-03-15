@@ -1296,17 +1296,18 @@ export interface CrabadaInTabern{
     mine_point: number
 }
 
+const MAX_REINFORCE_DEFENSE_PRICE = parseEther('20')
 const BORROW_STEP_PRICE_IN_TUS = 2
 const BORROW_MAX_PRICE_IN_TUS = 36
 const BORROW_PRICE_STEPS = Math.floor((BORROW_MAX_PRICE_IN_TUS/BORROW_STEP_PRICE_IN_TUS)+0.5)
 const PRICE_RANGES = Array.from(Array(BORROW_PRICE_STEPS).keys())
-.map( step => ({minPriceInTus: step*BORROW_STEP_PRICE_IN_TUS, maxPriceInTus: (step+1)*BORROW_STEP_PRICE_IN_TUS}) )
-.map( ({minPriceInTus, maxPriceInTus}) => ({
-    minPrice: parseEther(String(minPriceInTus)),
-    maxPrice: parseEther(String(maxPriceInTus)),
-}))
+    .map( step => ({minPriceInTus: step*BORROW_STEP_PRICE_IN_TUS, maxPriceInTus: (step+1)*BORROW_STEP_PRICE_IN_TUS}) )
+    .map( ({minPriceInTus, maxPriceInTus}) => ({
+        minPrice: parseEther(String(minPriceInTus)),
+        maxPrice: parseEther(String(maxPriceInTus)),
+    }))
 
-export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise<CrabadaToBorrow[]> => {
+export const getCrabadasToBorrow = async (minBattlePointNeeded: number, reinforceAttack: boolean): Promise<CrabadaToBorrow[]> => {
 
     const crabadasInTabernOrderByPrice: CrabadaInTabern[] = await API.getCrabadasInTabernOrderByPrice() //https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=100
 
@@ -1314,8 +1315,15 @@ export const getCrabadasToBorrow = async (minBattlePointNeeded: number): Promise
 
     const possibleCrabadasToBorrowOrderByPrice = crabadasInTabernOrderByPrice
         .filter( x => x.battle_point >= minBattlePointNeeded)
+        .filter( x => reinforceAttack ? 
+            true : (x.battle_point >= 220 && x.mine_point >= 79 && x.price <= MAX_REINFORCE_DEFENSE_PRICE)
+        )
 
     console.log('possibleCrabadasToBorrowOrderByPrice', possibleCrabadasToBorrowOrderByPrice.length);
+
+    if (!reinforceAttack){
+        return possibleCrabadasToBorrowOrderByPrice
+    }
 
     const crabadasToBorrowOrderByBattlePointDescByPriceSteps: CrabadaInTabern[] = PRICE_RANGES
         .map( ({minPrice, maxPrice}) => {
@@ -1374,17 +1382,19 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 
 }
 
+export const MAX_FEE_REINFORCE_DEFENSE = BigNumber.from(ONE_GWEI*100)
+
 export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     currentGameId: BigNumber, minRealBattlePointNeeded: number,
     signer: SignerWithAddress, player: string|undefined, testMode=true, reinforceAttack: boolean): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
     
-    const borrowOptions: CrabadaToBorrow[] = await getCrabadasToBorrow(minRealBattlePointNeeded)
+    const borrowOptions: CrabadaToBorrow[] = await getCrabadasToBorrow(minRealBattlePointNeeded, reinforceAttack)
     
     const override = {
         gasLimit: GAS_LIMIT,
-        maxFeePerGas: MAX_FEE,
+        maxFeePerGas: reinforceAttack ? MAX_FEE : MAX_FEE_REINFORCE_DEFENSE,
         maxPriorityFeePerGas: ONE_GWEI
     }
 
