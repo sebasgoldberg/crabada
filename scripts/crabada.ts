@@ -1415,7 +1415,9 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
                     const tr: TransactionResponse = await playerContract.connect(signer)[reinforceMethodName](currentGameId, crabadaId, borrowPrice, override)
             
                     console.log('Transaction hash', tr.hash);
-                
+
+                    tr.wait(3)
+
                     return tr
                 }
     
@@ -1440,6 +1442,8 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
                     const tr: TransactionResponse = await idleGame.connect(signer)[reinforceMethodName](currentGameId, crabadaId, borrowPrice, override)
             
                     console.log('Transaction hash', tr.hash);
+
+                    tr.wait(3)
                 
                     return tr
                 }
