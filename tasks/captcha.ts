@@ -522,11 +522,11 @@ export const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
         //     address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
         //     teams: [ 3286, 3759, 5032 ],
         // },
-        {
-            signerIndex: 2,
-            address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-            teams: [ /*5355,*/ 5357, /*6152*/ ],
-        },
+        // {
+        //     signerIndex: 2,
+        //     address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
+        //     teams: [ 5355, 5357, 6152 ],
+        // },
         // {
         //     signerIndex: 3,
         //     address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
