@@ -1416,7 +1416,7 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
             
                     console.log('Transaction hash', tr.hash);
 
-                    tr.wait(3)
+                    await tr.wait(3)
 
                     return tr
                 }
@@ -1443,7 +1443,7 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
             
                     console.log('Transaction hash', tr.hash);
 
-                    tr.wait(3)
+                    await tr.wait(3)
                 
                     return tr
                 }
