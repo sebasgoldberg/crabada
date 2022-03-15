@@ -1850,7 +1850,7 @@ export const withdrawRewards = async (hre: HardhatRuntimeEnvironment, log=consol
 
     const override = await getOverride(hre)
 
-    const fromAddresses = LOOT_CAPTCHA_CONFIG.players.map(p=>p.address)
+    const fromAddresses = MINE_CONFIG.map(p=>p.address)
 
     for (const from of fromAddresses){
 
@@ -1896,11 +1896,15 @@ export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 const LOOTER_TARGET_BALANCE = parseEther('2')
 const SETTLER_TARGET_BALANCE = parseEther('6')
 
+export const MINE_MODE = true
+export const ATTACK_MODE = !MINE_MODE
+
 export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.log ) => {
 
     const signer = await getSigner(hre)
 
-    const lootPendingAddresses: string[] = LOOT_CAPTCHA_CONFIG.players.map(p=>p.address)
+    const lootPendingAddresses: string[] = (MINE_MODE ?
+        MINE_CONFIG : LOOT_CAPTCHA_CONFIG.players).map(p=>p.address)
 
     const override = await getOverride(hre)
 
@@ -1924,9 +1928,9 @@ export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.lo
     }
 
     for (const destination of lootPendingAddresses)
-        await _refillAvax(signer, destination, LOOTER_TARGET_BALANCE)
+        await _refillAvax(signer, destination, MINE_MODE ? MINER_TARGET : LOOTER_TARGET_BALANCE)
     
-    await _refillAvax(signer, SETTLER_ACCOUNT, SETTLER_TARGET_BALANCE)
+    ATTACK_MODE && await _refillAvax(signer, SETTLER_ACCOUNT, SETTLER_TARGET_BALANCE)
 
 }
 
@@ -2325,6 +2329,8 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
     }
 
 }
+
+export const getDashboard = MINE_MODE ? getMineDashboardContent : getDashboardContent
 
 task(
     "dashboard",

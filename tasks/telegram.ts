@@ -2,9 +2,7 @@ import { task } from "hardhat/config";
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Context, Telegraf } from "telegraf";
-import { LOOT_CAPTCHA_CONFIG } from "./captcha";
-import { getDashboardContent, getSigner, LOOT_PENDING_AVAX_ACCOUNTS, LOOT_PENDING_CONFIG, refillavax, REINFORCE_ACCOUNT, SETTLER_ACCOUNT, withdrawRewards } from "./crabada";
-import { playerWithdrawErc20 } from "./player";
+import { getDashboard, refillavax, withdrawRewards } from "./crabada";
 
 task(
     "telegram",
@@ -49,7 +47,7 @@ task(
                 avax,
                 rewards,
                 players
-            } = await getDashboardContent(hre)
+            } = await getDashboard(hre)
 
             ctx.reply(`
 AVAX consumed 
@@ -91,7 +89,7 @@ ${ secondsToUnlock.sort((a,b)=> a<b?-1:a>b?1:0) }
         
             const {
                 players
-            } = await getDashboardContent(hre)
+            } = await getDashboard(hre)
 
             players.forEach( player => {
 
