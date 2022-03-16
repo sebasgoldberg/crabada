@@ -2257,7 +2257,7 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
                         const calcMinersRevenge = (defenseMP: number, diffBP: number): number => {
                             return bpDiff <=0 ? 
                                 100 :
-                                Math.max(
+                                Math.min(
                                     Math.floor(
                                         ( 7 + (((defenseMP)/5)-56)*1.25
                                             + 20/(diffBP**0.5) ) 
