@@ -2184,7 +2184,7 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
 
 }
 
-const MINER_TARGET = parseEther('1')
+const MINER_TARGET = parseEther('2.5')
 
 export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardContent> => {
 
