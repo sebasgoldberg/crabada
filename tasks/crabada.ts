@@ -2257,7 +2257,7 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
                             bpDiff <=0 ? 
                                 100 :
                                 7 + (((timePoint+defenseReinforceMinePoint)/5)-56)*1.25
-                                    + 20/(bpDiff^0.5)
+                                    + 20/(bpDiff**0.5)
 
                         return {
                             id: String(team),
