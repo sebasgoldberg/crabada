@@ -66,7 +66,6 @@ ${ avax.avaxConsumed }
 
 MINERS 
 ${ avax.miners.map( l => l.balance ).join('\n') }
-
             `)
 
             ctx.reply(`
@@ -80,12 +79,19 @@ ${ rewards.CRA }
             const secondsToUnlock: number[] = players
                 .flatMap( ({ teams }) => teams.map( ({ info: { secondsToUnlock }}) => secondsToUnlock ) )
 
+            const revenge: number[] = players
+                .flatMap( ({ teams }) => teams.map( ({ info: { gameInfo: { minersRevenge: minersRevange } }}) => minersRevange ) )
+
             ctx.reply(`
 Players unlocked
 ${ secondsToUnlock.filter( x => x < 0 ).length }
 
 Seconds To Unlock
 ${ secondsToUnlock.sort((a,b)=> a<b?-1:a>b?1:0) }
+
+REVENGE
+${ revenge.sort((a,b)=> a<b?-1:a>b?1:0).map(x=> `${x}%`) }
+${ revenge.reduce((prev, curr)=>prev+curr, 0)/revenge.length }
             `)
 
         })
@@ -111,7 +117,7 @@ secondsToUnlock: ${ team.info.secondsToUnlock }
 currentGame: ${ team.info.currentGame }
 attackReinforcements: ${ team.info.gameInfo.attackReinforcements }
 defenseReinforcements: ${ team.info.gameInfo.defenseReinforcements }
-minersRevance: ${ team.info.gameInfo.minersRevange }
+minersRevance: ${ team.info.gameInfo.minersRevenge }
 
 Other team: ${ team.info.gameInfo.otherTeam.id } ${ team.info.gameInfo.otherTeam.faction }
 props: ${ team.info.gameInfo.otherTeam.props.bp }(${ team.info.gameInfo.otherTeam.props.rbp }) ${ team.info.gameInfo.otherTeam.props.mp }

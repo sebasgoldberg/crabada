@@ -2025,7 +2025,7 @@ interface IDashboardTeam {
                 faction: TeamFaction,
                 props: IDashboardTeamProps,
             },
-            minersRevange?: number
+            minersRevenge?: number
         }
     }
 }
@@ -2283,7 +2283,7 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
                                             mp: attackerTimePoint
                                         }
                                     },
-                                    minersRevange
+                                    minersRevenge: minersRevange
                                 },
 
                             }
@@ -2433,7 +2433,7 @@ task(
                 console.log('Game info:')
                 console.log('- Attack crabada reinforcements', team.info.gameInfo.attackReinforcements)
                 console.log('- Defense crabada reinforcements', team.info.gameInfo.defenseReinforcements)
-                console.log("- Miner's revange %", team.info.gameInfo.minersRevange)
+                console.log("- Miner's revange %", team.info.gameInfo.minersRevenge)
             
                 console.log('Other team info:')
                 console.log('Team ID', team.info.gameInfo.otherTeam.id, team.info.gameInfo.otherTeam.faction)
