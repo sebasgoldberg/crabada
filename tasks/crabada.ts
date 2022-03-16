@@ -2254,8 +2254,8 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
                         const bpDiff = attackerBattlePoint.getRelativeBP(battlePoint.teamFaction)+attackReinforceBattlePoint
                             -battlePoint.getRelativeBP(attackerBattlePoint.teamFaction)-defenseReinforceBattlePoint
 
-                        const calcMinersRevenge = (defenseMP: number, diffBP: number) => {
-                            bpDiff <=0 ? 
+                        const calcMinersRevenge = (defenseMP: number, diffBP: number): number => {
+                            return bpDiff <=0 ? 
                                 100 :
                                 Math.max(
                                     Math.floor(
@@ -2293,7 +2293,7 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
                                             mp: attackerTimePoint
                                         }
                                     },
-                                    minersRevenge: minersRevenge
+                                    minersRevenge
                                 },
 
                             }
