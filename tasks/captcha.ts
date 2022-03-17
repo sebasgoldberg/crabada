@@ -469,19 +469,19 @@ const lootLoop = async (
     }, 50)
 
 
-    const listenCanLootGamesFromApiInterval = await listenCanLootGamesFromApi(hre, (canLootGamesFromApi: CanLootGameFromApi[]) => {
+    // const listenCanLootGamesFromApiInterval = await listenCanLootGamesFromApi(hre, (canLootGamesFromApi: CanLootGameFromApi[]) => {
 
-        // const teamsAndTheirTransaction: TeamAndItsTransaction[] = canLootGamesFromApi
-        //     // Latest have the priority
-        //     .sort(({start_time: a}, { start_time: b}) => a < b ? 1 : a > b ? -1 : 0)
-        //     .map(({game_id, team_id})=>({
-        //         gameId: BigNumber.from(game_id), 
-        //         teamId: BigNumber.from(team_id)
-        //     }))
+    //     const teamsAndTheirTransaction: TeamAndItsTransaction[] = canLootGamesFromApi
+    //         // Latest have the priority
+    //         .sort(({start_time: a}, { start_time: b}) => a < b ? 1 : a > b ? -1 : 0)
+    //         .map(({game_id, team_id})=>({
+    //             gameId: BigNumber.from(game_id), 
+    //             teamId: BigNumber.from(team_id)
+    //         }))
 
-        // attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
+    //     attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
 
-    }, 2000)
+    // }, 2000)
 
     // Never finish
     await new Promise((resolve) => {
@@ -505,7 +505,7 @@ const lootLoop = async (
     //clearInterval(attackTeamsInterval)
     // clearInterval(pendingStartGameTransactionInterval)
     clearInterval(startGameEventsInterval)
-    clearInterval(listenCanLootGamesFromApiInterval)
+    // clearInterval(listenCanLootGamesFromApiInterval)
     idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
     clearInterval(updateLockStatusInterval)
     settleGameInterval && clearInterval(settleGameInterval)
@@ -1046,7 +1046,7 @@ class AttackServer {
 
         this.attackExecutor = new AttackExecutor(hre)
         this.attackExecutor.beginAttackInterval()
-        this.app.listen(3000)
+        this.app.listen(90000,'0.0.0.0')
 
     }
 
