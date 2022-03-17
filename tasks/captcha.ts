@@ -1083,8 +1083,6 @@ class AttackServer {
             // TODO Retry call when error.response.data.message == 'Game doest not exists'
 
             console.error('ERROR trying to register attack', error.response.data);
-            if (error.request)
-                console.log('request', error.request)
 
             if (error.response.data.message == 'Game doest not exists'){
                 await this.registerOrRetryAttack(challenge, captchaVerifyResponse)
