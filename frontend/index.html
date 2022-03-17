@@ -44,7 +44,7 @@
 
         }
 
-        function loadCaptcha(challenge) {
+        function loadCaptcha(challenge, token) {
 
             const apiServer = params.captcha_server_same_origin ?
                 window.location.origin+'/proxy/captcha' :
@@ -60,7 +60,8 @@
                 challenge: challenge,
                 // riskType
                 riskType: "icon",
-                apiServers: [ apiServer ]
+                token: token,
+                apiServers: [ apiServer ],
             }, function (captcha) {
 
                 captcha.appendTo("#captcha");// call appendTo to insert the verification code into a certain element of the page, which can be customized by the user 
@@ -113,7 +114,7 @@
                     contentType: "application/json; charset=utf-8",
                     success: function (data) {
                         console.log(data);
-                        loadCaptcha(data.challenge)
+                        loadCaptcha(data.challenge, data.token)
                     },
                     error: function (error){
                         console.error(error);
