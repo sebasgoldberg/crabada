@@ -1,13 +1,4 @@
-'v4.1.1 Geetest Inc.';
-const uuid = function() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c)=>{
-        const r = (Math.random() * 16) | 0;
-        const v = c === 'x' ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-    }
-    );
-};
-window.uuid = uuid;
+'v4.1.0 Geetest Inc.';
 (function(window) {
     if (typeof window === 'undefined') {
         throw new Error('Geetest requires browser environment');
@@ -36,6 +27,14 @@ window.uuid = uuid;
             }
             );
         },
+    };
+    const uuid = function() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c)=>{
+            const r = (Math.random() * 16) | 0;
+            const v = c === 'x' ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
+        }
+        );
     };
     function Config(config) {
         const self = this;
@@ -173,7 +172,7 @@ window.uuid = uuid;
             }
         }
         ;
-        script.src = url;
+        script.src = `${url}`;
         head.appendChild(script);
         setTimeout(()=>{
             if (!loaded) {
@@ -269,6 +268,7 @@ window.uuid = uuid;
             client_type: MOBILE ? 'h5' : 'web',
             risk_type: config.riskType,
             call_type: config.callType,
+            token: config.token,
             lang: config.language ? config.language : navigator.appName === 'Netscape' ? navigator.language.toLowerCase() : navigator.userLanguage.toLowerCase(),
         }, (err)=>{
             if (err && typeof config.offlineCb === 'function') {
@@ -276,7 +276,7 @@ window.uuid = uuid;
                 return;
             }
             if (err) {
-                callback(config._get_fallback_config());
+                callback(config._get_fallback_config(), true);
             }
         }
         , handleCb, );
@@ -322,7 +322,7 @@ window.uuid = uuid;
         if (isObject(userConfig.getType)) {
             config._extend(userConfig.getType);
         }
-        jsonp(config.apiServers, config.typePath, config, (newConfig)=>{
+        jsonp(config.apiServers, config.typePath, config, (newConfig,result)=>{
             var newConfig = camelizeKeys(newConfig);
             if (newConfig.status === 'error') {
                 return throwError('networkError', config, newConfig);
@@ -333,7 +333,7 @@ window.uuid = uuid;
             }
             const init = function() {
                 config._extend(newConfig);
-                callback(new window.Geetest4(config));
+                callback(new window.Geetest4(config), result);
             };
             callbacks[type] = callbacks[type] || [];
             const s = status[type] || 'init';
@@ -380,13 +380,14 @@ window.uuid = uuid;
             } else if (s === 'loaded') {
                 return init();
             } else if (s === 'fail') {
-                throwError('networkError', config, {
+                throwError('networkError', config),
+                {
                     code: '60204',
                     msg: 'Network failure',
                     desc: {
                         detail: 'js resource load timeout',
                     },
-                });
+                };
             } else if (s === 'loading') {
                 callbacks[type].push(init);
             }
