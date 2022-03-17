@@ -44,7 +44,7 @@
 
         }
 
-        function loadCaptcha(challenge, token) {
+        function loadCaptcha(challenge, token, account) {
 
             const apiServer = params.captcha_server_same_origin ?
                 window.location.origin+'/proxy/captcha' :
@@ -61,6 +61,7 @@
                 // riskType
                 riskType: "icon",
                 token: token,
+                account: account,
                 apiServers: [ apiServer ],
             }, function (captcha) {
 
@@ -114,7 +115,7 @@
                     contentType: "application/json; charset=utf-8",
                     success: function (data) {
                         console.log(data);
-                        loadCaptcha(data.challenge, data.token)
+                        loadCaptcha(data.challenge, data.token, data.account)
                     },
                     error: function (error){
                         console.error(error);

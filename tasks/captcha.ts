@@ -1197,8 +1197,9 @@ class AttackServer {
             team_id: p.teamId.toString(),
             game_id: t.gameId.toString(),
             challenge,
-            // TODO Add dinamic token generation.
+            // TODO Add account and token dinamically.
             token: this.authServer.getToken('0xE90A22064F415896F1F72e041874Da419390CC6D'),
+            account: '0xE90A22064F415896F1F72e041874Da419390CC6D'.toLowerCase()
         }
 
         pendingResponse.res.json(captchaData)
