@@ -1183,7 +1183,7 @@ class AttackServer {
 
         // TODO delete pendingChallenge[challenge] after resolve it.
         this.pendingChallenge[challenge] = {
-            user_address: p.playerAddress,
+            user_address: p.playerAddress.toLowerCase(),
             team_id: p.teamId.toString(),
             game_id: t.gameId.toString(),
             requester: pendingResponse.requester,
