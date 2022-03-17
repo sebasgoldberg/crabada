@@ -51,7 +51,7 @@ export async function fixture(signers: any, provider: any) {
 }
 
 // Start test block
-describe.only('AntiBot', function () {
+describe('AntiBot', function () {
 
   this.timeout(60*1000)
 
