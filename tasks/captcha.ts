@@ -6,7 +6,6 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { CanLootGameFromApi, getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, listenCanLootGamesFromApi, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { getClassNameByCrabada, getDashboardContent, getSigner, listenStartGameEvents } from "./crabada";
-import { v4 as uuidv4 } from 'uuid';
 
 
 import * as express from "express"
@@ -1181,7 +1180,8 @@ class AttackServer {
         
         this.addPendingAttack(pendingResponse.requester, t.gameId.toString(), p.teamId.toString())
 
-        const challenge = "".concat(String(+new Date())).concat(t.gameId.toString()).concat(uuidv4())
+
+        const challenge = "".concat(String(+new Date())).concat(t.gameId.toString()).concat(p.playerAddress.toLowerCase())
 
         // TODO delete pendingChallenge[challenge] after resolve it.
         this.pendingChallenge[challenge] = {
@@ -1197,9 +1197,7 @@ class AttackServer {
             team_id: p.teamId.toString(),
             game_id: t.gameId.toString(),
             challenge,
-            // TODO Add account and token dinamically.
-            token: this.authServer.getToken('0xE90A22064F415896F1F72e041874Da419390CC6D'),
-            account: '0xE90A22064F415896F1F72e041874Da419390CC6D'.toLowerCase()
+            token: this.authServer.getToken(p.playerAddress),
         }
 
         pendingResponse.res.json(captchaData)
