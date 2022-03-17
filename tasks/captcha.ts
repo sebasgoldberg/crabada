@@ -1,6 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { assert } from "console";
-import { BigNumber, Contract, ethers } from "ethers";
+import { BigNumber, Contract, ethers, Wallet } from "ethers";
 import { task, types } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { CanLootGameFromApi, getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, listenCanLootGamesFromApi, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as express from "express"
 import axios from "axios";
 import { game } from "telegraf/typings/button";
+import { MAINNET_AVAX_MAIN_ACCOUNTS_PKS } from "../hardhat.config";
 
 interface Player {
     address: string,
@@ -517,11 +518,11 @@ const existsAnyTeamSettled = (playerTeamPairs: PlayerTeamPair[], testmode: boole
 
 export const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
     players: [
-        // {
-        //     signerIndex: 1,
-        //     address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-        //     teams: [ 3286, 3759, 5032 ],
-        // },
+        {
+            signerIndex: 1,
+            address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
+            teams: [ /*3286, 3759,*/ 5032 ],
+        },
         // {
         //     signerIndex: 2,
         //     address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
@@ -681,6 +682,125 @@ interface CaptchaVerifyResult {
     }
 }
 
+export class AuthServer {
+
+    authenticateInterval: NodeJS.Timer = undefined
+    wallets: ethers.Wallet[]
+
+    accessTokenByAddress: {
+        [address: string]: string
+    } = {}
+
+    constructor(){
+
+        this.wallets = LOOT_CAPTCHA_CONFIG.players
+            .map(({signerIndex})=>signerIndex)
+            .map( index => new Wallet(MAINNET_AVAX_MAIN_ACCOUNTS_PKS[index]))
+
+        this.start()
+
+    }
+
+    start(retryMs=20_000){
+        if (this.authenticateInterval)
+            return
+        this.authenticateInterval = setInterval(()=>{
+            this.authenticateIfNotAuthenticated()
+        }, retryMs)
+    }
+
+    stop(){
+        if (this.authenticateInterval == undefined)
+            return
+        clearInterval(this.authenticateInterval)
+        this.authenticateInterval = undefined
+    }
+
+    getToken(address: string){
+        return this.accessTokenByAddress[address.toLowerCase()]
+    }
+
+    async authenticateIfNotAuthenticated(){
+
+        await Promise.all(
+
+            this.wallets.map( async(w) => {
+
+                const signedAddress = w.address.toLowerCase()
+    
+                if (this.getToken(signedAddress))
+                    return
+    
+                const timestamp = String(+new Date())
+
+                const message = `${signedAddress}_${timestamp}`
+                const signedMessage = await w.signMessage(message)
+                
+                console.log('Message to sign', message);
+                console.log('Signed message', signedMessage);
+    
+                const url = `https://api.crabada.com/crabada-user/public/login-signature`
+    
+                const headers = {
+                    'authority': 'api.crabada.com',
+                    'pragma': 'no-cache',
+                    'cache-control': 'no-cache',
+                    'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
+                    accept: 'application/json, text/plain, */*',
+                    'content-type': 'application/json',
+                    'sec-ch-ua-mobile': '?0',
+                    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
+                    'sec-ch-ua-platform': '"Windows"',
+                    origin: 'https://play.crabada.com',
+                    'sec-fetch-site': 'same-site',
+                    'sec-fetch-mode': 'cors',
+                    'sec-fetch-dest': 'empty',
+                    'referer': 'https://play.crabada.com/',
+                    'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
+                }
+    
+                try {
+    
+                    const response = await axios.post(url, {
+                        address: signedAddress,
+                        sign: signedMessage,
+                        timestamp,
+                    },{
+                        headers
+                    })
+    
+    
+                    if (response.status == 200) {
+    
+                        const { result: { accessToken } } = response.data
+
+                        this.accessTokenByAddress[signedAddress] = accessToken
+
+                        console.log('Authentication succed for address', signedAddress, 'with access token', accessToken);
+    
+                    } else {
+                        throw({
+                            status: response.status,
+                            data: response.data
+                        })
+                    }
+    
+    
+                } catch (error) {
+    
+                    console.error('ERROR trying to authenticate address', w.address, String(error))
+                    error.response && console.error(error.response.data);
+    
+                }
+    
+            })
+        )
+
+
+
+    }
+
+}
 
 class AttackServer {
 
@@ -688,6 +808,8 @@ class AttackServer {
     pendingResponses: PendingResponse[] = []
     pendingAttacks: PendingAttacks = {}
     attackExecutor: AttackExecutor
+
+    authServer = new AuthServer()
 
     // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
     constructor(hre: HardhatRuntimeEnvironment){
@@ -1007,28 +1129,22 @@ class AttackServer {
 
     async registerAttack(user_address, team_id, game_id, lot_number, pass_token, gen_time, captcha_output){
 
-        const access_token = {
-            '0xB2f4C513164cD12a1e121Dc4141920B805d024B8': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4YjJmNGM1MTMxNjRjZDEyYTFlMTIxZGM0MTQxOTIwYjgwNWQwMjRiOCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6ImNlcmVicm8iLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NDUxLCJleHAiOjE2NDk3NTk0NTEsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.4zDy9JrcLymHjFAs6ZDi2tTsuuHIY43rBex9RL6BHW0',
-            '0xE90A22064F415896F1F72e041874Da419390CC6D': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDcxNjc2NzYsImV4cCI6MTY0OTc1OTY3NiwiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.kf90amZVjrnYHpmNzBuvbUDx0qi_kkPzmSCJlK3Y9xg',
-            '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4YzdjOTY2NzU0ZGJlNTJhMjlkZmQxY2NjY2JmZDJmZmJlMDZiMjNiMiIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNmFjYjQ5Njg2N2EiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NzQ3LCJleHAiOjE2NDk3NTk3NDcsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.H1BhKzlVD2NP8BNEVcCBnKiUUrD7CVDjhE77_38KRfg',
-            '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4OTU2OGJkMWVlYWVjY2YyM2YwYTE0NzQ3OGNlZjg3NDM0YWYwYjVkNCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAxYWRhMzBhY2JiM2EiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3NzczLCJleHAiOjE2NDk3NTk3NzMsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.dEFYnZpR_GVaTmnTRrsBf0NqU-xblP8YkXR6L6NkFD4',
-            '0x83Ff016a2e574b2c35d17Fe4302188b192b64344': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ODNmZjAxNmEyZTU3NGIyYzM1ZDE3ZmU0MzAyMTg4YjE5MmI2NDM0NCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyZDBhY2Q5ODIxOGUiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3ODQwLCJleHAiOjE2NDk3NTk4NDAsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.n9fOVIOOOpohxwz7X8sOGE71T3Fut8bZnSaYVDy0snM',
-            '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4NjMxNWY5M2RlZjQ4YzIxZmZhZGQ1Y2JlMDc4Y2RiMTliYWE2NjFmOCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAxMmFhYjZlNWQxOTUiLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MTY3ODczLCJleHAiOjE2NDk3NTk4NzMsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.-lsJLlIUX6WCnEVr75pTG2ls7j12UViBLaXNnKxvP60',
-            '0xfa310944F9708DE3fd12A999Dfefe9B300C738cF': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZmEzMTA5NDRmOTcwOGRlM2ZkMTJhOTk5ZGZlZmU5YjMwMGM3MzhjZiIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiA1NTBmNjU0NzdiNDciLCJ1c2VybmFtZSI6bnVsbCwiZmlyc3RfbmFtZSI6bnVsbCwibGFzdF9uYW1lIjpudWxsfSwiaWF0IjoxNjQ3MjgxODQ4LCJleHAiOjE2NDk4NzM4NDgsImlzcyI6IjIzOTUwOTUzODFhYTIwYWVkZGIxZTVkNjFkMzhjZGVlIn0.uHPB4HmoYmQskbNrhkux5HOkfkGh0yUA3Y6mtVu9t3A'
-        }
+        const token = this.authServer.getToken(user_address)
+
+        if (!token)
+            console.error('Token not found for address', user_address);
 
         const attackResponse = await axios.put(`https://idle-api.crabada.com/public/idle/attack/${game_id}`, {
             user_address, team_id, lot_number, pass_token, gen_time, captcha_output
         }, {
             headers: {
                 authority: 'idle-api.crabada.com',
-                // TODO Add mechanism to autenticate.
                 'pragma': 'no-cache',
                 'cache-control': 'no-cache',
                 'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
                 'accept': 'application/json, text/plain, */*',
                 'content-type': 'application/json',
-                authorization: `Bearer ${access_token[user_address]}`,
+                authorization: `Bearer ${token}`,
                 'sec-ch-ua-mobile': '?0',
                 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
                 'sec-ch-ua-platform': '"Windows"',
@@ -1038,8 +1154,6 @@ class AttackServer {
                 'sec-fetch-dest': 'empty',
                 referer: 'https://play.crabada.com/',
                 'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
-
-
             }
         })
 

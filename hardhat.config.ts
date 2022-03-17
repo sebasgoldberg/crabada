@@ -6,7 +6,7 @@ import "@nomiclabs/hardhat-waffle"
 
 const NODE_ID: number = process.env['BLOCKCHAIN_NODE_ID'] ? Number(process.env['BLOCKCHAIN_NODE_ID']) : 0
 
-const MAINNET_AVAX_MAIN_ACCOUNTS_PKS = process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK'] ? process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK'].split(',') : []
+export const MAINNET_AVAX_MAIN_ACCOUNTS_PKS = process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK'] ? process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK'].split(',') : []
 const CRABADA_ATTACKER_PKS = process.env['CRABADA_ATTACKER_PKS'] ? process.env['CRABADA_ATTACKER_PKS'].split(',') : []
 
 // For testing with mainet account when forking
