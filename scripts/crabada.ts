@@ -241,7 +241,7 @@ export const mineStep = async (
         const difference = (previousLockTo as BigNumber).sub(timestamp)
         // The lock of the previous team should be 3 hours and a half in the future, or less.
         if (difference.gte(4*60*60 -30*60)){
-            console.log('Previous team', previousTeamId, 'has lock', previousLockTo.toString(), 'with distance to', timestamp, 'higher than 3 hours and half');
+            console.log('Previous team', previousTeamId, 'has lock', previousLockTo.toString(), 'with distance to timestamp', timestamp, 'higher than 3 hours and half');
             return
         }
     }
