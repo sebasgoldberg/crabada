@@ -1032,6 +1032,7 @@ export const _minePoint = ({ speed, critical }: CrabadaAPIInfo): number => {
 import axios from "axios";
 import { CONFIG_BY_NODE_ID, NodeConfig } from "../config/nodes";
 import { ClassNameByCrabada, CrabadaClassName, TeamBattlePoints } from "./teambp";
+import { MINE_GROUPS } from "../tasks/crabada";
 
 export interface CanLootGameFromApi{
     game_id: number,
@@ -1398,12 +1399,25 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 export const MAX_FEE_REINFORCE_DEFENSE = BigNumber.from(ONE_GWEI*100)
 
 export const doReinforce = async (hre: HardhatRuntimeEnvironment,
-    currentGameId: BigNumber, minRealBattlePointNeeded: number,
+    currentGameId: BigNumber, teamId: number, minRealBattlePointNeeded: number,
     signer: SignerWithAddress, player: string|undefined, testMode=true, reinforceAttack: boolean): Promise<TransactionResponse|undefined> => {
 
     const { idleGame } = getCrabadaContracts(hre)
     
-    const borrowOptions: CrabadaToBorrow[] = await getCrabadasToBorrow(minRealBattlePointNeeded, reinforceAttack)
+    let borrowOptions: CrabadaToBorrow[]
+    
+    if (!reinforceAttack)
+        borrowOptions = MINE_GROUPS
+            .filter( ({teamsOrder}) => teamsOrder.includes(teamId))
+            .flatMap( ({crabadaReinforcers}) => crabadaReinforcers
+                .map( crabadaId => ({
+                    id: BigNumber.from(crabadaId),
+                    price: ethers.constants.Zero
+                }))
+            )
+    
+    if (borrowOptions.length == 0)
+        borrowOptions = await getCrabadasToBorrow(minRealBattlePointNeeded, reinforceAttack)
     
     const override = {
         gasLimit: GAS_LIMIT,
@@ -1516,7 +1530,7 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
 
     log('reinforcementMinBattlePoints', reinforcementMinBattlePoints)
 
-    return await doReinforce(hre, currentGameId, reinforcementMinBattlePoints, signer, player, testMode, reinforceAttack)
+    return await doReinforce(hre, currentGameId, teamId, reinforcementMinBattlePoints, signer, player, testMode, reinforceAttack)
 
 }
 

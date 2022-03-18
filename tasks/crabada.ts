@@ -168,18 +168,18 @@ const MINE_CONFIG: MineConfig[] = [
     {
         signerIndex: 0,
         address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-        teams: [ 3286, 3759, 5032 ],
+        teams: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
     },
     {
         signerIndex: 1,
         address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-        teams: [ 5355, 5357, 6152 ],
+        teams: [ 5357, ],
     },
-    {
-        signerIndex: 2,
-        address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
-        teams: [ 7449, 8157, 9236 ],
-    },
+    // {
+    //     signerIndex: 2,
+    //     address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
+    //     teams: [ ],
+    // },
     {
         signerIndex: 3,
         address: '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4',
@@ -197,33 +197,61 @@ const MINE_CONFIG: MineConfig[] = [
     },
 ]
 
+const MINE_CONFIG_BY_TEAM_ID: {
+    [teamId: number]: MineConfig
+} = {}
+
+MINE_CONFIG
+    .forEach( mineConfig => mineConfig.teams
+        .forEach( teamId => MINE_CONFIG_BY_TEAM_ID[teamId] = mineConfig )
+    );
+
+interface MineGroup {
+    teamsOrder: number[],
+    crabadaReinforcers: number[]
+}
+
+export const MINE_GROUPS: MineGroup[] = [
+    { 
+        teamsOrder: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
+        crabadaReinforcers: [ 49113, 49891 ],
+    },
+    {
+        teamsOrder: [ 16767, 16768, 16769, 16761, 16762, 16763, 16764, 16765 ],
+        crabadaReinforcers: [ 49769, 50097 ],
+    },
+    {
+        teamsOrder: [ 5357, 16766 ],
+        crabadaReinforcers: []
+    }
+]
+
 // npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 task(
     "minestep",
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
     async ({ minerteamid, attackercontract, attackerteamid, wait, testmineraccount, testattackeraccounts, accountindex }, hre: HardhatRuntimeEnvironment) => {
         
-        // const attackSigners = attackerteamid ?
-        //     testattackeraccounts ? 
-        //         (await Promise.all((testattackeraccounts as string).split(',').map( testattackeraccount => getSigner(hre, testattackeraccount) )))
-        //         : (await hre.ethers.getSigners()).slice(accountindex+1)
-        //     : []
+        for (const mineGroup of MINE_GROUPS){
 
-        await Promise.all(
-            MINE_CONFIG.map(async({signerIndex, teams}) => {
-                const minerSigner = await getSigner(hre, undefined, signerIndex);
-                try {
-                    let previousTeam = undefined
-                    for (const teamid of teams){
-                        await mineStep(hre, teamid, undefined, undefined, wait, minerSigner, previousTeam, [])
-                        previousTeam = teamid
-                    }                        
-                } catch (error) {
-                    console.error(String(error));
+            try {
+
+                let previousTeam = undefined
+
+                for (const teamId of mineGroup.teamsOrder){
+                    const { signerIndex } = MINE_CONFIG_BY_TEAM_ID[teamId]
+                    const minerSigner = await getSigner(hre, undefined, signerIndex);
+                    await mineStep(hre, teamId, undefined, undefined, wait, minerSigner, previousTeam, [])
+                    previousTeam = teamId
                 }
-            })
-        ) 
 
+            } catch (error) {
+
+                console.error(String(error));
+
+            }
+
+        }
 
     })
     .addOptionalParam("minerteamid", "The teams IDs to use for mining. Separated by ','", undefined, types.string)
