@@ -1406,7 +1406,7 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
 
     const { idleGame } = getCrabadaContracts(hre)
     
-    let borrowOptions: CrabadaToBorrow[]
+    let borrowOptions: CrabadaToBorrow[] = []
     
     if (REINFORCE_WITH_OWN_CRABADA && !reinforceAttack)
         borrowOptions = MINE_GROUPS
