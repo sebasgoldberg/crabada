@@ -221,8 +221,8 @@ task(
         
         for (const mineGroup of MINE_GROUPS){
 
-            console.log('mineGroup.teamsOrder', mineGroup.teamsOrder);
-            console.log('mineGroup.crabadaReinforcers', mineGroup.crabadaReinforcers);
+            console.log('mineGroup.teamsOrder', ...mineGroup.teamsOrder);
+            console.log('mineGroup.crabadaReinforcers', ...mineGroup.crabadaReinforcers);
 
             try {
 
