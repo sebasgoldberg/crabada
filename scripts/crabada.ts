@@ -1398,7 +1398,7 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 
 export const MAX_FEE_REINFORCE_DEFENSE = BigNumber.from(ONE_GWEI*100)
 
-const REINFORCE_WITH_OWN_CRABADA = true
+const REINFORCE_WITH_OWN_CRABADA = false
 
 export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     currentGameId: BigNumber, teamId: number, minRealBattlePointNeeded: number,
