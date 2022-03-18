@@ -1398,6 +1398,8 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 
 export const MAX_FEE_REINFORCE_DEFENSE = BigNumber.from(ONE_GWEI*100)
 
+const REINFORCE_WITH_OWN_CRABADA = false
+
 export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     currentGameId: BigNumber, teamId: number, minRealBattlePointNeeded: number,
     signer: SignerWithAddress, player: string|undefined, testMode=true, reinforceAttack: boolean): Promise<TransactionResponse|undefined> => {
@@ -1406,7 +1408,7 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     
     let borrowOptions: CrabadaToBorrow[]
     
-    if (!reinforceAttack)
+    if (REINFORCE_WITH_OWN_CRABADA && !reinforceAttack)
         borrowOptions = MINE_GROUPS
             .filter( ({teamsOrder}) => teamsOrder.includes(teamId))
             .flatMap( ({crabadaReinforcers}) => crabadaReinforcers
