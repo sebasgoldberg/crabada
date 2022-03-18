@@ -1872,14 +1872,14 @@ export const withdrawRewards = async (hre: HardhatRuntimeEnvironment, log=consol
 
     const fromAddresses = MINE_CONFIG.map(p=>p.address)
 
-    for (const from of fromAddresses){
+    for (const {address: from, teams: { length: teamsQuantity } } of MINE_CONFIG){
 
         for (const erc20 of [tusToken, craToken]){
 
                 let value: BigNumber = await erc20.balanceOf(from)
 
                 if (erc20.address === tusToken.address)
-                    value = value.sub(parseEther('120')) // Backup value for reinforcements
+                    value = value.sub(parseEther(String((20*2*teamsQuantity)))) // Backup value for reinforcements
 
                 if (value.gt(0)){
                     log('erc20.transferFrom(from, rewardsto, value)', from, rewardsTo, formatEther(value));
@@ -1923,8 +1923,9 @@ export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.lo
 
     const signer = await getSigner(hre)
 
-    const lootPendingAddresses: string[] = (MINE_MODE ?
-        MINE_CONFIG : LOOT_CAPTCHA_CONFIG.players).map(p=>p.address)
+    const lootPendingAddresses = (MINE_MODE ?
+        MINE_CONFIG : LOOT_CAPTCHA_CONFIG.players)
+            .map(({address, teams: {length: teamsQuantity}}) => ({ address, teamsQuantity }))
 
     const override = await getOverride(hre)
 
@@ -1947,8 +1948,10 @@ export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.lo
 
     }
 
-    for (const destination of lootPendingAddresses)
-        await _refillAvax(signer, destination, MINE_MODE ? MINER_TARGET : LOOTER_TARGET_BALANCE)
+    for (const {address, teamsQuantity} of lootPendingAddresses){
+        const target = MINE_MODE ? MINER_TEAM_TARGET.mul(teamsQuantity) : LOOTER_TARGET_BALANCE
+        await _refillAvax(signer, address, target)
+    }
     
     ATTACK_MODE && await _refillAvax(signer, SETTLER_ACCOUNT, SETTLER_TARGET_BALANCE)
 
@@ -2204,13 +2207,18 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
 
 }
 
-const MINER_TARGET = parseEther('2.5')
+const MINER_TEAM_TARGET = parseEther('0.8')
 
 export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardContent> => {
 
     const getDashboardAvax = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardAvax> => {
             
-        let avaxConsumed = MINER_TARGET.mul(MINE_CONFIG.length)
+        let avaxConsumed = MINER_TEAM_TARGET.mul(
+            MINE_CONFIG.reduce( 
+                (prev, {teams: {length: teamsQuantity}}) => prev+teamsQuantity, 
+                0
+            ) 
+        )
         
         const getAvaxBalance = async (address: string): Promise<IDashboardAvaxAccount> => {
             return {
