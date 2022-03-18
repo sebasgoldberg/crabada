@@ -191,7 +191,7 @@ export const locked = async (teamId: number, lockTo: BigNumber, timestamp: numbe
   
 export const mineStep = async (
     hre: HardhatRuntimeEnvironment, minerTeamId: number, attackerContractAddress: string|undefined, 
-    attackerTeamId: number, wait: number, minerSigner: SignerWithAddress, 
+    attackerTeamId: number, wait: number, minerSigner: SignerWithAddress, previousTeamId: number,
     attackerSigners: SignerWithAddress[]) => {
 
     const override = {
@@ -230,10 +230,24 @@ export const mineStep = async (
     
     const { lockTo: minerLockTo, currentGameId: minerCurrentGameId } = await idleGame.getTeamInfo(minerTeamId)
 
+    const timestamp = await currentBlockTimeStamp(hre)
+
+    if (previousTeamId){
+        const { lockTo: previousLockTo }: { lockTo: BigNumber } = await idleGame.getTeamInfo(previousTeamId)
+        if (previousLockTo.lt(timestamp)){
+            console.log('Previous team', previousTeamId, 'has lock', previousLockTo.toString(), 'previous to timestamp', timestamp);
+            return
+        }
+        const difference = (previousLockTo as BigNumber).sub(timestamp)
+        // The lock of the previous team should be 3 hours and a half in the future, or less.
+        if (difference.gte(4*60*60 -30*60)){
+            console.log('Previous team', previousTeamId, 'has lock', previousLockTo.toString(), 'with distance to', timestamp, 'higher than 3 hours and half');
+            return
+        }
+    }
+
     const { lockTo: attackerLockTo, currentGameId: attackerCurrentGameId } = attackerTeamId ?
         await idleGame.getTeamInfo(attackerTeamId) : { lockTo: 0, currentGameId: 0 }
-
-    const timestamp = await currentBlockTimeStamp(hre)
 
     if (attackerTeamId && await locked(attackerTeamId, attackerLockTo, timestamp))
         return

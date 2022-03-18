@@ -213,8 +213,10 @@ task(
             MINE_CONFIG.map(async({signerIndex, teams}) => {
                 const minerSigner = await getSigner(hre, undefined, signerIndex);
                 try {
+                    let previousTeam = undefined
                     for (const teamid of teams){
-                        await mineStep(hre, teamid, undefined, undefined, wait, minerSigner, [])
+                        await mineStep(hre, teamid, undefined, undefined, wait, minerSigner, previousTeam, [])
+                        previousTeam = teamid
                     }                        
                 } catch (error) {
                     console.error(String(error));
