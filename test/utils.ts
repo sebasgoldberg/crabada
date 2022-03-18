@@ -41,15 +41,24 @@ export const transferCrabadasFromTeam = async (hre: HardhatRuntimeEnvironment, t
 
     return crabadaTeamMembers
 
-  }
+}
 
-  export const logTransactionAndWait = async(txrp: Promise<ethers.providers.TransactionResponse>, confirmations: number, log=console.log) => {
+export const logTransactionAndWait = async(txrp: Promise<ethers.providers.TransactionResponse>, confirmations: number, log=console.log) => {
     const txr = await txrp
     log(txr.nonce, txr.hash);
     await txr.wait(confirmations)
-  }
+}
 
-  export const withdrawTeam = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, addressTo: string, teamId: number): Promise<BigNumber[]> =>{
+export const withdraw = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, addressTo: string, crabadas: number[]|BigNumber[], override: any) =>{
+  const { idleGame } = getCrabadaContracts(hre)
+  console.log('withdraw(addressTo, crabadaTeamMembers)', addressTo, crabadas);
+  await idleGame.connect(signer).callStatic.withdraw(addressTo, crabadas, override)
+  await logTransactionAndWait(
+    idleGame.connect(signer).withdraw(addressTo, crabadas, override), 2
+  )
+}
+
+export const withdrawTeam = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, addressTo: string, teamId: number): Promise<BigNumber[]> =>{
 
     const { idleGame } = getCrabadaContracts(hre)
 
@@ -75,12 +84,30 @@ export const transferCrabadasFromTeam = async (hre: HardhatRuntimeEnvironment, t
 
     // Withdraw crabadas from game
     const crabadaTeamMembers = [c1, c2, c3]
-    console.log('withdraw(addressTo, crabadaTeamMembers)', addressTo, crabadaTeamMembers);
-    await idleGame.connect(signer).callStatic.withdraw(addressTo, crabadaTeamMembers, override)
-    await logTransactionAndWait(
-      idleGame.connect(signer).withdraw(addressTo, crabadaTeamMembers, override), 2
-    )
+    await withdraw(hre, signer, addressTo, crabadaTeamMembers, override)
 
     return crabadaTeamMembers
 
+}
+
+export const deposit = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress, 
+  crabadasIds: number[]|BigNumber[], override: any) => {
+
+  const { idleGame, crabada } = getCrabadaContracts(hre)
+
+  if (!(await crabada.isApprovedForAll(signer.address, idleGame.address))){
+      console.log('crabada.connect(signer).callStatic.setApprovalForAll(idleGame.address, true)', idleGame.address);
+      await crabada.connect(signer).callStatic.setApprovalForAll(idleGame.address, true, override)
+      await logTransactionAndWait(
+          crabada.connect(signer).setApprovalForAll(idleGame.address, true, override),
+          2
+      )
   }
+
+  console.log("idleGame.callStatic.deposit(crabadasIds)", crabadasIds);
+  await idleGame.connect(signer).callStatic.deposit(crabadasIds, override);
+  await logTransactionAndWait(
+      idleGame.connect(signer).deposit(crabadasIds, override),
+      2
+  )
+}

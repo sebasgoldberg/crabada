@@ -1032,7 +1032,8 @@ export const _minePoint = ({ speed, critical }: CrabadaAPIInfo): number => {
 import axios from "axios";
 import { CONFIG_BY_NODE_ID, NodeConfig } from "../config/nodes";
 import { ClassNameByCrabada, CrabadaClassName, TeamBattlePoints } from "./teambp";
-import { MINE_GROUPS } from "../tasks/crabada";
+import { getSigner, MINE_CONFIG_BY_TEAM_ID, MINE_GROUPS } from "../tasks/crabada";
+import { deposit, withdraw } from "../test/utils";
 
 export interface CanLootGameFromApi{
     game_id: number,
@@ -1396,7 +1397,7 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 
 }
 
-export const MAX_FEE_REINFORCE_DEFENSE = BigNumber.from(ONE_GWEI*100)
+export const MAX_FEE_REINFORCE_DEFENSE = BigNumber.from(ONE_GWEI*150)
 
 const REINFORCE_WITH_OWN_CRABADA = true
 
@@ -1404,29 +1405,89 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     currentGameId: BigNumber, teamId: number, minRealBattlePointNeeded: number,
     signer: SignerWithAddress, player: string|undefined, testMode=true, reinforceAttack: boolean): Promise<TransactionResponse|undefined> => {
 
-    const { idleGame } = getCrabadaContracts(hre)
-    
-    let borrowOptions: CrabadaToBorrow[] = []
-    
-    if (REINFORCE_WITH_OWN_CRABADA && !reinforceAttack)
-        borrowOptions = MINE_GROUPS
-            .filter( ({teamsOrder}) => teamsOrder.includes(teamId))
-            .flatMap( ({crabadaReinforcers}) => crabadaReinforcers
-                .map( crabadaId => ({
-                    id: BigNumber.from(crabadaId),
-                    price: ethers.constants.Zero
-                }))
-            )
-    
-    if (borrowOptions.length == 0)
-        borrowOptions = await getCrabadasToBorrow(minRealBattlePointNeeded, reinforceAttack)
-    
     const override = {
         gasLimit: GAS_LIMIT,
         maxFeePerGas: reinforceAttack ? MAX_FEE : MAX_FEE_REINFORCE_DEFENSE,
         maxPriorityFeePerGas: ONE_GWEI
     }
+    
+    const { idleGame } = getCrabadaContracts(hre)
+    
+    let borrowOptions: CrabadaToBorrow[] = []
+    
+    if (REINFORCE_WITH_OWN_CRABADA && !reinforceAttack){
 
+        const mineGroupsForTeamId = MINE_GROUPS
+            .filter( ({teamsOrder}) => teamsOrder.includes(teamId))
+
+        // TODO refactor code to be more elegant.
+        let shouldReinforceFromInventory = true
+
+        await Promise.all(
+            mineGroupsForTeamId.map(async ({teamsOrder, crabadaReinforcers}) => {
+
+                if (crabadaReinforcers.length == 0)
+                    return
+                
+                if (teamsOrder.length <= 1)
+                    return
+
+                // Check it is the firs half hour of mining
+                const { lockTo }: { lockTo: number } = await idleGame.getTeamInfo(teamId)
+                const timestamp = await currentBlockTimeStamp(hre)
+                const difference = lockTo-timestamp
+
+                if (difference<3.5*3600 || difference>4*3600){
+                    console.log('Reinforce from inventory should not happen. Difference', difference, 
+                        'should be between', 3.5*3600, 'and', 4*3600);
+                    shouldReinforceFromInventory = false
+                    return
+                }
+
+                const indexOfCurrentTeam = teamsOrder.indexOf(teamId)
+                const indexOfPreviousTeam = indexOfCurrentTeam == 0 ?
+                    teamsOrder.length-1
+                    : indexOfCurrentTeam-1
+                
+                const previousTeam = teamsOrder[indexOfPreviousTeam]
+
+                const currentTeamMineConfig = MINE_CONFIG_BY_TEAM_ID[teamId]
+                const previousTeamMineConfig = MINE_CONFIG_BY_TEAM_ID[previousTeam]
+
+                if (currentTeamMineConfig.address == previousTeamMineConfig.address)
+                    return
+
+                const previousTeamSigner = await getSigner(hre, undefined, previousTeamMineConfig.signerIndex)
+
+                try {
+                    await withdraw(hre, previousTeamSigner, signer.address, crabadaReinforcers, override)
+                } catch (error) {
+                    console.error('ERROR trying to withdraw:', String(error));
+                }
+                
+                try {
+                    await deposit(hre, signer, crabadaReinforcers, override)
+                } catch (error) {
+                    console.error('ERROR trying to deposit:', String(error));
+                }
+                
+            })
+        )
+
+        if (shouldReinforceFromInventory){
+            borrowOptions = mineGroupsForTeamId
+                .flatMap( ({crabadaReinforcers}) => crabadaReinforcers
+                    .map( crabadaId => ({
+                        id: BigNumber.from(crabadaId),
+                        price: ethers.constants.Zero
+                    }))
+                )
+        }
+    }
+    
+    if (borrowOptions.length == 0)
+        borrowOptions = await getCrabadasToBorrow(minRealBattlePointNeeded, reinforceAttack)
+    
     const reinforceMethodName = reinforceAttack ? 'reinforceAttack' : 'reinforceDefense'
 
     for (const { id: crabadaId, price: borrowPrice } of borrowOptions){

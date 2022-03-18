@@ -10,7 +10,7 @@ import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig, p
 
 import "./player"
 import "./captcha"
-import { logTransactionAndWait, withdrawTeam } from "../test/utils";
+import { deposit, logTransactionAndWait, withdrawTeam } from "../test/utils";
 import { ClassNameByCrabada, classNameFromDna, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { assert } from "console";
 import { PLAYER_TUS_RESERVE } from "./player";
@@ -63,31 +63,18 @@ task("transfercrabadas", "Transfer the specified creabadas.", async ({ to, craba
     .addParam("to", "Destination address.", undefined, types.string)
     .addParam("crabadas", "Crabadas to transfer.", undefined, types.string)
 
+
 task("depositcrabadas", "Deposit crabadas to idle game.", async ({ crabadas }, hre): Promise<void> => {
 
     const signer = await getSigner(hre);
 
     const crabadasIds = (crabadas as string).split(',').map( x => Number(x) )
 
-    const { idleGame, crabada } = getCrabadaContracts(hre)
-
     const override = await getOverride(hre)
 
-    if (!(await crabada.isApprovedForAll(signer.address, idleGame.address))){
-        console.log('crabada.connect(signer).callStatic.setApprovalForAll(idleGame.address, true)', idleGame.address);
-        await crabada.connect(signer).callStatic.setApprovalForAll(idleGame.address, true, override)
-        await logTransactionAndWait(
-            crabada.connect(signer).setApprovalForAll(idleGame.address, true, override),
-            2
-        )
-    }
+    const { idleGame, crabada } = getCrabadaContracts(hre)
 
-    console.log("idleGame.callStatic.deposit(crabadasIds)", crabadasIds);
-    await idleGame.connect(signer).callStatic.deposit(crabadasIds, override);
-    await logTransactionAndWait(
-        idleGame.connect(signer).deposit(crabadasIds, override),
-        2
-    )
+    deposit(hre, signer, crabadasIds, override)
 
 })
     .addParam("crabadas", "Crabadas to deposit.", undefined, types.string)
@@ -197,7 +184,7 @@ const MINE_CONFIG: MineConfig[] = [
     },
 ]
 
-const MINE_CONFIG_BY_TEAM_ID: {
+export const MINE_CONFIG_BY_TEAM_ID: {
     [teamId: number]: MineConfig
 } = {}
 
