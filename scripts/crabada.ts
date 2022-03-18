@@ -233,6 +233,15 @@ export const mineStep = async (
 
     const timestamp = await currentBlockTimeStamp(hre)
 
+    const { lockTo: attackerLockTo, currentGameId: attackerCurrentGameId } = attackerTeamId ?
+        await idleGame.getTeamInfo(attackerTeamId) : { lockTo: 0, currentGameId: 0 }
+
+    if (attackerTeamId && await locked(attackerTeamId, attackerLockTo, timestamp))
+        return
+    
+    if (await locked(minerTeamId, minerLockTo, timestamp))
+        return
+
     if (previousTeamId){
         const { lockTo: previousLockTo }: { lockTo: BigNumber } = await idleGame.getTeamInfo(previousTeamId)
         if (previousLockTo.lt(timestamp)){
@@ -248,15 +257,6 @@ export const mineStep = async (
             return
         }
     }
-
-    const { lockTo: attackerLockTo, currentGameId: attackerCurrentGameId } = attackerTeamId ?
-        await idleGame.getTeamInfo(attackerTeamId) : { lockTo: 0, currentGameId: 0 }
-
-    if (attackerTeamId && await locked(attackerTeamId, attackerLockTo, timestamp))
-        return
-    
-    if (await locked(minerTeamId, minerLockTo, timestamp))
-        return
 
     // CLOSE GAME
     
