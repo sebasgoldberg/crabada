@@ -1433,11 +1433,11 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
                     return
 
                 // Check it is the firs half hour of mining
-                const { lockTo }: { lockTo: number } = await idleGame.getTeamInfo(teamId)
+                const { lockTo }: { lockTo: BigNumber } = await idleGame.getTeamInfo(teamId)
                 const timestamp = await currentBlockTimeStamp(hre)
-                const difference = lockTo-timestamp
+                const difference = lockTo.sub(timestamp)
 
-                if (difference<3.5*3600 || difference>4*3600){
+                if (difference.lt(3.5*3600) || difference.gt(4*3600)){
                     console.log('Reinforce from inventory should not happen. Difference', difference, 
                         'should be between', 3.5*3600, 'and', 4*3600);
                     shouldReinforceFromInventory = false
