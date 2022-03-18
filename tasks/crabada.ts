@@ -205,7 +205,7 @@ export const MINE_GROUPS: MineGroup[] = [
     },
     {
         teamsOrder: [ 16767, 16768, 16769, 16761, 16762, 16763, 16764, 16765 ],
-        crabadaReinforcers: [ /*49769, 50097*/ ],
+        crabadaReinforcers: [ 49769, 50097 ],
     },
     {
         teamsOrder: [ 5357, 16766 ],
