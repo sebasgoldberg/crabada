@@ -272,7 +272,7 @@ export const mineStep = async (
         const transactionResponse: TransactionResponse = await idleGame.closeGame(gameId, override)
         console.log(`transaction: ${transactionResponse.hash}`);        
     
-        await transactionResponse.wait(wait)
+        await transactionResponse.wait(2)
     
     }
 
