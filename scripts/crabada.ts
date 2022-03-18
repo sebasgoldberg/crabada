@@ -226,6 +226,7 @@ export const mineStep = async (
     const minerAddress = minerSigner.address
 
     console.log('Miner address', minerSigner.address);
+    console.log('Team ID', minerTeamId, ', previous', previousTeamId);
     attackerSigners.forEach( (signer, index) => console.log('Attacker address', index, signer.address) )
     
     const { lockTo: minerLockTo, currentGameId: minerCurrentGameId } = await idleGame.getTeamInfo(minerTeamId)
@@ -239,9 +240,11 @@ export const mineStep = async (
             return
         }
         const difference = (previousLockTo as BigNumber).sub(timestamp)
-        // The lock of the previous team should be 3 hours and a half in the future, or less.
-        if (difference.gte(4*60*60 -30*60)){
-            console.log('Previous team', previousTeamId, 'has lock', previousLockTo.toString(), 'with distance to timestamp', timestamp, 'higher than 3 hours and half');
+        // The lock of the previous team should be between 2 hours and 3 hours and a half in the future.
+        // It is used 2 hours to avoid some issues regarding group mine initialization.
+        if (!(difference.gte(2.5*3600) && difference.lte(3.5*3600))){
+            console.log('Previous team', previousTeamId, 'has lock', previousLockTo.toString(), 'with distance to timestamp', timestamp, 
+            'lower than 2 hours and half, or higher than 3 hours and half');
             return
         }
     }
@@ -336,6 +339,8 @@ export const mineStep = async (
 
         const [startGameTransactionResponse, ] = await Promise.all([startGameTransactionResponsePromise, attackTeamTransactionResponsesPromise])
         console.log(`transaction ${startGameTransactionResponse.hash}`, startGameTransactionResponse.blockNumber);
+
+        await (startGameTransactionResponse as ethers.providers.TransactionResponse).wait(1)
 
     }
 
