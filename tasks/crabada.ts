@@ -10,7 +10,7 @@ import { AccountConfig, CONFIG_BY_NODE_ID, looter1, looter2, main, NodeConfig, p
 
 import "./player"
 import "./captcha"
-import { deposit, logTransactionAndWait, withdrawTeam } from "../test/utils";
+import { deposit, logTransactionAndWait, withdraw, withdrawTeam } from "../test/utils";
 import { ClassNameByCrabada, classNameFromDna, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { assert } from "console";
 import { PLAYER_TUS_RESERVE } from "./player";
@@ -68,13 +68,11 @@ task("depositcrabadas", "Deposit crabadas to idle game.", async ({ crabadas }, h
 
     const signer = await getSigner(hre);
 
-    const crabadasIds = (crabadas as string).split(',').map( x => Number(x) )
+    const crabadasIds = (crabadas as string).split(',').map( x => BigNumber.from(x) )
 
     const override = await getOverride(hre)
 
-    const { idleGame, crabada } = getCrabadaContracts(hre)
-
-    deposit(hre, signer, crabadasIds, override)
+    await deposit(hre, signer, crabadasIds, override)
 
 })
     .addParam("crabadas", "Crabadas to deposit.", undefined, types.string)
@@ -1978,6 +1976,24 @@ task(
     })
     .addParam("addressto", "Account to be sent the team members.", OPERATION_ADDRESS, types.string)
     .addParam("teamid", "Team ID where are going to withdraw its members.", undefined, types.string)
+
+task(
+    "withdrawcrabadas",
+    "Withdraw crabadas owned by signer, to the specified address.",
+    async ({ addressto, crabadas }, hre: HardhatRuntimeEnvironment) => {
+        
+        const signer = (await hre.ethers.getSigners())[0]
+
+        const override = await getOverride(hre)
+
+        await withdraw(hre, signer, addressto, 
+            (crabadas as string).split(',').map(x=>BigNumber.from(x)),
+            override
+        )
+
+    })
+    .addParam("addressto", "Account to be sent the team members.", undefined, types.string)
+    .addParam("crabadas", "Crabadas IDs, coma separated.", undefined, types.string)
 
 
 const printTeamStatus = async (hre: HardhatRuntimeEnvironment, team: number) => {
