@@ -1470,26 +1470,24 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
 
                 // Try to withdraw from other signers and deposit for the current team's signer.
 
-                await Promise.all(
-                    crabadaReinforcers.map( async (crabadaId) => {
-                        await Promise.all(
-                            otherTeamsSigners.map( async(otherTeamsSigner) => {
-                                try {
-                                    await withdraw(hre, otherTeamsSigner, signer.address, [crabadaId], override)
-                                } catch (error) {
-                                    console.error('ERROR trying to withdraw:', String(error));
-                                }
-                            })
-                        )
-                        
+                for (const crabadaId of crabadaReinforcers){
+
+                    for (const otherTeamsSigner of otherTeamsSigners){
                         try {
-                            await deposit(hre, signer, [crabadaId], override)
+                            await withdraw(hre, otherTeamsSigner, signer.address, [crabadaId], override)
                         } catch (error) {
-                            console.error('ERROR trying to deposit:', String(error));
+                            console.error('ERROR trying to withdraw:', String(error));
                         }
-        
-                    })
-                )
+                    }
+                    
+                    try {
+                        await deposit(hre, signer, [crabadaId], override)
+                    } catch (error) {
+                        console.error('ERROR trying to deposit:', String(error));
+                    }
+
+                }
+
                 
             })
         )
