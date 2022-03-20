@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, formatUnits, parseEther } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { API, attachAttackRouter, baseFee, compareBigNumbers, compareBigNumbersDescending, crabadaIdToBattlePointPromise, crabadaIdToMinePointPromise, currentBlockTimeStamp, gasPrice, getCrabadaContracts, getOverride, getPercentualStepDistribution, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, loot, mineStep, ONE_GWEI, queryFilterByPage, reinforce, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged, waitTransaction } from "../scripts/crabada";
+import { attachAttackRouter, baseFee, compareBigNumbers, compareBigNumbersDescending, currentBlockTimeStamp, gasPrice, getCrabadaContracts, getPercentualStepDistribution, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, loot, mineStep, ONE_GWEI, queryFilterByPage, reinforce, settleGame, StepMaxValuesByPercentage, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
@@ -44,7 +44,7 @@ task("transfercrabadas", "Transfer the specified creabadas.", async ({ to, craba
 
     const { crabada } = getCrabadaContracts(hre)
 
-    const override = await getOverride(hre)
+    const override = hre.crabada.network.getOverride()
 
     for (const c of crabadasIds){
         try {
@@ -70,7 +70,7 @@ task("depositcrabadas", "Deposit crabadas to idle game.", async ({ crabadas }, h
 
     const crabadasIds = (crabadas as string).split(',').map( x => BigNumber.from(x) )
 
-    const override = await getOverride(hre)
+    const override = hre.crabada.network.getOverride()
 
     await deposit(hre, signer, crabadasIds, override)
 
@@ -83,7 +83,7 @@ task("removecrabadasfromteam", "Removes crabadas from team.", async ({ teamid, p
 
     const { idleGame } = getCrabadaContracts(hre)
 
-    const override = await getOverride(hre)
+    const override = hre.crabada.network.getOverride()
 
     const positions = position ? [position] : [0,1,2]
 
@@ -110,7 +110,7 @@ task("addcrabadastoteam", "Add crabadas to team for the specified signer.", asyn
 
     const { idleGame } = getCrabadaContracts(hre)
 
-    const override = await getOverride(hre)
+    const override = hre.crabada.network.getOverride()
 
     if (teamid) {
 
@@ -142,82 +142,13 @@ task("addcrabadastoteam", "Add crabadas to team for the specified signer.", asyn
     .addParam("crabadas", "Crabadas to transfer.", undefined, types.string)
 
 
-interface MineConfig{
-    signerIndex: number,
-    address: string,
-    teams: number[]
-}
-
-
-const MINE_CONFIG: MineConfig[] = [
-    {
-        signerIndex: 0,
-        address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-        teams: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
-    },
-    {
-        signerIndex: 1,
-        address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-        teams: [ 5357, ],
-    },
-    // {
-    //     signerIndex: 2,
-    //     address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
-    //     teams: [ ],
-    // },
-    {
-        signerIndex: 3,
-        address: '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4',
-        teams: [ 16767, 16768, 16769 ],
-    },
-    {
-        signerIndex: 4,
-        address: '0x83Ff016a2e574b2c35d17Fe4302188b192b64344',
-        teams: [ 16761, 16762, 16763 ],
-    },
-    {
-        signerIndex: 5,
-        address: '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8',
-        teams: [ 16764, 16765, 16766 ],
-    },
-]
-
-export const MINE_CONFIG_BY_TEAM_ID: {
-    [teamId: number]: MineConfig
-} = {}
-
-MINE_CONFIG
-    .forEach( mineConfig => mineConfig.teams
-        .forEach( teamId => MINE_CONFIG_BY_TEAM_ID[teamId] = mineConfig )
-    );
-
-interface MineGroup {
-    teamsOrder: number[],
-    crabadaReinforcers: number[]
-}
-
-export const MINE_GROUPS: MineGroup[] = [
-    { 
-        teamsOrder: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
-        crabadaReinforcers: [ 49113, 49891 ],
-    },
-    {
-        teamsOrder: [ 16767, 16768, 16769, 16761, 16762, 16763, 16764, 16765 ],
-        crabadaReinforcers: [ 49769, 50097 ],
-    },
-    {
-        teamsOrder: [ 5357, 16766 ],
-        crabadaReinforcers: []
-    }
-]
-
 // npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 task(
     "minestep",
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
     async ({ minerteamid, attackercontract, attackerteamid, wait, testmineraccount, testattackeraccounts, accountindex }, hre: HardhatRuntimeEnvironment) => {
         
-        for (const mineGroup of MINE_GROUPS){
+        for (const mineGroup of hre.crabada.network.MINE_GROUPS){
 
             console.log('mineGroup.teamsOrder', ...mineGroup.teamsOrder);
             console.log('mineGroup.crabadaReinforcers', ...mineGroup.crabadaReinforcers);
@@ -227,7 +158,7 @@ task(
                 let previousTeam = undefined
 
                 for (const teamId of mineGroup.teamsOrder){
-                    const { signerIndex } = MINE_CONFIG_BY_TEAM_ID[teamId]
+                    const { signerIndex } = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
                     const minerSigner = await getSigner(hre, undefined, signerIndex);
                     await mineStep(hre, teamId, undefined, undefined, wait, minerSigner, previousTeam, [])
                     previousTeam = teamId
@@ -450,7 +381,7 @@ task(
 
         const { currentGameId } = await idleGame.getTeamInfo(teamid)
 
-        const override = await getOverride(hre)
+        const override = hre.crabada.network.getOverride()
 
         console.log(`closeGame(gameId: ${currentGameId})`);
         await idleGame.connect(signer).callStatic.closeGame(currentGameId, override)
@@ -468,16 +399,26 @@ task(
 
         const { idleGame } = getCrabadaContracts(hre)
 
-        await idleGame.connect(signer).callStatic.attack(gameid, teamid, expire, signature, LOOT_CAPTCHA_CONFIG.attackTransaction.override)
-        await logTransactionAndWait(
-            idleGame.connect(signer).attack(gameid, teamid, expire, signature, LOOT_CAPTCHA_CONFIG.attackTransaction.override)
-        , 1)
+        // TODO Verify if needs other type of override
+        const override = hre.crabada.network.getPriorityOverride()
+
+        if (expire && signature){
+            await idleGame.connect(signer).callStatic.attack(gameid, teamid, expire, signature, override)
+            await logTransactionAndWait(
+                idleGame.connect(signer).attack(gameid, teamid, expire, signature, override)
+            , 1)
+        } else {
+            await idleGame.connect(signer).callStatic["attack(uint256,uint256)"](gameid, teamid, override)
+            await logTransactionAndWait(
+                idleGame.connect(signer)["attack(uint256,uint256)"](gameid, teamid, override)
+            , 1)
+        }
 
     })
     .addParam("gameid", "Team ID which have a game to settle.", undefined, types.int)
     .addParam("teamid", "Team ID which have a game to settle.", undefined, types.int)
-    .addParam("expire", "Team ID which have a game to settle.", undefined, types.int)
-    .addParam("signature", "Team ID which have a game to settle.", undefined, types.string)
+    .addOptionalParam("expire", "Team ID which have a game to settle.", undefined, types.int)
+    .addOptionalParam("signature", "Team ID which have a game to settle.", undefined, types.string)
 
 task(
     "ownerof",
@@ -589,7 +530,7 @@ export const getClassNameByCrabada = async (hre: HardhatRuntimeEnvironment): Pro
 
         console.log('Getting class names using API.');
 
-        const apiResult: ClassNameByCrabada = await API.getClassNameByCrabada()
+        const apiResult: ClassNameByCrabada = await hre.crabada.api.getClassNameByCrabada()
 
         console.log('Obtained class name for', Object.keys(apiResult).length, 'crabadas');
 
@@ -728,7 +669,7 @@ task(
     "Reinforce defense process.",
     async ({ testaccount, testmode }, hre: HardhatRuntimeEnvironment) => {
 
-        for (const {signerIndex, teams} of MINE_CONFIG){
+        for (const {signerIndex, teams} of hre.crabada.network.MINE_CONFIG){
 
             const signer = await getSigner(hre, testaccount, signerIndex)
 
@@ -1836,7 +1777,7 @@ task(
 
         const signers = await hre.ethers.getSigners()
 
-        const override = await getOverride(hre)
+        const override = hre.crabada.network.getOverride()
 
         for (const signer of signers){
 
@@ -1866,11 +1807,9 @@ export const withdrawRewards = async (hre: HardhatRuntimeEnvironment, log=consol
 
     const rewardsTo = signer.address
 
-    const override = await getOverride(hre)
+    const override = hre.crabada.network.getOverride()
 
-    const fromAddresses = MINE_CONFIG.map(p=>p.address)
-
-    for (const {address: from, teams: { length: teamsQuantity } } of MINE_CONFIG){
+    for (const {address: from, teams: { length: teamsQuantity } } of hre.crabada.network.MINE_CONFIG){
 
         for (const erc20 of [tusToken, craToken]){
 
@@ -1922,10 +1861,10 @@ export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.lo
     const signer = await getSigner(hre)
 
     const lootPendingAddresses = (MINE_MODE ?
-        MINE_CONFIG : LOOT_CAPTCHA_CONFIG.players)
+        hre.crabada.network.MINE_CONFIG : LOOT_CAPTCHA_CONFIG.players)
             .map(({address, teams: {length: teamsQuantity}}) => ({ address, teamsQuantity }))
 
-    const override = await getOverride(hre)
+    const override = hre.crabada.network.getOverride()
 
     const _refillAvax = async (signer: SignerWithAddress, destination: string, targetAmmount: BigNumber) => {
         
@@ -1984,7 +1923,7 @@ task(
         
         const signer = (await hre.ethers.getSigners())[0]
 
-        const override = await getOverride(hre)
+        const override = hre.crabada.network.getOverride()
 
         await withdraw(hre, signer, addressto, 
             (crabadas as string).split(',').map(x=>BigNumber.from(x)),
@@ -2230,7 +2169,7 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
     const getDashboardAvax = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardAvax> => {
             
         let avaxConsumed = MINER_TEAM_TARGET.mul(
-            MINE_CONFIG.reduce( 
+            hre.crabada.network.MINE_CONFIG.reduce( 
                 (prev, {teams: {length: teamsQuantity}}) => prev+teamsQuantity, 
                 0
             ) 
@@ -2244,7 +2183,7 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
         }
 
         const balances: IDashboardAvaxAccount[] = await Promise.all(
-            MINE_CONFIG
+            hre.crabada.network.MINE_CONFIG
                 .map(({address})=>address)
                 .map(getAvaxBalance)
         )
@@ -2264,7 +2203,7 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
     const getDashboardPlayers =async (hre: HardhatRuntimeEnvironment): Promise<IDashboardPlayer[]> => {
 
         return Promise.all(
-            MINE_CONFIG.map( async (player): Promise<IDashboardPlayer> => {
+            hre.crabada.network.MINE_CONFIG.map( async (player): Promise<IDashboardPlayer> => {
 
                 const playerTusBalancePromise: Promise<BigNumber> = tusToken.balanceOf(player.address)
                     
@@ -2286,13 +2225,13 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
                     
                         const sum = (prev, current) => prev+current
                     
-                        const attackReinforceBattlePoint = (await Promise.all([ attackId1, attackId2 ].map(crabadaIdToBattlePointPromise)))
+                        const attackReinforceBattlePoint = (await Promise.all([ attackId1, attackId2 ].map(hre.crabada.api.crabadaIdToBattlePointPromise)))
                             .reduce(sum,0)
                         
-                        const defenseReinforceBattlePoint = (await Promise.all([ defId1, defId2 ].map( crabadaIdToBattlePointPromise )))
+                        const defenseReinforceBattlePoint = (await Promise.all([ defId1, defId2 ].map(hre.crabada.api.crabadaIdToBattlePointPromise)))
                             .reduce(sum,0)
 
-                        const defenseReinforceMinePoint = (await Promise.all([ defId1, defId2 ].map( crabadaIdToMinePointPromise )))
+                        const defenseReinforceMinePoint = (await Promise.all([ defId1, defId2 ].map(hre.crabada.api.crabadaIdToMinePointPromise)))
                             .reduce(sum,0)
 
                         const bpDiff = attackerBattlePoint.getRelativeBP(battlePoint.teamFaction)+attackReinforceBattlePoint

@@ -3,7 +3,7 @@ import { assert } from "console";
 import { BigNumber, Contract, ethers, Wallet } from "ethers";
 import { task, types } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { CanLootGameFromApi, getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, listenCanLootGamesFromApi, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
+import { getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { getClassNameByCrabada, getDashboardContent, getSigner, listenStartGameEvents } from "./crabada";
 

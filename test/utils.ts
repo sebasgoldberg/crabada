@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber, Contract, ethers } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { getCrabadaContracts, getOverride, settleGame } from "../scripts/crabada";
+import { getCrabadaContracts, settleGame } from "../scripts/crabada";
 
 export const evm_increaseTime = async (hre: HardhatRuntimeEnvironment, seconds: number) => {
     await hre.ethers.provider.send('evm_increaseTime', [seconds]);
@@ -71,7 +71,7 @@ export const withdrawTeam = async (hre: HardhatRuntimeEnvironment, signer: Signe
 
     await settleGame(idleGame.connect(signer), currentGameId, 3)
 
-    const override = await getOverride(hre)
+    const override = hre.crabada.network.getOverride()
 
     // Remove members from team
     for (const index of [0, 1, 2]){
@@ -95,14 +95,22 @@ export const deposit = async (hre: HardhatRuntimeEnvironment, signer: SignerWith
 
   const { idleGame, crabada } = getCrabadaContracts(hre)
 
-  if (!(await crabada.isApprovedForAll(signer.address, idleGame.address))){
-      console.log('crabada.connect(signer).callStatic.setApprovalForAll(idleGame.address, true)', idleGame.address);
-      await crabada.connect(signer).callStatic.setApprovalForAll(idleGame.address, true, override)
-      await logTransactionAndWait(
-          crabada.connect(signer).setApprovalForAll(idleGame.address, true, override),
-          2
-      )
-  }
+    if (!(await crabada.isApprovedForAll(signer.address, idleGame.address))){
+      try {
+
+        console.log('crabada.connect(signer).callStatic.setApprovalForAll(idleGame.address, true)', idleGame.address);
+        await crabada.connect(signer).callStatic.setApprovalForAll(idleGame.address, true, override)
+        await logTransactionAndWait(
+            crabada.connect(signer).setApprovalForAll(idleGame.address, true, override),
+            2
+        )
+
+      } catch (error) {
+  
+        console.error('ERROR:', String(error));
+      
+      }
+    }
 
   console.log("idleGame.callStatic.deposit(crabadasIds)", crabadasIds);
   await idleGame.connect(signer).callStatic.deposit(crabadasIds, override);

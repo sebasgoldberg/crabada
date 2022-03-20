@@ -5,6 +5,7 @@ StartLimitIntervalSec=0
 
 [Service]
 Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<private key settler>,<private key looter 1>,..,<private key looter n>"
+Environment="HARDHAT_NETWORK=<network>"
 Type=simple
 WatchdogSec=1800
 Restart=always

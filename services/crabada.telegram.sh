@@ -1,4 +1,10 @@
 #!/bin/bash
 . /home/cerebro/.nvm/nvm.sh
-npx hardhat telegram --network localmainnet
+
+if [ -z "$HARDHAT_NETWORK" ]
+then 
+    HARDHAT_NETWORK=localmainnet
+fi
+
+npx hardhat telegram --network "$HARDHAT_NETWORK"
 

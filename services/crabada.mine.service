@@ -5,6 +5,7 @@ StartLimitIntervalSec=0
 
 [Service]
 Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<your private key>"
+Environment="HARDHAT_NETWORK=<network>"
 Type=simple
 WatchdogSec=600
 Restart=always

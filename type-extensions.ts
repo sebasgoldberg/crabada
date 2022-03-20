@@ -3,6 +3,7 @@
 // To extend one of Hardhat's types, you need to import the module where it has been defined, and redeclare it.
 import "hardhat/types/config";
 import "hardhat/types/runtime";
+import { CrabadaHardhatRuntimeEnvironment } from "./scripts/hre";
 
 declare module "hardhat/types/config" {
   // This is an example of an extension to one of the Hardhat config values.
@@ -20,5 +21,13 @@ declare module "hardhat/types/config" {
   // default values using the extendConfig function.
   export interface HardhatConfig {
     nodeId: number;
+  }
+}
+
+declare module "hardhat/types/runtime" {
+  // This is an example of an extension to the Hardhat Runtime Environment.
+  // This new field will be available in tasks' actions, scripts, and tests.
+  export interface HardhatRuntimeEnvironment {
+    crabada: CrabadaHardhatRuntimeEnvironment;
   }
 }

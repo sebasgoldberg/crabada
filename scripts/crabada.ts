@@ -103,35 +103,31 @@ export const abi = {
     ERC20: ERC20Abi,
     Crabada: CrabadaAbi,
 }
-  
-export const contractAddress = {
-    IdleGame: '0x82a85407BD612f52577909F4A58bfC6873f14DA8',
-    tusToken: '0xf693248F96Fe03422FEa95aC0aFbBBc4a8FdD172',
-    craToken: '0xa32608e873f9ddef944b24798db69d80bbb4d1ed',
-    crabada: '0x1b7966315ef0259de890f38f1bdb95acc03cacdd',
-}
 
 export const getCrabadaContracts = (hre: HardhatRuntimeEnvironment) => {
+
+    const addresses = hre.crabada.network.getContractAddresses()
+
     const idleGame = new Contract(
-        contractAddress.IdleGame,
+        addresses.IdleGame,
         abi.IdleGame,
         hre.ethers.provider
     )
   
     const tusToken = new Contract(
-        contractAddress.tusToken,
+        addresses.tusToken,
         abi.ERC20,
         hre.ethers.provider
     )
   
     const craToken = new Contract(
-        contractAddress.craToken,
+        addresses.craToken,
         abi.ERC20,
         hre.ethers.provider
     )
   
     const crabada = new Contract(
-        contractAddress.crabada,
+        addresses.crabada,
         abi.Crabada,
         hre.ethers.provider
     )
@@ -194,35 +190,13 @@ export const mineStep = async (
     attackerTeamId: number, wait: number, minerSigner: SignerWithAddress, previousTeamId: number,
     attackerSigners: SignerWithAddress[]) => {
 
-    const override = {
-        gasLimit: GAS_LIMIT,
-        // nonce: undefined,
-        // gasPrice: undefined,
-        maxFeePerGas: MAX_FEE,
-        maxPriorityFeePerGas: ONE_GWEI
-    } 
+    const override = hre.crabada.network.getPriorityOverride()
 
-    const idleGame = new Contract(
-        contractAddress.IdleGame,
-        abi.IdleGame,
-        hre.ethers.provider
-    ).connect(minerSigner)
+    const { idleGame } = getCrabadaContracts(hre)
 
     const Player = (await hre.ethers.getContractFactory("Player"));
     const attackers = attackerSigners.map( signer => Player.attach(attackerContractAddress).connect(signer) ) 
 
-    const tusToken = new Contract(
-        contractAddress.tusToken,
-        abi.ERC20,
-        hre.ethers.provider
-    )
-  
-    const craToken = new Contract(
-        contractAddress.craToken,
-        abi.ERC20,
-        hre.ethers.provider
-    )
-  
     const minerAddress = minerSigner.address
 
     console.log('Miner address', minerSigner.address);
@@ -292,7 +266,7 @@ export const mineStep = async (
 
         try {
             console.log(`callStatic.startGame(teamId: ${minerTeamId})`);
-            await idleGame.callStatic.startGame(minerTeamId)
+            await idleGame.connect(minerSigner).callStatic.startGame(minerTeamId)
         } catch (error) {
             console.error(`ERROR: ${error.toString()}`)
             console.error(`ERROR: Not possible to start the game.`)
@@ -316,7 +290,7 @@ export const mineStep = async (
         const attackDelays = attackers.map( (attacker, index) => 900*(index+1) )
 
         console.log(`startGame(teamId: ${minerTeamId})`);
-        const startGameTransactionResponsePromise = idleGame.startGame(minerTeamId, override)
+        const startGameTransactionResponsePromise = idleGame.connect(minerSigner).startGame(minerTeamId, override)
 
         const attackTeamTransactionResponsesPromise = Promise.all(attackDelays.map( (delayMilis, index) => {
             return new Promise<TransactionResponse | undefined>( resolve => {
@@ -367,7 +341,7 @@ export const deployPlayer = async (hre: HardhatRuntimeEnvironment, signer: Signe
     const { idleGame, crabada } = getCrabadaContracts(hre)
 
     const Player = (await hre.ethers.getContractFactory("Player")).connect(signer);
-    const override = await getOverride(hre)
+    const override = hre.crabada.network.getOverride()
     override.gasLimit = 2500000
     const player = await Player.deploy(idleGame.address, crabada.address, override)
 
@@ -376,18 +350,12 @@ export const deployPlayer = async (hre: HardhatRuntimeEnvironment, signer: Signe
 
 export const deployAttackRouter = async (hre: HardhatRuntimeEnvironment, signer: SignerWithAddress | undefined): Promise<Contract> => {
 
-    const { idleGame, crabada } = getCrabadaContracts(hre)
-
     const AttackRouter = (await hre.ethers.getContractFactory("AttackRouter")).connect(signer);
-    const override = await getOverride(hre)
+    const override = hre.crabada.network.getOverride()
     override.gasLimit = 2500000
     const router = await AttackRouter.deploy(override)
 
     return router
-}
-
-export const getOverride = async (hre: HardhatRuntimeEnvironment) => {
-    return ({maxFeePerGas: 100*ONE_GWEI, maxPriorityFeePerGas: ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
 }
 
 export interface TeamInfo {
@@ -1018,239 +986,13 @@ const _shoudReinforce = (attackId1: BigNumber, attackId2: BigNumber, defId1: Big
     return false
 }
 
-interface CrabadaAPIInfo{ 
-    hp: number, 
-    damage: number, 
-    armor: number,
-    speed: number,
-    critical: number,
-}
 
-export const _battlePoint = ({ hp, damage, armor }: CrabadaAPIInfo): number => {
-    return hp+damage+armor
-}
-
-export const _minePoint = ({ speed, critical }: CrabadaAPIInfo): number => {
-    return speed+critical
-}
-
-import axios from "axios";
 import { CONFIG_BY_NODE_ID, NodeConfig } from "../config/nodes";
-import { ClassNameByCrabada, CrabadaClassName, TeamBattlePoints } from "./teambp";
-import { getSigner, MINE_CONFIG_BY_TEAM_ID, MINE_GROUPS } from "../tasks/crabada";
+import { ClassNameByCrabada, TeamBattlePoints } from "./teambp";
+import { getSigner } from "../tasks/crabada";
 import { deposit, withdraw } from "../test/utils";
+import { CrabadaInTabern } from "./api";
 
-export interface CanLootGameFromApi{
-    game_id: number,
-    team_id: number,
-    start_time: number,
-}
-
-export class CrabadaAPI{
-
-   async getCanLootGames(): Promise<CanLootGameFromApi[]>{
-
-        const headers = {
-            'authority': 'idle-api.crabada.com',
-            'pragma': 'no-cache',
-            'cache-control': 'no-cache',
-            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
-            accept: 'application/json, text/plain, */*',
-            // TODO authorization should use the bearer token for each player.
-            authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDcyNTQ3MDMsImV4cCI6MTY0OTg0NjcwMywiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.GFRl3lK53u45oG-lDx58paC6rtZFyPGgcQhCCDgi6sA',
-            'sec-ch-ua-mobile': '?0',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
-            'sec-ch-ua-platform': '"Windows"',
-            origin: 'https://play.crabada.com',
-            'sec-fetch-site': 'same-site',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-dest': 'empty',
-            'referer': 'https://play.crabada.com/',
-            'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
-        }
-
-        const { 
-            result: {
-                data
-            }
-        } = (await axios.get(
-                // TODO address should be for each player.
-                `https://idle-api.crabada.com/public/idle/mines?page=1&status=open&looter_address=0xe90a22064f415896f1f72e041874da419390cc6d&can_loot=1&limit=10`,
-                {
-                    headers
-                })
-            ).data
-
-        return (data as CanLootGameFromApi[])
-   }
-
-    // TODO Read chain data using Crabada contract: const { dna } = await crabada.crabadaInfo(4887)
-    async getCrabadaInfo(crabadaId: BigNumber): Promise<CrabadaAPIInfo>{
-
-        const response: { 
-            result: CrabadaAPIInfo 
-        } = (await axios.get(`https://api.crabada.com/public/crabada/info/${ crabadaId.toString() }`))
-            .data
-
-        return response.result
-
-    }
-
-    async getCrabadasInTabernOrderByPrice(): Promise<CrabadaInTabern[]>{
-
-        interface ResponseObject { 
-            id: string,
-            price: string,
-            is_being_borrowed: number,
-            battle_point: number,
-            mine_point: number
-        }
-
-        interface Response {
-            result: {
-                totalRecord: number
-                data: ResponseObject[] 
-            } 
-        }
-
-        const quanResponse: Response = (await axios.get(`https://idle-api.crabada.com/public/idle/crabadas/lending?limit=1&page=1`))
-            .data
-
-        console.log('Lending totalRecord', quanResponse.result.totalRecord);
-
-        const responses: { 
-            result: { 
-                data: ResponseObject[] 
-            } 
-        }[] = (await Promise.all(
-            Array.from(Array(Math.round((quanResponse.result.totalRecord/50)+0.5)).keys())
-            .map( value => value+1 )
-            .map( async (page: number) => {
-                try {
-                    const url = `https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
-                    return (await axios.get(url)).data
-                } catch (error) {
-                    error(`ERROR getting page for lending API`, String(error))
-                    return undefined
-                }
-            })
-        )).filter(x=>x)
-
-        return responses.map( response => {
-            return response.result.data.map( o => {
-                try {
-                    return {
-                        id: BigNumber.from(o.id),
-                        price: BigNumber.from(String(o.price)),
-                        is_being_borrowed: o.is_being_borrowed ? true : false,
-                        battle_point: o.battle_point,
-                        mine_point: o.mine_point
-                    }
-                } catch (error) {
-                    return undefined
-                }
-            }).filter(x=>x)
-        }).flat()
-
-    }
-
-    async getClassNameByCrabada(): Promise<ClassNameByCrabada>{
-
-        interface ResponseObject { 
-            id: string,
-            class_name: string,
-        }
-
-        interface Response {
-            result: {
-                totalRecord: number
-                data: ResponseObject[] 
-            } 
-        }
-
-        const quanResponse: Response = (await axios.get(`https://api.crabada.com/public/crabada/all?limit=1&page=1`))
-            .data
-
-        const response: Response = (await axios.get(`https://api.crabada.com/public/crabada/all?limit=${ quanResponse.result.totalRecord+1000 }&page=1`))
-            .data
-
-        const result: ClassNameByCrabada = {}
-
-        for (const crabada of response.result.data){
-
-            if (!crabada.class_name)
-                continue
-
-            result[crabada.id] = (crabada.class_name as CrabadaClassName)
-
-        }
-
-        return result
-    
-    }
-    
-}
-
-export const API = new CrabadaAPI()
-
-type CanLootGamesFromApiTask = (canLootGamesFromApi: CanLootGameFromApi[]) => void
-
-export const listenCanLootGamesFromApi = async (hre: HardhatRuntimeEnvironment, task: CanLootGamesFromApiTask, interval: number = 500): Promise<NodeJS.Timer> => {
-
-    const gameAlreadyProcessed: {
-        [game_id: number]: boolean
-    } = {}
-
-    let processing: boolean = false
-
-    return setInterval(async () => {
-
-        if (processing)
-            return
-        
-        processing = true
-
-        try {
-
-            const canLootGamesFromApi: CanLootGameFromApi[] = await API.getCanLootGames()
-
-            const newCanLootGamesFromApi = canLootGamesFromApi.filter(({game_id})=>{
-                const result = !gameAlreadyProcessed[game_id]
-                gameAlreadyProcessed[game_id] = true
-                return result
-            })
-
-            task(newCanLootGamesFromApi)
-
-            setTimeout(()=>{
-                newCanLootGamesFromApi.forEach( ({game_id}) =>{ 
-                    delete gameAlreadyProcessed[game_id]
-                })
-            },60_000)
-                
-        } catch (error) {
-            console.error('ERROR retrieving canLootGames', String(error));
-        }
-
-        processing = false
-
-    }, interval)
-
-}
-
-export const crabadaIdToBattlePointPromise = async(crabadaId): Promise<number> => {
-    if (crabadaId.isZero())
-        return 0
-    const crabadaInfo = await API.getCrabadaInfo(crabadaId) // https://api.crabada.com/public/crabada/info/18410 -> const { hp, damage, armor} response.result
-    return _battlePoint(crabadaInfo)
-}
-
-export const crabadaIdToMinePointPromise = async(crabadaId): Promise<number> => {
-    if (crabadaId.isZero())
-        return 0
-    const crabadaInfo = await API.getCrabadaInfo(crabadaId) // https://api.crabada.com/public/crabada/info/18410 -> const { hp, damage, armor} response.result
-    return _minePoint(crabadaInfo)
-}
 
 export const getReinforcementMinBattlePoints = async (hre: HardhatRuntimeEnvironment,
     teamId: BigNumber, reinforceAttack: boolean): Promise<number> => {
@@ -1276,10 +1018,10 @@ export const getReinforcementMinBattlePoints = async (hre: HardhatRuntimeEnviron
     
     const sum = (prev, current) => prev+current
 
-    const attackReinforceBattlePoint = (await Promise.all([ attackId1, attackId2 ].map(crabadaIdToBattlePointPromise)))
+    const attackReinforceBattlePoint = (await Promise.all([ attackId1, attackId2 ].map( hre.crabada.api.crabadaIdToBattlePointPromise )))
         .reduce(sum,0)
     
-    const defenseReinforceBattlePoint = (await Promise.all([ defId1, defId2 ].map( crabadaIdToBattlePointPromise )))
+    const defenseReinforceBattlePoint = (await Promise.all([ defId1, defId2 ].map( hre.crabada.api.crabadaIdToBattlePointPromise )))
         .reduce(sum,0)
 
     let otherReinforceBattlePoint = 0
@@ -1308,14 +1050,6 @@ export interface CrabadaToBorrow {
     price: BigNumber
 }
 
-export interface CrabadaInTabern{ 
-    id: BigNumber,
-    price: BigNumber,
-    is_being_borrowed: boolean,
-    battle_point: number,
-    mine_point: number
-}
-
 const MAX_REINFORCE_DEFENSE_PRICE = parseEther('20')
 const BORROW_STEP_PRICE_IN_TUS = 2
 const BORROW_MAX_PRICE_IN_TUS = 36
@@ -1327,9 +1061,9 @@ const PRICE_RANGES = Array.from(Array(BORROW_PRICE_STEPS).keys())
         maxPrice: parseEther(String(maxPriceInTus)),
     }))
 
-export const getCrabadasToBorrow = async (minBattlePointNeeded: number, reinforceAttack: boolean): Promise<CrabadaToBorrow[]> => {
+export const getCrabadasToBorrow = async (hre: HardhatRuntimeEnvironment, minBattlePointNeeded: number, reinforceAttack: boolean): Promise<CrabadaToBorrow[]> => {
 
-    const crabadasInTabernOrderByPrice: CrabadaInTabern[] = await API.getCrabadasInTabernOrderByPrice() //https://idle-api.crabada.com/public/idle/crabadas/lending?orderBy=price&order=asc&limit=100
+    const crabadasInTabernOrderByPrice: CrabadaInTabern[] = await hre.crabada.api.getCrabadasInTabernOrderByPrice()
 
     console.log('crabadasInTabernOrderByPrice', crabadasInTabernOrderByPrice.length);
 
@@ -1370,11 +1104,7 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 
     const allowance: BigNumber = await tusToken.allowance(player ? player : signer.address, spender)
 
-    const override = {
-        gasLimit: GAS_LIMIT,
-        maxFeePerGas: MAX_FEE,
-        maxPriorityFeePerGas: ONE_GWEI
-    }
+    const override = hre.crabada.network.getPriorityOverride()
 
     if (allowance.lt(ethers.constants.MaxUint256.div(2))){
 
@@ -1410,11 +1140,7 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     currentGameId: BigNumber, teamId: number, minRealBattlePointNeeded: number,
     signer: SignerWithAddress, player: string|undefined, testMode=true, reinforceAttack: boolean): Promise<TransactionResponse|undefined> => {
 
-    const override = {
-        gasLimit: GAS_LIMIT,
-        maxFeePerGas: reinforceAttack ? MAX_FEE : MAX_FEE_REINFORCE_DEFENSE,
-        maxPriorityFeePerGas: ONE_GWEI
-    }
+    const override = hre.crabada.network.getPriorityOverride()
     
     const { idleGame } = getCrabadaContracts(hre)
     
@@ -1422,7 +1148,7 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     
     if (REINFORCE_WITH_OWN_CRABADA && !reinforceAttack){
 
-        const mineGroupsForTeamId = MINE_GROUPS
+        const mineGroupsForTeamId = hre.crabada.network.MINE_GROUPS
             .filter( ({teamsOrder}) => teamsOrder.includes(teamId))
 
         // TODO refactor code to be more elegant.
@@ -1456,8 +1182,8 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
                 
                 const previousTeam = teamsOrder[indexOfPreviousTeam]
 
-                const currentTeamMineConfig = MINE_CONFIG_BY_TEAM_ID[teamId]
-                const previousTeamMineConfig = MINE_CONFIG_BY_TEAM_ID[previousTeam]
+                const currentTeamMineConfig = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
+                const previousTeamMineConfig = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[previousTeam]
 
                 if (currentTeamMineConfig.address == previousTeamMineConfig.address)
                     return
@@ -1496,7 +1222,7 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     }
     
     if (borrowOptions.length == 0)
-        borrowOptions = await getCrabadasToBorrow(minRealBattlePointNeeded, reinforceAttack)
+        borrowOptions = await getCrabadasToBorrow(hre, minRealBattlePointNeeded, reinforceAttack)
     
     const reinforceMethodName = reinforceAttack ? 'reinforceAttack' : 'reinforceDefense'
 

@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { formatEther, parseEther } from "ethers/lib/utils";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { attachAttackRouter, attachPlayer, deployAttackRouter, deployPlayer, getCrabadaContracts, getOverride, waitTransaction } from "../scripts/crabada";
+import { attachAttackRouter, attachPlayer, deployAttackRouter, deployPlayer, getCrabadaContracts, waitTransaction } from "../scripts/crabada";
 import { types } from "hardhat/config"
 import { evm_increaseTime, logTransactionAndWait, transferCrabadasFromTeam } from "../test/utils";
 import { BigNumber, Contract, ethers } from "ethers";
@@ -86,9 +86,9 @@ task(
         const isApprovedForAll = await crabada.connect(signer).isApprovedForAll(signer.address, player)
         if (!isApprovedForAll){
             console.log('crabada.callStatic.setApprovalForAll(_playerTo.address, true)', player);
-            await crabada.connect(signer).callStatic.setApprovalForAll(player, true, await getOverride(hre))
+            await crabada.connect(signer).callStatic.setApprovalForAll(player, true, hre.crabada.network.getOverride())
             console.log('crabada.setApprovalForAll(_playerTo.address, true)', player);
-            await waitTransaction(await crabada.connect(signer).setApprovalForAll(player, true, await getOverride(hre)), 2)
+            await waitTransaction(await crabada.connect(signer).setApprovalForAll(player, true, hre.crabada.network.getOverride()), 2)
         }else
             console.log('Already approved')
 
@@ -107,9 +107,9 @@ task(
 
         const crabadasToDesposit = crabadas.split(',').map( s => BigNumber.from(s))
 
-        await playerC.connect(signer).callStatic.deposit(signer.address, crabadasToDesposit, await getOverride(hre))
+        await playerC.connect(signer).callStatic.deposit(signer.address, crabadasToDesposit, hre.crabada.network.getOverride())
         
-        await playerC.connect(signer).deposit(signer.address, crabadasToDesposit, await getOverride(hre))
+        await playerC.connect(signer).deposit(signer.address, crabadasToDesposit, hre.crabada.network.getOverride())
         
     })
     .addParam("player", "Player contract address, for which will be created the team.")
@@ -125,9 +125,9 @@ task(
 
         const playerC = await attachPlayer(hre, player)
 
-        await playerC.connect(signer).callStatic.createTeam(c1, c2, c3, await getOverride(hre))
+        await playerC.connect(signer).callStatic.createTeam(c1, c2, c3, hre.crabada.network.getOverride())
 
-        await playerC.connect(signer).createTeam(c1, c2, c3, await getOverride(hre))
+        await playerC.connect(signer).createTeam(c1, c2, c3, hre.crabada.network.getOverride())
 
         const teamId = await playerC.teams((await playerC.teamsCount()).sub(1))
         console.log(`Team created: ${teamId}`);
@@ -166,7 +166,7 @@ export const playerWithdrawErc20 = async (
         playerAddresses.map( pAddress => attachPlayer(hre, pAddress))
     )
 
-    const override = await getOverride(hre)
+    const override = hre.crabada.network.getOverride()
 
     for (const p of pContracts){
 
@@ -223,9 +223,9 @@ task(
         const teamInfo = await idleGame.getTeamInfo(teamid)
         const { currentGameId: gameId} = teamInfo
 
-        await idleGame.connect(signer).callStatic.closeGame(gameId, await getOverride(hre))
+        await idleGame.connect(signer).callStatic.closeGame(gameId, hre.crabada.network.getOverride())
         
-        await idleGame.connect(signer).closeGame(gameId, await getOverride(hre))
+        await idleGame.connect(signer).closeGame(gameId, hre.crabada.network.getOverride())
 
     })
     .addParam("player", "Player contract address, for which will be created the team.")
@@ -242,9 +242,9 @@ task(
 
         const playerC = await attachPlayer(hre, player)
 
-        await playerC.connect(signer).callStatic.removeCrabadaFromTeam(teamid, position, await getOverride(hre))
+        await playerC.connect(signer).callStatic.removeCrabadaFromTeam(teamid, position, hre.crabada.network.getOverride())
         
-        await playerC.connect(signer).removeCrabadaFromTeam(teamid, position, await getOverride(hre))
+        await playerC.connect(signer).removeCrabadaFromTeam(teamid, position, hre.crabada.network.getOverride())
         
     })
     .addParam("player", "Player contract address, for which will be created the team.")
@@ -261,9 +261,9 @@ task(
 
         const _player = await attachPlayer(hre, player)
 
-        await _player.connect(signer).callStatic.addCrabadaToTeam(teamid, position, crabada, await getOverride(hre))
+        await _player.connect(signer).callStatic.addCrabadaToTeam(teamid, position, crabada, hre.crabada.network.getOverride())
         
-        await _player.connect(signer).addCrabadaToTeam(teamid, position, crabada, await getOverride(hre))
+        await _player.connect(signer).addCrabadaToTeam(teamid, position, crabada, hre.crabada.network.getOverride())
         
     })
     .addParam("player", "Player contract address, for which will be created the team.")
@@ -283,9 +283,9 @@ task(
 
         const crabadasIds = (crabadas as string).split(',').map( x => BigNumber.from(x) )
 
-        await playerC.connect(signer).callStatic.withdraw(signer.address, crabadasIds, await getOverride(hre))
+        await playerC.connect(signer).callStatic.withdraw(signer.address, crabadasIds, hre.crabada.network.getOverride())
         
-        await playerC.connect(signer).withdraw(signer.address, crabadasIds, await getOverride(hre))
+        await playerC.connect(signer).withdraw(signer.address, crabadasIds, hre.crabada.network.getOverride())
         
     })
     .addParam("player", "Player contract address, for which will be created the team.")
@@ -303,7 +303,7 @@ task(
 
         await playerC.connect(signer).callStatic.transferOwnership(newowner)
 
-        await playerC.connect(signer).transferOwnership(newowner, await getOverride(hre))
+        await playerC.connect(signer).transferOwnership(newowner, hre.crabada.network.getOverride())
 
     })
     .addParam("player", "Player contract address that will be transfered.")
@@ -333,35 +333,35 @@ task(
 
             for (let position=0; position<3; position++){
                 console.log('_playerFrom.callStatic.removeCrabadaFromTeam(teamId, position)', teamId.toNumber(), position);
-                await _playerFrom.callStatic.removeCrabadaFromTeam(teamId, position, await getOverride(hre))
+                await _playerFrom.callStatic.removeCrabadaFromTeam(teamId, position, hre.crabada.network.getOverride())
                 console.log('_playerFrom.removeCrabadaFromTeam(teamId, position)', teamId.toNumber(), position);
-                await waitTransaction(await _playerFrom.removeCrabadaFromTeam(teamId, position, await getOverride(hre)), wait)
+                await waitTransaction(await _playerFrom.removeCrabadaFromTeam(teamId, position, hre.crabada.network.getOverride()), wait)
             }
     
             const crabadasIds = [c1, c2, c3]
 
             console.log('_playerFrom.callStatic.withdraw(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
-            await _playerFrom.callStatic.withdraw(signer.address, crabadasIds, await getOverride(hre))
+            await _playerFrom.callStatic.withdraw(signer.address, crabadasIds, hre.crabada.network.getOverride())
             console.log('_playerFrom.withdraw(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
-            await waitTransaction(await _playerFrom.withdraw(signer.address, crabadasIds, await getOverride(hre)), wait)
+            await waitTransaction(await _playerFrom.withdraw(signer.address, crabadasIds, hre.crabada.network.getOverride()), wait)
 
             const isApprovedForAll = await crabada.isApprovedForAll(signer.address, _playerTo.address)
             if (!isApprovedForAll){
                 console.log('crabada.callStatic.setApprovalForAll(_playerTo.address, true)', _playerTo.address);
-                await crabada.connect(signer).callStatic.setApprovalForAll(_playerTo.address, true, await getOverride(hre))
+                await crabada.connect(signer).callStatic.setApprovalForAll(_playerTo.address, true, hre.crabada.network.getOverride())
                 console.log('crabada.setApprovalForAll(_playerTo.address, true)', _playerTo.address);
-                await waitTransaction(await crabada.connect(signer).setApprovalForAll(_playerTo.address, true, await getOverride(hre)), wait)
+                await waitTransaction(await crabada.connect(signer).setApprovalForAll(_playerTo.address, true, hre.crabada.network.getOverride()), wait)
             }
 
             console.log('_playerTo.callStatic.deposit(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
-            await _playerTo.callStatic.deposit(signer.address, crabadasIds, await getOverride(hre))
+            await _playerTo.callStatic.deposit(signer.address, crabadasIds, hre.crabada.network.getOverride())
             console.log('_playerTo.deposit(_playerTo.address, crabadasIds)', signer.address, crabadasIds.map(x=>x.toString()));
-            await waitTransaction(await _playerTo.deposit(signer.address, crabadasIds, await getOverride(hre)), wait)
+            await waitTransaction(await _playerTo.deposit(signer.address, crabadasIds, hre.crabada.network.getOverride()), wait)
 
             console.log('_playerTo.callStatic.createTeam(c1, c2, c3)', ...(crabadasIds.map(x=>x.toString())) );
-            await _playerTo.callStatic.createTeam(c1, c2, c3, await getOverride(hre))
+            await _playerTo.callStatic.createTeam(c1, c2, c3, hre.crabada.network.getOverride())
             console.log('_playerTo.createTeam(c1, c2, c3)', ...(crabadasIds.map(x=>x.toString())) );
-            await waitTransaction(await _playerTo.createTeam(c1, c2, c3, await getOverride(hre)), wait)
+            await waitTransaction(await _playerTo.createTeam(c1, c2, c3, hre.crabada.network.getOverride()), wait)
         }
 
 
@@ -382,11 +382,11 @@ task(
 
         const playerC = await attachPlayer(hre, player)
 
-        const override = await getOverride(hre)
+        const override = hre.crabada.network.getOverride()
 
         await playerC.connect(signer).callStatic.addOwner(newowner, override)
 
-        const txr: ethers.providers.TransactionResponse = await playerC.connect(signer).addOwner(newowner, await getOverride(hre))
+        const txr: ethers.providers.TransactionResponse = await playerC.connect(signer).addOwner(newowner, hre.crabada.network.getOverride())
         
         console.log(txr.hash);
 
@@ -407,7 +407,7 @@ task(
 
         await routerC.connect(signer).callStatic.addOwner(newowner)
 
-        await routerC.connect(signer).addOwner(newowner, await getOverride(hre))
+        await routerC.connect(signer).addOwner(newowner, hre.crabada.network.getOverride())
 
     })
     .addParam("router", "AttackRouter contract for which will be added a new owner.")

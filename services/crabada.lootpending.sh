@@ -1,4 +1,10 @@
 #!/bin/bash
 . /home/cerebro/.nvm/nvm.sh
-npx hardhat lootpending --network localmainnet --testmode false
+
+if [ -z "$HARDHAT_NETWORK" ]
+then 
+    HARDHAT_NETWORK=localmainnet
+fi
+
+npx hardhat lootpending --network "$HARDHAT_NETWORK" --testmode false
 
