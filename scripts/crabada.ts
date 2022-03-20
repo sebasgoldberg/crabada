@@ -238,7 +238,7 @@ export const mineStep = async (
 
         try {
             console.log(`callStatic.closeGame(gameId: ${gameId})`);        
-            await idleGame.callStatic.closeGame(gameId, override)
+            await idleGame.connect(minerSigner).callStatic.closeGame(gameId, override)
         } catch (error) {
             console.error(`ERROR: ${error.toString()}`)
             console.error(`INFO: Maybe it is too early to close the game`)
@@ -246,7 +246,7 @@ export const mineStep = async (
         }
     
         console.log(`closeGame(gameId: ${gameId})`);
-        const transactionResponse: TransactionResponse = await idleGame.closeGame(gameId, override)
+        const transactionResponse: TransactionResponse = await idleGame.connect(minerSigner).closeGame(gameId, override)
         console.log(`transaction: ${transactionResponse.hash}`);        
     
         await transactionResponse.wait(2)
@@ -258,7 +258,7 @@ export const mineStep = async (
 
     // SETTLE GAME
 
-    attackerTeamId && await settleGame(idleGame, attackerCurrentGameId, wait)
+    attackerTeamId && await settleGame(idleGame.connect(minerSigner), attackerCurrentGameId, wait)
 
     // START GAME
 
