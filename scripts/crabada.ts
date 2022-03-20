@@ -1175,37 +1175,45 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
                     return
                 }
 
-                const indexOfCurrentTeam = teamsOrder.indexOf(teamId)
-                const indexOfPreviousTeam = indexOfCurrentTeam == 0 ?
-                    teamsOrder.length-1
-                    : indexOfCurrentTeam-1
-                
-                const previousTeam = teamsOrder[indexOfPreviousTeam]
+                // get other signers from the same mining group
 
-                const currentTeamMineConfig = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
-                const previousTeamMineConfig = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[previousTeam]
+                const { signerIndex: currentTeamSignerIndex } = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
+                const otherTeamsSignerIndexes: number[]= []
 
-                if (currentTeamMineConfig.address == previousTeamMineConfig.address)
-                    return
+                teamsOrder.forEach( t => {
+                    const { signerIndex } = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[t]
+                    if (signerIndex == currentTeamSignerIndex)
+                        return
+                    if (otherTeamsSignerIndexes.includes(signerIndex))
+                        return
+                    otherTeamsSignerIndexes.push(signerIndex)
+                })
 
-                const previousTeamSigner = await getSigner(hre, undefined, previousTeamMineConfig.signerIndex)
+                const otherTeamsSigners = await Promise.all(
+                    otherTeamsSignerIndexes
+                        .map( async(index) => (await getSigner(hre, undefined, index)) )
+                )
 
-                await Promise.all(
-                    crabadaReinforcers.map( async (crabadaId) => {
+                // Try to withdraw from other signers and deposit for the current team's signer.
+
+                for (const crabadaId of crabadaReinforcers){
+
+                    for (const otherTeamsSigner of otherTeamsSigners){
                         try {
-                            await withdraw(hre, previousTeamSigner, signer.address, [crabadaId], override)
+                            await withdraw(hre, otherTeamsSigner, signer.address, [crabadaId], override)
                         } catch (error) {
                             console.error('ERROR trying to withdraw:', String(error));
                         }
-                        
-                        try {
-                            await deposit(hre, signer, [crabadaId], override)
-                        } catch (error) {
-                            console.error('ERROR trying to deposit:', String(error));
-                        }
-        
-                    })
-                )
+                    }
+                    
+                    try {
+                        await deposit(hre, signer, [crabadaId], override)
+                    } catch (error) {
+                        console.error('ERROR trying to deposit:', String(error));
+                    }
+
+                }
+
                 
             })
         )
