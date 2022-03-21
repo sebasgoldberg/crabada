@@ -2225,13 +2225,13 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
                     
                         const sum = (prev, current) => prev+current
                     
-                        const attackReinforceBattlePoint = (await Promise.all([ attackId1, attackId2 ].map(hre.crabada.api.crabadaIdToBattlePointPromise)))
+                        const attackReinforceBattlePoint = (await Promise.all([ attackId1, attackId2 ].map(x => hre.crabada.api.crabadaIdToBattlePointPromise(x))))
                             .reduce(sum,0)
                         
-                        const defenseReinforceBattlePoint = (await Promise.all([ defId1, defId2 ].map(hre.crabada.api.crabadaIdToBattlePointPromise)))
+                        const defenseReinforceBattlePoint = (await Promise.all([ defId1, defId2 ].map(x => hre.crabada.api.crabadaIdToBattlePointPromise(x))))
                             .reduce(sum,0)
 
-                        const defenseReinforceMinePoint = (await Promise.all([ defId1, defId2 ].map(hre.crabada.api.crabadaIdToMinePointPromise)))
+                        const defenseReinforceMinePoint = (await Promise.all([ defId1, defId2 ].map( x => hre.crabada.api.crabadaIdToMinePointPromise(x))))
                             .reduce(sum,0)
 
                         const bpDiff = attackerBattlePoint.getRelativeBP(battlePoint.teamFaction)+attackReinforceBattlePoint
