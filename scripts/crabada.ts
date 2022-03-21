@@ -1189,6 +1189,11 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
                     otherTeamsSignerIndexes.push(signerIndex)
                 })
 
+                // In case there are no other sigers for the miners group, must
+                // not continue with the withdraw and deposit operations.
+                if (otherTeamsSignerIndexes.length == 0)
+                    return
+
                 const otherTeamsSigners = await Promise.all(
                     otherTeamsSignerIndexes
                         .map( async(index) => (await getSigner(hre, undefined, index)) )
