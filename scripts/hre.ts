@@ -138,7 +138,7 @@ export class CrabadaNetwork{
         if (this.isSwimmerTestNetwork()){
             return 'https://subnet-test-api.crabada.com'
         }else{
-            return 'https://api.crabada.com/'
+            return 'https://api.crabada.com'
         }
 
     }
