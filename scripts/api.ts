@@ -87,14 +87,10 @@ export class CrabadaAPI{
     // TODO Read chain data using Crabada contract: const { dna } = await crabada.crabadaInfo(4887)
     async getCrabadaInfo(crabadaId: BigNumber): Promise<CrabadaAPIInfo>{
 
-        console.log(`${this.crabadaApiBaseUrl}/public/crabada/info/${ crabadaId.toString() }`);
-        
         const response: { 
             result: CrabadaAPIInfo 
         } = (await axios.get(`${this.crabadaApiBaseUrl}/public/crabada/info/${ crabadaId.toString() }`))
             .data
-
-        console.log(response.result);
 
         return response.result
 
