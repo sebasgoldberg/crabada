@@ -174,18 +174,31 @@ export class CrabadaAPI{
         const quanResponse: Response = (await axios.get(`${this.crabadaApiBaseUrl}/public/crabada/all?limit=1&page=1`))
             .data
 
-        const response: Response = (await axios.get(`${this.crabadaApiBaseUrl}/public/crabada/all?limit=${ quanResponse.result.totalRecord+1000 }&page=1`))
-            .data
+        const responses: Response[] = (await Promise.all(
+            Array.from(Array(Math.round((quanResponse.result.totalRecord/1000)+0.5)).keys())
+            .map( value => value+1 )
+            .map( async (page: number) => {
+                try {
+                    const url = `${this.crabadaApiBaseUrl}/public/crabada/all?limit=1000&page=${page}`
+                    return (await axios.get(url)).data
+                } catch (error) {
+                    error(`ERROR getting page for lending API`, String(error))
+                    return undefined
+                }
+            })
+        )).filter(x=>x)
 
         const result: ClassNameByCrabada = {}
 
-        for (const crabada of response.result.data){
+        for (const response of responses){
+            for (const crabada of response.result.data){
 
-            if (!crabada.class_name)
-                continue
-
-            result[crabada.id] = (crabada.class_name as CrabadaClassName)
-
+                if (!crabada.class_name)
+                    continue
+    
+                result[crabada.id] = (crabada.class_name as CrabadaClassName)
+    
+            }    
         }
 
         return result
