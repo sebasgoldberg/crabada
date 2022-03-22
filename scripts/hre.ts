@@ -101,7 +101,7 @@ export class CrabadaNetwork{
             crabadaReinforcers: [ 49769, 50097 ],
         },
         {
-            teamsOrder: [ 5357, 16766 ],
+            teamsOrder: [ /*5357,*/ 16766 ],
             crabadaReinforcers: []
         }
     ]
