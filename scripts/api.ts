@@ -182,7 +182,7 @@ export class CrabadaAPI{
                     const url = `${this.crabadaApiBaseUrl}/public/crabada/all?limit=1000&page=${page}`
                     return (await axios.get(url)).data
                 } catch (error) {
-                    error(`ERROR getting page for lending API`, String(error))
+                    error(`ERROR getting page for crabada api`, String(error))
                     return undefined
                 }
             })

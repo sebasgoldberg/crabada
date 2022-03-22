@@ -174,7 +174,7 @@ export class CrabadaNetwork{
                 maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
             }
         },
-        attackOnlyTeamsThatPlayToLoose: true
+        attackOnlyTeamsThatPlayToLoose: false
     }
 
     private initializeLootCaptchaConfig(){
