@@ -1022,11 +1022,15 @@ class AttackManager{
         // TODO Sort playerTeamPairs by quantity of unlocked/settled teams.
         for (const {locked, playerAddress, settled} of playerTeamPairs){
 
+            console.log('{locked, playerAddress, settled}', {locked, playerAddress, settled});
+
             if (locked)
                 continue
 
             if (!settled)
                 continue
+
+            console.log('higherGameId.toNumber(), playerAddress', higherGameId.toNumber(), playerAddress);
 
             this.attackServer.captchaServer.updateCurrentAttackInfo(higherGameId.toNumber(), playerAddress)
 
