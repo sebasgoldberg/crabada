@@ -735,7 +735,6 @@ class CaptchaServer{
     load(req: express.Request, res: express.Response){
 
         if (this.lastGameId <= 0){
-            console.log();
             res.status(400)
             res.json({ message: "Waiting for initialization" })
             return
@@ -761,7 +760,7 @@ class CaptchaServer{
         }
 
         res.json(captchaData)
-        console.log('Sent captcha data to', requester, captchaData);
+        //console.log('Sent captcha data to', requester, captchaData);
 
     }
 
@@ -1023,15 +1022,11 @@ class AttackManager{
         // TODO Sort playerTeamPairs by quantity of unlocked/settled teams.
         for (const {locked, playerAddress, settled} of playerTeamPairs){
 
-            console.log('{locked, playerAddress, settled}', {locked, playerAddress, settled});
-
             if (locked)
                 continue
 
             if (!settled)
                 continue
-
-            console.log('higherGameId.toNumber(), playerAddress', higherGameId.toNumber(), playerAddress);
 
             this.attackServer.captchaServer.updateCurrentAttackInfo(higherGameId.toNumber(), playerAddress)
 
