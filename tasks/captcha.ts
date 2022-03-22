@@ -6,20 +6,10 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { getClassNameByCrabada, getDashboardContent, getSigner, listenStartGameEvents } from "./crabada";
-
-
 import * as express from "express"
 import axios from "axios";
 import { MAINNET_AVAX_MAIN_ACCOUNTS_PKS } from "../hardhat.config";
 import { Player } from "../scripts/hre";
-
-type LootFunction = (
-    unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
-    targets: Target[],
-    targetsHaveAdvantage: boolean,
-    lootersFaction: TeamFaction, 
-    testmode: boolean
-    ) => void
 
 interface PlayerTeamPair {
     playerAddress: string,
@@ -100,10 +90,6 @@ const settleGamesAndSetInterval = async (hre: HardhatRuntimeEnvironment, playerT
     return settleGameInterval
 }
 
-const areAllPlayerTeamPairsLocked = (playerTeamPairs: PlayerTeamPair[]): boolean => {
-    return playerTeamPairs.map( ({ locked }) => locked ).every( locked => locked )
-}
-
 const getUpdateTeamBattlePointListener = (
     hre: HardhatRuntimeEnvironment, teamsThatPlayToLooseByTeamId: TeamInfoByTeam,
     classNameByCrabada: ClassNameByCrabada): ethers.providers.Listener => {
@@ -133,18 +119,15 @@ interface StartedGameTargetsByTeamId {
     [teamId:string]: StartGameTargets
 }
 
-let attackIteration = 0
-
 interface TeamAndItsTransaction {
     teamId: BigNumber,
     txHash?: string,
     gameId: BigNumber,
 }
 
-
 const attackTeamsThatStartedAGame = (
     playerTeamPairs: PlayerTeamPair[], teamsThatPlayToLooseByTeamId: TeamInfoByTeam, 
-    teamsAndTheirTransactions: TeamAndItsTransaction[], testmode: boolean, lootFunction: LootFunction) => {
+    teamsAndTheirTransactions: TeamAndItsTransaction[], testmode: boolean, attackManager: AttackManager) => {
 
 
     if (teamsAndTheirTransactions.length == 0){
@@ -234,8 +217,8 @@ const attackTeamsThatStartedAGame = (
         startedGameTargetsByTeamId, LOOTERS_FACTION
     )
     
-    attackTeams(playerTeamPairs, targetsWithAdvantageByTeamId, teamsThatPlayToLooseByTeamId, true, LOOTERS_FACTION, testmode, lootFunction)
-    attackTeams(playerTeamPairs, targetsWithNoAdvantageByTeamId, teamsThatPlayToLooseByTeamId, true, LOOTERS_FACTION, testmode, lootFunction)
+    attackTeams(playerTeamPairs, targetsWithAdvantageByTeamId, teamsThatPlayToLooseByTeamId, true, LOOTERS_FACTION, testmode, attackManager)
+    attackTeams(playerTeamPairs, targetsWithNoAdvantageByTeamId, teamsThatPlayToLooseByTeamId, true, LOOTERS_FACTION, testmode, attackManager)
 
 }
 
@@ -250,7 +233,7 @@ type Target = StartGameTargets & {battlePoint: TeamBattlePoints}
 const attackTeams = async (
     playerTeamPairs: PlayerTeamPair[], startedGameTargetsByTeamId: StartedGameTargetsByTeamId, 
     teamsThatPlayToLooseByTeamId: TeamInfoByTeam, targetsHaveAdvantage: boolean,
-    lootersFaction: TeamFaction, testmode: boolean, lootFunction: LootFunction) => {
+    lootersFaction: TeamFaction, testmode: boolean, attackManager: AttackManager) => {
 
     // 1) Apply only for looter teams are unlocked
     const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => (!p.locked && p.settled) || testmode )
@@ -326,7 +309,7 @@ const attackTeams = async (
 
     try {
 
-        lootFunction(
+        attackManager.onAttack(
             unlockedPlayerTeamPairsWithEnoughBattlePointSorted,
             targets,
             targetsHaveAdvantage,
@@ -342,10 +325,11 @@ const attackTeams = async (
 
 }
 
+
 const lootLoop = async (
     hre: HardhatRuntimeEnvironment, looters: Player[], 
     blockstoanalyze: number, firstdefendwindow: number, testmode: boolean,
-    lootFunction: LootFunction) => {
+    attackManager: AttackManager) => {
 
     // const updateGasPrice = updateGasPriceFunction(hre)
     // const gasPriceUpdateInterval = setInterval(updateGasPrice, 10_000)
@@ -444,7 +428,8 @@ const lootLoop = async (
             }
         })
 
-        attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
+        attackManager.onNewGames(teamsAndTheirTransaction, playerTeamPairs)
+        attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, attackManager)
 
     }, 50)
 
@@ -490,22 +475,6 @@ const lootLoop = async (
     clearInterval(updateLockStatusInterval)
     settleGameInterval && clearInterval(settleGameInterval)
 
-}
-
-const existsAnyTeamSettled = (playerTeamPairs: PlayerTeamPair[], testmode: boolean): boolean => {
-    return (playerTeamPairs.filter( p => p.settled || testmode ).length == 0)
-}
-
-interface PendingResponse {
-    resolveResponse: (value: unknown) => void,
-    res: typeof express.response,
-    requester: string
-}
-
-type PendingAttackLooterTeams = string[]
-
-interface PendingAttacks{
-    [gameId: string]: PendingAttackLooterTeams
 }
 
 interface AttackTransactionData{
@@ -587,23 +556,7 @@ class AttackExecutor{
 }
 
 
-interface PendingTransaction {
-    user_address: string,
-    team_id: string,
-    game_id: string,
-    requester: string,
-    status: {
-        resolveStatusResponse?: (value: unknown) => void,
-        res?: typeof express.response,    
-        successfulAttackRegistration?: boolean|undefined
-    }
-}
-
-interface PendingTransactionByChallenge {
-    [challenge: string]: PendingTransaction
-}
-
-interface CaptchaVerifyResult {
+interface CaptchaVerifiedResult {
     status: string,
     data: {
         lot_number: string,
@@ -683,7 +636,7 @@ export class AuthServer {
                 const url = `${this.hre.crabada.network.getCrabadaApiBaseUrl()}/crabada-user/public/login-signature`
     
                 const headers = {
-                    'authority': 'api.crabada.com',
+                    'authority': this.hre.crabada.network.getCrabadaApiDomain(),
                     'pragma': 'no-cache',
                     'cache-control': 'no-cache',
                     'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
@@ -743,16 +696,150 @@ export class AuthServer {
 
 }
 
+interface ChallengeInfo {
+    user_address: string,
+    game_id: string,
+    requester: string,
+    challenge: string,
+}
+
+interface ChallengeInfoByChallenge {
+    [challenge: string]: ChallengeInfo
+}
+
+interface ResolvedCaptcha{
+    challengeInfo: ChallengeInfo,
+    verifiedResult: CaptchaVerifiedResult
+}
+
+class CaptchaServer{
+
+    lastGameId: number;
+    looterAddress: string;
+
+    pendingChallenge: ChallengeInfoByChallenge = { }
+
+    hre: HardhatRuntimeEnvironment
+    authServer: AuthServer
+
+    constructor(hre: HardhatRuntimeEnvironment, authServer: AuthServer){
+        this.hre = hre
+        this.authServer = authServer
+    }
+
+    updateCurrentAttackInfo(actualGameId: number, looterAddress: string){
+        this.lastGameId = Math.max(this.lastGameId, actualGameId+14)
+        this.looterAddress = looterAddress.toLowerCase()
+    }
+
+    load(req: express.Request, res: express.Response){
+
+        if (!this.lastGameId){
+            res.status(400)
+            res.json({ message: "Waiting for initialization" })
+            return
+        }
+
+        this.lastGameId++
+
+        const { requester }: { requester: string } = req.body
+
+        const challenge = "".concat(String(+new Date())).concat(this.lastGameId.toString()).concat(this.looterAddress)
+    
+        // TODO delete pendingChallenge[challenge] after resolve it.
+        this.pendingChallenge[challenge] = {
+            user_address: this.looterAddress,
+            game_id: this.lastGameId.toString(),
+            requester: requester,
+            challenge,
+        }
+    
+        const captchaData = {
+            challenge,
+            token: this.authServer.getToken(this.looterAddress),
+        }
+
+        res.json(captchaData)
+        console.log('Sent captcha data to', requester, captchaData);
+
+    }
+
+    resolvedCaptchasByGameId: {
+        [gameid: string]: ResolvedCaptcha
+    }
+
+    addResolvedCaptcha(challenge: string, verifiedResult: CaptchaVerifiedResult){
+        const challengeInfo: ChallengeInfo = this.pendingChallenge[challenge]
+        this.resolvedCaptchasByGameId[challengeInfo.game_id] = {
+            challengeInfo,
+            verifiedResult
+        }
+
+        // Once resolved the challenge it is deleted.
+        delete this.pendingChallenge[challenge]
+    }
+
+    getResolvedCaptchaAndRemoveIt(gameId:string): ResolvedCaptcha{
+        const result = this.resolvedCaptchasByGameId[gameId]
+        if (result)
+            delete this.resolvedCaptchasByGameId[gameId]
+        return result
+    }
+
+    async proxyCaptcha(req: express.Request, res: express.Response){
+
+        const url = `${this.hre.crabada.network.getIdleGameApiBaseUrl()}${req.url.replace('proxy/captcha', 'public')}`
+        const headers = {
+            'authority': this.hre.crabada.network.getIdleGameApiDomain(),
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
+            'sec-ch-ua-mobile': '?0',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
+            'sec-ch-ua-platform': '"Windows"',
+            'accept': '*/*',
+            'sec-fetch-site': 'same-site',
+            'sec-fetch-mode': 'no-cors',
+            'sec-fetch-dest': 'script',
+            'referer': this.hre.crabada.network.getReferer(),
+            'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
+            // cookie: '_hjSessionUser_2567432=eyJpZCI6IjFmMDRmZmRkLWYxMGMtNThjMi1iMWZjLTM0Zjg5MTFlNWNlNyIsImNyZWF0ZWQiOjE2MzgwMTA1MzY2NjksImV4aXN0aW5nIjp0cnVlfQ==; _ga_0JZ9C3M56S=GS1.1.1644169522.62.0.1644169522.0; amp_fef1e8=4a14c266-5a66-48f2-9614-e6282c8be872R...1ftker5j1.1ftkerd5k.bm.25.dr; _ga=GA1.1.311628077.1638010536; _ga_8LH6CFBN5P=GS1.1.1646881253.330.1.1646881507.0; _ga_J0F5RPFJF1=GS1.1.1647125967.36.1.1647125983.0; _ga_EKEKPKZ4L1=GS1.1.1647167093.7.0.1647167094.0; _ga_C6PTCE6QJM=GS1.1.1647178955.188.1.1647179135.0',
+        }
+
+        try {
+
+            const response = await axios.get(url,{
+                headers
+            })
+
+            res.status(response.status)
+            res.send(response.data)
+
+            if (response.status == 200 && req.url.indexOf('/proxy/captcha/verify') >= 0) {
+
+                const parsedData: CaptchaVerifiedResult = JSON.parse(/geetest_[\d]*\((.*)\)/g.exec(response.data)[1])
+
+                const challenge = req.query.challenge as string
+
+                this.addResolvedCaptcha(challenge, parsedData)
+
+            }
+
+
+        } catch (error) {
+
+            console.log('ERROR', String(error))
+
+        }
+    }
+
+}
 class AttackServer {
 
     app = express();
-    pendingResponses: PendingResponse[] = []
-    pendingAttacks: PendingAttacks = {}
     attackExecutor: AttackExecutor
 
-    authServer: AuthServer
-
     hre: HardhatRuntimeEnvironment
+    authServer: AuthServer
+    captchaServer: CaptchaServer
 
     // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
     constructor(hre: HardhatRuntimeEnvironment){
@@ -761,7 +848,7 @@ class AttackServer {
 
         this.authServer = new AuthServer(hre)
 
-        const { idleGame } = getCrabadaContracts(hre)
+        this.captchaServer = new CaptchaServer(hre, this.authServer)
 
         this.app.use(express.json());
 
@@ -788,44 +875,8 @@ class AttackServer {
             console.log('/captcha/load/')
             console.log(req.body);
 
-            // if (!existsAnyTeamSettled(playerTeamPairs, testmode)){
-            //     res.status(401)
-            //     res.json({
-            //         message: "ALL TEAMS ARE BUSY."
-            //     })
-            // }
+            await this.captchaServer.load(req, res)
 
-            const { requester }: { requester: string } = req.body
-            let indexToDelete: number = undefined
-
-            await new Promise(resolve => {
-
-                this.pendingResponses.forEach( (value, index) => {
-                    if (value.requester == requester){
-                        indexToDelete = index
-                    }
-                })
-
-                if (indexToDelete == undefined){
-
-                    this.pendingResponses.push({
-                        requester: req.body.requester,
-                        res,
-                        resolveResponse: resolve
-                    })
-
-                } else {
-
-                    this.pendingResponses[indexToDelete].resolveResponse(undefined)
-                    this.pendingResponses[indexToDelete] = {
-                        requester: req.body.requester,
-                        res,
-                        resolveResponse: resolve
-                    }
-
-                }
-
-            })
         })
 
         /**
@@ -835,158 +886,8 @@ class AttackServer {
 
             console.log('req.url', req.url); // '/proxy/captcha/load/?captcha_id=a9cd95e65fc75072dadea93e3d60b0e6&challenge=16471805841662330581e891e709-1e56-4e70-9b6d-996385914a5f&client_type=web&risk_type=icon&lang=pt-br&callback=geetest_1647180585657'
 
-            const url = `${hre.crabada.network.getIdleGameApiBaseUrl()}${req.url.replace('proxy/captcha', 'public')}`
-            const headers = {
-                'authority': 'idle-api.crabada.com',
-                'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
-                'sec-ch-ua-mobile': '?0',
-                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
-                'sec-ch-ua-platform': '"Windows"',
-                'accept': '*/*',
-                'sec-fetch-site': 'same-site',
-                'sec-fetch-mode': 'no-cors',
-                'sec-fetch-dest': 'script',
-                'referer': this.hre.crabada.network.getReferer(),
-                'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
-                // cookie: '_hjSessionUser_2567432=eyJpZCI6IjFmMDRmZmRkLWYxMGMtNThjMi1iMWZjLTM0Zjg5MTFlNWNlNyIsImNyZWF0ZWQiOjE2MzgwMTA1MzY2NjksImV4aXN0aW5nIjp0cnVlfQ==; _ga_0JZ9C3M56S=GS1.1.1644169522.62.0.1644169522.0; amp_fef1e8=4a14c266-5a66-48f2-9614-e6282c8be872R...1ftker5j1.1ftkerd5k.bm.25.dr; _ga=GA1.1.311628077.1638010536; _ga_8LH6CFBN5P=GS1.1.1646881253.330.1.1646881507.0; _ga_J0F5RPFJF1=GS1.1.1647125967.36.1.1647125983.0; _ga_EKEKPKZ4L1=GS1.1.1647167093.7.0.1647167094.0; _ga_C6PTCE6QJM=GS1.1.1647178955.188.1.1647179135.0',
-            }
+            await this.captchaServer.proxyCaptcha(req, res)
 
-            try {
-
-                const response = await axios.get(url,{
-                    headers
-                })
-
-                res.status(response.status)
-                res.send(response.data)
-
-                if (response.status == 200 && req.url.indexOf('/proxy/captcha/verify') >= 0) {
-
-                    const parsedData: CaptchaVerifyResult = JSON.parse(/geetest_[\d]*\((.*)\)/g.exec(response.data)[1])
-
-                    const challenge = req.query.challenge as string
-
-                    await this.registerOrRetryAttack(challenge, parsedData)
-
-                    this.respondStatusPendingChallenge(challenge)
-
-                }
-
-
-            } catch (error) {
-
-                console.log('ERROR', String(error))
-
-                // if (error.response){
-                //     console.log('error.response.status', error.response.status);
-                //     console.log('error.response.data', error.response.data);
-                //     res.status(error.response.status)
-                //     res.json(error.response.data)
-                // } else {
-                //     throw error
-                // }
-
-            }
-
-        })
-
-        interface AttackRequestData {
-            requester: string,
-            game_id: string,
-            user_address: string,
-            team_id: string,
-            lot_number: string,
-            pass_token: string,
-            gen_time: string,
-            captcha_output: string,
-        }
-
-        this.app.post('/captcha/verify/', async (req, res) => {
-            const reqData: AttackRequestData = req.body
-            console.log('/captcha/verify/')
-            console.log(reqData);
-            const { requester, game_id, user_address, team_id, lot_number, pass_token, gen_time, captcha_output } = reqData
-            if (!this.hasPendingAttack(requester, game_id, team_id)){
-                res.json({
-                    message: "INVALID REQUESTER, GAMEID, TEAMID."
-                })
-                res.status(401)
-                return
-            } else {
-                // TODO remove pending attack.
-            }
-
-            interface AttackResponseData {
-                error_code: string,
-                message: string,
-                result?: {
-                    signature: string,
-                    game_id: number,
-                    team_id: number,
-                    expire_time: number
-                }
-            }
-
-            try {
-
-                const attackResponse = await this.registerAttack(user_address, team_id, game_id, lot_number, pass_token, gen_time, captcha_output)
-
-                console.log('SUCCESS trying to register attack', requester);
-                console.log(attackResponse.data);
-                res.status(attackResponse.status)
-                res.json(attackResponse.data)
-
-                const { signature, expire_time } = attackResponse.data.result
-
-                this.attackExecutor.addAttackTransactionData({user_address, game_id, team_id, expire_time, signature})
-
-            } catch (error) {
-
-                console.error('ERROR trying to register attack', error.response.data);
-
-                res.status(error.response.status)
-                res.json(error.response.data)
-
-            }
-
-
-
-
-            // ERROR: {"error_code":"BAD_REQUEST","message":"Captcha validate failed"}
-            // OK: {
-            //     "error_code": null,
-            //     "message": null,
-            //     "result": {
-            //         "signature": "0x64fe7ab4114e4147afcc78ee640cf092dc91efdbf13b721da89fa39b74d5675f7f9767a0577e339c289d3a1bb707d2b93956fda367b4f6494650d30ca80498b51b",
-            //         "game_id": 2109002,
-            //         "team_id": 5357,
-            //         "expire_time": 1646739603
-            //     }
-            // }
-
-        })
-
-        this.app.get('/captcha/status/', async (req, res) => {
-
-            console.log('/captcha/status/')
-
-            const challenge = req.query.challenge as string
-
-            const pendingChallenge = this.pendingChallenge[challenge]
-
-            if (!pendingChallenge){
-                res.status(404)
-                return
-            }
-
-            await new Promise(resolve => {
-
-                pendingChallenge.status.res = res
-                pendingChallenge.status.resolveStatusResponse = resolve
-
-                this.respondStatusPendingChallenge(challenge)
-
-            })
         })
 
         this.attackExecutor = new AttackExecutor(hre)
@@ -995,10 +896,9 @@ class AttackServer {
 
     }
 
-    async registerOrRetryAttack(challenge: string, captchaVerifyResponse: CaptchaVerifyResult){
+    async registerOrRetryAttack(resolvedCaptcha: ResolvedCaptcha, team_id: string|number){
 
-        const pendingChallenge = this.pendingChallenge[challenge]
-        const { user_address, game_id, team_id, requester } = pendingChallenge
+        const { user_address, game_id, requester } = resolvedCaptcha.challengeInfo
 
         const { 
             data: { 
@@ -1007,7 +907,7 @@ class AttackServer {
                     captcha_output, pass_token, gen_time 
                 } 
             }
-        }: CaptchaVerifyResult = captchaVerifyResponse
+        }: CaptchaVerifiedResult = resolvedCaptcha.verifiedResult
 
 
         try {
@@ -1021,8 +921,6 @@ class AttackServer {
 
             this.attackExecutor.addAttackTransactionData({ user_address, game_id, team_id, expire_time, signature })
 
-            pendingChallenge.status.successfulAttackRegistration = true
-
         } catch (error) {
 
             // error.response.data
@@ -1033,42 +931,10 @@ class AttackServer {
             console.error('ERROR trying to register attack', error.response.data);
 
             if (error.response.data.message == 'Game doest not exists'){
-                await this.registerOrRetryAttack(challenge, captchaVerifyResponse)
-            }else{
-                pendingChallenge.status.successfulAttackRegistration = false
+                await this.registerOrRetryAttack(resolvedCaptcha, team_id)
             }
 
         }
-
-    }
-
-    respondStatusPendingChallenge(challenge: string){
-
-        const pendingChallenge = this.pendingChallenge[challenge]
-
-        if (!pendingChallenge)
-            return
-        
-        if (!pendingChallenge.status.res || pendingChallenge.status.successfulAttackRegistration == undefined)
-            return
-
-        pendingChallenge.status.res.status(
-            pendingChallenge.status.successfulAttackRegistration ? 200 : 400
-        )
-
-        const {game_id, requester, team_id, user_address} = pendingChallenge
-        pendingChallenge.status.res.json({
-            challenge,
-            game_id, 
-            requester, 
-            team_id, 
-            user_address,
-            successfulAttackRegistration: pendingChallenge.status.successfulAttackRegistration,
-        })
-
-        pendingChallenge.status.resolveStatusResponse(undefined)
-
-        delete pendingChallenge[challenge]
 
     }
 
@@ -1083,7 +949,7 @@ class AttackServer {
             user_address, team_id, lot_number, pass_token, gen_time, captcha_output
         }, {
             headers: {
-                authority: 'idle-api.crabada.com',
+                authority: this.hre.crabada.network.getIdleGameApiDomain(),
                 'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
                 'accept': 'application/json, text/plain, */*',
                 'content-type': 'application/json',
@@ -1104,92 +970,27 @@ class AttackServer {
 
     }
 
-    hasPendingAttack(requester: string, gameId: string, looterTeamId: string): boolean {
-        return (
-            this.pendingAttacks[gameId] 
-            && (this.pendingAttacks[gameId].includes(looterTeamId))
-        )
-    }
-
-    addPendingAttack(requester: string, gameId: string, looterTeamId: string){
-        this.pendingAttacks[gameId] = this.pendingAttacks[gameId] || []
-        this.pendingAttacks[gameId].push(looterTeamId)
-    }
-
-    pendingChallenge: PendingTransactionByChallenge = {}
-
-    sendCaptchaDataResponse(p: PlayerTeamPair, t: Target){
-
-        const pendingResponse = this.pendingResponses.shift()
-        if (!pendingResponse)
-            return
-        
-        this.addPendingAttack(pendingResponse.requester, t.gameId.toString(), p.teamId.toString())
-
-
-        const challenge = "".concat(String(+new Date())).concat(t.gameId.toString()).concat(p.playerAddress.toLowerCase())
-
-        // TODO delete pendingChallenge[challenge] after resolve it.
-        this.pendingChallenge[challenge] = {
-            user_address: p.playerAddress.toLowerCase(),
-            team_id: p.teamId.toString(),
-            game_id: t.gameId.toString(),
-            requester: pendingResponse.requester,
-            status: {}
-        }
-
-        const captchaData = {
-            user_address: p.playerAddress,
-            team_id: p.teamId.toString(),
-            game_id: t.gameId.toString(),
-            challenge,
-            token: this.authServer.getToken(p.playerAddress),
-        }
-
-        pendingResponse.res.json(captchaData)
-        console.log('Sent captcha data to', pendingResponse.requester, captchaData);
-        pendingResponse.resolveResponse(undefined)
-
-    }
-
-    recentTeams = []
-
-    returnCaptchaData(unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[], targets: Target[]){
+    attack(unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[], targets: Target[]){
 
         const targetsOrderByGameIdDescending = targets.sort((a, b) => b.gameId < a.gameId ? -1 : b.gameId > a.gameId ? 1 : 0 )
 
-        const playerTeamPairsOrderByNotInRecentTeams = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.sort((a, b) => {
-            const aInRecentTeams = this.recentTeams.includes(a.teamId.toString())
-            const bInRecentTeams = this.recentTeams.includes(b.teamId.toString())
-            return aInRecentTeams == bInRecentTeams ? 0 : aInRecentTeams ? 1 : -1
-        })
-
-        const teamIdsAlreadyUsed: number[] = []
-
         for (const t of targetsOrderByGameIdDescending){
-            for (const p of playerTeamPairsOrderByNotInRecentTeams){
 
-                // Do not use same team for different targets.
-                if (teamIdsAlreadyUsed.includes(p.teamId))
+            const resolvedCaptcha = this.captchaServer.getResolvedCaptchaAndRemoveIt(t.gameId.toString())
+
+            if (!resolvedCaptcha)
+                continue
+
+            for (const p of unlockedPlayerTeamPairsWithEnoughBattlePointSorted){
+
+                if (p.playerAddress.toLowerCase() != resolvedCaptcha.challengeInfo.user_address)
                     continue
 
                 if (p.battlePoint.gt(t.battlePoint)){
 
-                    // TODO Search captcha response for (p, t)
-                    // TODO With captcha response try to attack.
+                    this.registerOrRetryAttack(resolvedCaptcha, p.teamId)
 
-                    this.sendCaptchaDataResponse(p, t);
-                    this.recentTeams.push(p.teamId.toString())
-
-                    if (this.recentTeams.length>2)
-                        this.recentTeams.shift()
-
-                    if (this.pendingResponses.length == 0)
-                        return
-
-                    teamIdsAlreadyUsed.push(p.teamId)
-
-                    // Do not use same target for different teams.
+                    // The resolved captcha it is used only once.
                     break
 
                 }
@@ -1201,26 +1002,61 @@ class AttackServer {
 
 }
 
+class AttackManager{
+
+    attackServer: AttackServer
+
+    constructor(hre: HardhatRuntimeEnvironment){
+
+        this.attackServer = new AttackServer(hre)
+
+    }
+
+    onNewGames(teamsAndTheirTransaction: TeamAndItsTransaction[], playerTeamPairs: PlayerTeamPair[]){
+
+        if (teamsAndTheirTransaction.length == 0)
+            return
+
+        const { gameId: higherGameId } = teamsAndTheirTransaction.sort( ({gameId: a}, {gameId: b})=> a.lt(b) ? -1 : b.lt(a) ? 1 : 0 ).pop()
+
+        // TODO Sort playerTeamPairs by quantity of unlocked/settled teams.
+        for (const {locked, playerAddress, settled} of playerTeamPairs){
+
+            if (locked)
+                continue
+
+            if (!settled)
+                continue
+
+            this.attackServer.captchaServer.updateCurrentAttackInfo(higherGameId.toNumber(), playerAddress)
+
+            return
+
+        }
+
+    }
+
+    onAttack(
+        unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
+        targets: Target[],
+        targetsHaveAdvantage: boolean,
+        lootersFaction: TeamFaction, 
+        testmode: boolean
+        ){
+
+        this.attackServer.attack(unlockedPlayerTeamPairsWithEnoughBattlePointSorted, targets)
+    }
+
+}
+
 task(
     "captchaloot",
     "Loot using captcha.",
     async ({ blockstoanalyze, firstdefendwindow, testmode }, hre: HardhatRuntimeEnvironment) => {
 
-        const attackServer = new AttackServer(hre)
+        const attackManager: AttackManager = new AttackManager(hre)
 
-        const returnCaptchaData: LootFunction = (
-            unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
-            targets: Target[],
-            targetsHaveAdvantage: boolean,
-            lootersFaction: TeamFaction, 
-            testmode: boolean
-            ) => {
-
-            attackServer.returnCaptchaData(unlockedPlayerTeamPairsWithEnoughBattlePointSorted, targets)
-
-        }
-
-        await lootLoop(hre, hre.crabada.network.LOOT_CAPTCHA_CONFIG.players, blockstoanalyze, firstdefendwindow, testmode, returnCaptchaData )
+        await lootLoop(hre, hre.crabada.network.LOOT_CAPTCHA_CONFIG.players, blockstoanalyze, firstdefendwindow, testmode, attackManager )
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)

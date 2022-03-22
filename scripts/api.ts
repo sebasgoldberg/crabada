@@ -54,7 +54,7 @@ export class CrabadaAPI{
     async getCanLootGames(): Promise<CanLootGameFromApi[]>{
 
         const headers = {
-            'authority': 'idle-api.crabada.com',
+            'authority': this.network.getIdleGameApiDomain(),
             'pragma': 'no-cache',
             'cache-control': 'no-cache',
             'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
