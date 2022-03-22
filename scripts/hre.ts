@@ -15,6 +15,26 @@ interface MineGroup {
     crabadaReinforcers: number[]
 }
 
+export interface Player {
+    address: string,
+    teams: number[],
+    signerIndex: number
+}
+
+interface LootCaptchaConfig {
+    players: Player[],
+    attackTransaction: {
+        override: {
+            gasLimit: number,
+            gasPrice?: BigNumber,
+            maxFeePerGas?: BigNumber,
+            maxPriorityFeePerGas?: BigNumber,
+        }
+    },
+    attackOnlyTeamsThatPlayToLoose: boolean
+}
+
+
 export class CrabadaNetwork{
 
     hre: HardhatRuntimeEnvironment
@@ -112,9 +132,62 @@ export class CrabadaNetwork{
 
     }
 
+    LOOT_CAPTCHA_CONFIG: LootCaptchaConfig;
+
+    private LOOT_CAPTCHA_CONFIG_MAINNET: LootCaptchaConfig = {
+        players: [
+            // {
+            //     signerIndex: 1,
+            //     address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
+            //     teams: [ 3286, 3759, 5032 ],
+            // },
+            // {
+            //     signerIndex: 2,
+            //     address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
+            //     teams: [ /*5355,*/ 5357, /*6152*/ ],
+            // },
+            // {
+            //     signerIndex: 3,
+            //     address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
+            //     teams: [ 7449, 8157, 9236 ],
+            // },
+            // {
+            //     signerIndex: 4,
+            //     address: '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4',
+            //     teams: [ 16767, 16768, 16769 ],
+            // },
+            // {
+            //     signerIndex: 5,
+            //     address: '0x83Ff016a2e574b2c35d17Fe4302188b192b64344',
+            //     teams: [ 16761, 16762, 16763 ],
+            // },
+            // {
+            //     signerIndex: 6,
+            //     address: '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8',
+            //     teams: [ 16764, 16765, 16766 ],
+            // },
+        ],
+        attackTransaction: {
+            override: {
+                gasLimit: 1000000,
+                maxFeePerGas: BigNumber.from(ONE_GWEI*400),
+                maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
+            }
+        },
+        attackOnlyTeamsThatPlayToLoose: true
+    }
+
+    private initializeLootCaptchaConfig(){
+        this.LOOT_CAPTCHA_CONFIG = this.isSwimmerTestNetwork() ?
+            undefined
+            : this.LOOT_CAPTCHA_CONFIG_MAINNET
+    }
+    
+
     constructor(hre: HardhatRuntimeEnvironment){
         this.hre = hre
         this.initializeMineConfig()
+        this.initializeLootCaptchaConfig()
     }
 
     isSwimmerNetwork(): boolean{
@@ -141,6 +214,14 @@ export class CrabadaNetwork{
             return 'https://api.crabada.com'
         }
 
+    }
+
+    getOrigin(): string{
+        return 'https://play.crabada.com'
+    }
+
+    getReferer(): string{
+        return 'https://play.crabada.com'
     }
 
     getContractAddresses(){

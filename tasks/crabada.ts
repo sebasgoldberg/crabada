@@ -14,7 +14,6 @@ import { deposit, logTransactionAndWait, withdraw, withdrawTeam } from "../test/
 import { ClassNameByCrabada, classNameFromDna, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { assert } from "console";
 import { PLAYER_TUS_RESERVE } from "./player";
-import { LOOT_CAPTCHA_CONFIG } from "./captcha";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -636,7 +635,7 @@ task(
     "Reinforce process.",
     async ({ testmode }, hre: HardhatRuntimeEnvironment) => {
 
-        for (const {teams, signerIndex} of LOOT_CAPTCHA_CONFIG.players){
+        for (const {teams, signerIndex} of hre.crabada.network.LOOT_CAPTCHA_CONFIG.players){
 
             const signer = await getSigner(hre, undefined, signerIndex)
 
@@ -1861,7 +1860,7 @@ export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.lo
     const signer = await getSigner(hre)
 
     const lootPendingAddresses = (MINE_MODE ?
-        hre.crabada.network.MINE_CONFIG : LOOT_CAPTCHA_CONFIG.players)
+        hre.crabada.network.MINE_CONFIG : hre.crabada.network.LOOT_CAPTCHA_CONFIG.players)
             .map(({address, teams: {length: teamsQuantity}}) => ({ address, teamsQuantity }))
 
     const override = hre.crabada.network.getOverride()
@@ -2031,7 +2030,7 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
             
         let avaxConsumed = SETTLER_TARGET_BALANCE
             // .add(REINFORCE_TARGET_BALANCE)
-            .add(LOOTER_TARGET_BALANCE.mul(LOOT_CAPTCHA_CONFIG.players.length))
+            .add(LOOTER_TARGET_BALANCE.mul(hre.crabada.network.LOOT_CAPTCHA_CONFIG.players.length))
         
         const getAvaxBalance = async (address: string): Promise<IDashboardAvaxAccount> => {
             return {
@@ -2041,7 +2040,7 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
         }
 
         const lootersPromise: Promise<IDashboardAvaxAccount[]> = Promise.all(
-            LOOT_CAPTCHA_CONFIG.players.map(p => p.address).map(getAvaxBalance)
+            hre.crabada.network.LOOT_CAPTCHA_CONFIG.players.map(p => p.address).map(getAvaxBalance)
         )
 
         const settlerPromise = getAvaxBalance(SETTLER_ACCOUNT)
@@ -2071,7 +2070,7 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
     const getDashboardPlayers =async (hre: HardhatRuntimeEnvironment): Promise<IDashboardPlayer[]> => {
 
         return Promise.all(
-            LOOT_CAPTCHA_CONFIG.players.map( async (player): Promise<IDashboardPlayer> => {
+            hre.crabada.network.LOOT_CAPTCHA_CONFIG.players.map( async (player): Promise<IDashboardPlayer> => {
 
                 const playerTusBalancePromise: Promise<BigNumber> = tusToken.balanceOf(player.address)
                     

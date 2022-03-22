@@ -10,27 +10,8 @@ import { getClassNameByCrabada, getDashboardContent, getSigner, listenStartGameE
 
 import * as express from "express"
 import axios from "axios";
-import { game } from "telegraf/typings/button";
 import { MAINNET_AVAX_MAIN_ACCOUNTS_PKS } from "../hardhat.config";
-
-interface Player {
-    address: string,
-    teams: number[],
-    signerIndex: number
-}
-
-interface LootCaptchaConfig {
-    players: Player[],
-    attackTransaction: {
-        override: {
-            gasLimit: number,
-            // gasPrice: BigNumber,
-            maxFeePerGas: BigNumber,
-            maxPriorityFeePerGas: BigNumber,
-        }
-    },
-    attackOnlyTeamsThatPlayToLoose: boolean
-}
+import { Player } from "../scripts/hre";
 
 type LootFunction = (
     unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
@@ -403,7 +384,7 @@ const lootLoop = async (
     // Teams that play to loose...
 
     const teamsThatPlayToLooseByTeamId = await (
-        LOOT_CAPTCHA_CONFIG.attackOnlyTeamsThatPlayToLoose ? 
+        hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackOnlyTeamsThatPlayToLoose ? 
             getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow, classNameByCrabada)
             : getTeamsBattlePoint(hre, blockstoanalyze, classNameByCrabada)
     )
@@ -515,49 +496,6 @@ const existsAnyTeamSettled = (playerTeamPairs: PlayerTeamPair[], testmode: boole
     return (playerTeamPairs.filter( p => p.settled || testmode ).length == 0)
 }
 
-export const LOOT_CAPTCHA_CONFIG: LootCaptchaConfig = {
-    players: [
-        // {
-        //     signerIndex: 1,
-        //     address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-        //     teams: [ 3286, 3759, 5032 ],
-        // },
-        {
-            signerIndex: 2,
-            address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-            teams: [ /*5355,*/ 5357, /*6152*/ ],
-        },
-        // {
-        //     signerIndex: 3,
-        //     address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
-        //     teams: [ 7449, 8157, 9236 ],
-        // },
-        // {
-        //     signerIndex: 4,
-        //     address: '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4',
-        //     teams: [ 16767, 16768, 16769 ],
-        // },
-        // {
-        //     signerIndex: 5,
-        //     address: '0x83Ff016a2e574b2c35d17Fe4302188b192b64344',
-        //     teams: [ 16761, 16762, 16763 ],
-        // },
-        // {
-        //     signerIndex: 6,
-        //     address: '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8',
-        //     teams: [ 16764, 16765, 16766 ],
-        // },
-    ],
-    attackTransaction: {
-        override: {
-            gasLimit: 1000000,
-            maxFeePerGas: BigNumber.from(ONE_GWEI*400),
-            maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
-        }
-    },
-    attackOnlyTeamsThatPlayToLoose: true
-}
-
 interface PendingResponse {
     resolveResponse: (value: unknown) => void,
     res: typeof express.response,
@@ -605,13 +543,13 @@ class AttackExecutor{
         try {
             console.log('looterSigner', looterSigner.address)
             console.log('idleGame.attack(game_id, team_id, expire_time, signature)', game_id, team_id, expire_time, signature);
-            await idleGame.connect(looterSigner).callStatic.attack(
+            await idleGame.connect(looterSigner).callStatic["attack(uint256,uint256,uint256,bytes)"](
                 BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature, 
-                LOOT_CAPTCHA_CONFIG.attackTransaction.override
+                this.hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackTransaction.override
             )
-            const txr: ethers.providers.TransactionResponse = await idleGame.connect(looterSigner).attack(
+            const txr: ethers.providers.TransactionResponse = await idleGame.connect(looterSigner)["attack(uint256,uint256,uint256,bytes)"](
                 BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature,
-                LOOT_CAPTCHA_CONFIG.attackTransaction.override
+                this.hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackTransaction.override
             )
             console.log('txr.hash', txr.hash);
             delete this.attackTransactionsDataByGameId[game_id]
@@ -690,9 +628,13 @@ export class AuthServer {
         [address: string]: string
     } = {}
 
-    constructor(){
+    hre: HardhatRuntimeEnvironment
 
-        this.wallets = LOOT_CAPTCHA_CONFIG.players
+    constructor(hre: HardhatRuntimeEnvironment){
+
+        this.hre = hre
+
+        this.wallets = this.hre.crabada.network.LOOT_CAPTCHA_CONFIG.players
             .map(({signerIndex})=>signerIndex)
             .map( index => new Wallet(MAINNET_AVAX_MAIN_ACCOUNTS_PKS[index]))
 
@@ -738,7 +680,7 @@ export class AuthServer {
                 console.log('Message to sign', message);
                 console.log('Signed message', signedMessage);
     
-                const url = `https://api.crabada.com/crabada-user/public/login-signature`
+                const url = `${this.hre.crabada.network.getCrabadaApiBaseUrl()}/crabada-user/public/login-signature`
     
                 const headers = {
                     'authority': 'api.crabada.com',
@@ -750,11 +692,11 @@ export class AuthServer {
                     'sec-ch-ua-mobile': '?0',
                     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
                     'sec-ch-ua-platform': '"Windows"',
-                    origin: 'https://play.crabada.com',
+                    origin: this.hre.crabada.network.getOrigin(),
                     'sec-fetch-site': 'same-site',
                     'sec-fetch-mode': 'cors',
                     'sec-fetch-dest': 'empty',
-                    'referer': 'https://play.crabada.com/',
+                    'referer': this.hre.crabada.network.getReferer(),
                     'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
                 }
     
@@ -808,10 +750,16 @@ class AttackServer {
     pendingAttacks: PendingAttacks = {}
     attackExecutor: AttackExecutor
 
-    authServer = new AuthServer()
+    authServer: AuthServer
+
+    hre: HardhatRuntimeEnvironment
 
     // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
     constructor(hre: HardhatRuntimeEnvironment){
+
+        this.hre = hre
+
+        this.authServer = new AuthServer(hre)
 
         const { idleGame } = getCrabadaContracts(hre)
 
@@ -887,7 +835,7 @@ class AttackServer {
 
             console.log('req.url', req.url); // '/proxy/captcha/load/?captcha_id=a9cd95e65fc75072dadea93e3d60b0e6&challenge=16471805841662330581e891e709-1e56-4e70-9b6d-996385914a5f&client_type=web&risk_type=icon&lang=pt-br&callback=geetest_1647180585657'
 
-            const url = `https://idle-api.crabada.com${req.url.replace('proxy/captcha', 'public')}`
+            const url = `${hre.crabada.network.getIdleGameApiBaseUrl()}${req.url.replace('proxy/captcha', 'public')}`
             const headers = {
                 'authority': 'idle-api.crabada.com',
                 'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
@@ -898,7 +846,7 @@ class AttackServer {
                 'sec-fetch-site': 'same-site',
                 'sec-fetch-mode': 'no-cors',
                 'sec-fetch-dest': 'script',
-                'referer': 'https://play.crabada.com/',
+                'referer': this.hre.crabada.network.getReferer(),
                 'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
                 // cookie: '_hjSessionUser_2567432=eyJpZCI6IjFmMDRmZmRkLWYxMGMtNThjMi1iMWZjLTM0Zjg5MTFlNWNlNyIsImNyZWF0ZWQiOjE2MzgwMTA1MzY2NjksImV4aXN0aW5nIjp0cnVlfQ==; _ga_0JZ9C3M56S=GS1.1.1644169522.62.0.1644169522.0; amp_fef1e8=4a14c266-5a66-48f2-9614-e6282c8be872R...1ftker5j1.1ftkerd5k.bm.25.dr; _ga=GA1.1.311628077.1638010536; _ga_8LH6CFBN5P=GS1.1.1646881253.330.1.1646881507.0; _ga_J0F5RPFJF1=GS1.1.1647125967.36.1.1647125983.0; _ga_EKEKPKZ4L1=GS1.1.1647167093.7.0.1647167094.0; _ga_C6PTCE6QJM=GS1.1.1647178955.188.1.1647179135.0',
             }
@@ -1131,7 +1079,7 @@ class AttackServer {
         if (!token)
             console.error('Token not found for address', user_address);
 
-        const attackResponse = await axios.put(`https://idle-api.crabada.com/public/idle/attack/${game_id}`, {
+        const attackResponse = await axios.put(`${this.hre.crabada.network.getIdleGameApiBaseUrl()}/public/idle/attack/${game_id}`, {
             user_address, team_id, lot_number, pass_token, gen_time, captcha_output
         }, {
             headers: {
@@ -1143,11 +1091,11 @@ class AttackServer {
                 'sec-ch-ua-mobile': '?0',
                 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
                 'sec-ch-ua-platform': '"Windows"',
-                origin: 'https://play.crabada.com',
+                origin: this.hre.crabada.network.getOrigin(),
                 'sec-fetch-site': 'same-site',
                 'sec-fetch-mode': 'cors',
                 'sec-fetch-dest': 'empty',
-                referer: 'https://play.crabada.com/',
+                referer: this.hre.crabada.network.getReferer(),
                 'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
             }
         })
@@ -1227,6 +1175,9 @@ class AttackServer {
 
                 if (p.battlePoint.gt(t.battlePoint)){
 
+                    // TODO Search captcha response for (p, t)
+                    // TODO With captcha response try to attack.
+
                     this.sendCaptchaDataResponse(p, t);
                     this.recentTeams.push(p.teamId.toString())
 
@@ -1269,7 +1220,7 @@ task(
 
         }
 
-        await lootLoop(hre, LOOT_CAPTCHA_CONFIG.players, blockstoanalyze, firstdefendwindow, testmode, returnCaptchaData )
+        await lootLoop(hre, hre.crabada.network.LOOT_CAPTCHA_CONFIG.players, blockstoanalyze, firstdefendwindow, testmode, returnCaptchaData )
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)

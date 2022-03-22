@@ -41,8 +41,11 @@ export class CrabadaAPI{
 
     static instance: CrabadaAPI
 
+    network: CrabadaNetwork
+
     constructor(network: CrabadaNetwork){
 
+        this.network = network
         this.idleGameApiBaseUrl = network.getIdleGameApiBaseUrl()
         this.crabadaApiBaseUrl = network.getCrabadaApiBaseUrl()
 
@@ -61,11 +64,11 @@ export class CrabadaAPI{
             'sec-ch-ua-mobile': '?0',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
             'sec-ch-ua-platform': '"Windows"',
-            origin: 'https://play.crabada.com',
+            origin: this.network.getOrigin(),
             'sec-fetch-site': 'same-site',
             'sec-fetch-mode': 'cors',
             'sec-fetch-dest': 'empty',
-            'referer': 'https://play.crabada.com/',
+            'referer': this.network.getReferer(),
             'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
         }
 
