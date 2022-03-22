@@ -714,7 +714,7 @@ interface ResolvedCaptcha{
 
 class CaptchaServer{
 
-    lastGameId: number;
+    lastGameId: number = 0;
     looterAddress: string;
 
     pendingChallenge: ChallengeInfoByChallenge = { }
@@ -734,7 +734,8 @@ class CaptchaServer{
 
     load(req: express.Request, res: express.Response){
 
-        if (!this.lastGameId){
+        if (this.lastGameId <= 0){
+            console.log();
             res.status(400)
             res.json({ message: "Waiting for initialization" })
             return
