@@ -766,7 +766,7 @@ class CaptchaServer{
 
     resolvedCaptchasByGameId: {
         [gameid: string]: ResolvedCaptcha
-    }
+    } = {}
 
     addResolvedCaptcha(challenge: string, verifiedResult: CaptchaVerifiedResult){
         const challengeInfo: ChallengeInfo = this.pendingChallenge[challenge]
