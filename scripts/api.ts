@@ -32,6 +32,7 @@ export interface CanLootGameFromApi{
     game_id: number,
     team_id: number,
     start_time: number,
+    created_at: number,
 }
 
 export class CrabadaAPI{

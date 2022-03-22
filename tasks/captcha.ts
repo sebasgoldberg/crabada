@@ -12,6 +12,7 @@ import * as express from "express"
 import axios from "axios";
 import { MAINNET_AVAX_MAIN_ACCOUNTS_PKS } from "../hardhat.config";
 import { Player } from "../scripts/hre";
+import { CanLootGameFromApi, listenCanLootGamesFromApi } from "../scripts/api";
 
 type LootFunction = (
     unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
@@ -127,6 +128,7 @@ interface StartGameTargets {
     teamId: BigNumber,
     attacksPerformed: number,
     gameId: BigNumber,
+    created_at: number,
 }
 
 interface StartedGameTargetsByTeamId {
@@ -139,6 +141,7 @@ interface TeamAndItsTransaction {
     teamId: BigNumber,
     txHash?: string,
     gameId: BigNumber,
+    created_at: number,
 }
 
 
@@ -153,7 +156,7 @@ const attackTeamsThatStartedAGame = (
 
     const startedGameTargetsByTeamId: StartedGameTargetsByTeamId = {}
 
-    teamsAndTheirTransactions.forEach( ({ teamId, txHash, gameId }) => {
+    teamsAndTheirTransactions.forEach( ({ teamId, txHash, gameId, created_at }) => {
 
         const targetTeamInfo = teamsThatPlayToLooseByTeamId[teamId.toString()]
 
@@ -179,6 +182,7 @@ const attackTeamsThatStartedAGame = (
             teamId,
             attacksPerformed: 0,
             gameId,
+            created_at
         }
 
         console.log('Pending startGame', txHash, 
@@ -431,37 +435,38 @@ const lootLoop = async (
     // const pendingStartGameTransactionInterval = await listenPendingStartGameTransaction(hre, addTeamToLootTargets)
 
 
-    const startGameEventsInterval = await listenStartGameEvents(hre, logs => {
+    // const startGameEventsInterval = await listenStartGameEvents(hre, logs => {
 
-        const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, gameId, log: {transactionHash, blockNumber}}) => {
+    //     const teamsAndTheirTransaction: TeamAndItsTransaction[] = logs.map( ({teamId, gameId, log: {transactionHash, blockNumber}}) => {
 
-            console.log('start game event', transactionHash, blockNumber, teamId.toString());
+    //         console.log('start game event', transactionHash, blockNumber, teamId.toString());
 
-            return {
-                teamId,
-                txHash: transactionHash,
-                gameId
-            }
-        })
-
-        attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
-
-    }, 50)
-
-
-    // const listenCanLootGamesFromApiInterval = await listenCanLootGamesFromApi(hre, (canLootGamesFromApi: CanLootGameFromApi[]) => {
-
-    //     const teamsAndTheirTransaction: TeamAndItsTransaction[] = canLootGamesFromApi
-    //         // Latest have the priority
-    //         .sort(({start_time: a}, { start_time: b}) => a < b ? 1 : a > b ? -1 : 0)
-    //         .map(({game_id, team_id})=>({
-    //             gameId: BigNumber.from(game_id), 
-    //             teamId: BigNumber.from(team_id)
-    //         }))
+    //         return {
+    //             teamId,
+    //             txHash: transactionHash,
+    //             gameId
+    //         }
+    //     })
 
     //     attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
 
-    // }, 2000)
+    // }, 50)
+
+
+    const listenCanLootGamesFromApiInterval = await listenCanLootGamesFromApi(hre, (canLootGamesFromApi: CanLootGameFromApi[]) => {
+
+        const teamsAndTheirTransaction: TeamAndItsTransaction[] = canLootGamesFromApi
+            // Latest have the priority
+            .sort(({start_time: a}, { start_time: b}) => a < b ? 1 : a > b ? -1 : 0)
+            .map(({game_id, team_id, created_at})=>({
+                gameId: BigNumber.from(game_id), 
+                teamId: BigNumber.from(team_id),
+                created_at
+            }))
+
+        attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
+
+    }, 2000)
 
     // Never finish
     await new Promise((resolve) => {
@@ -484,8 +489,8 @@ const lootLoop = async (
     // clearInterval(gasPriceUpdateInterval)
     //clearInterval(attackTeamsInterval)
     // clearInterval(pendingStartGameTransactionInterval)
-    clearInterval(startGameEventsInterval)
-    // clearInterval(listenCanLootGamesFromApiInterval)
+    // clearInterval(startGameEventsInterval)
+    clearInterval(listenCanLootGamesFromApiInterval)
     idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
     clearInterval(updateLockStatusInterval)
     settleGameInterval && clearInterval(settleGameInterval)
@@ -1126,8 +1131,7 @@ class AttackServer {
         
         this.addPendingAttack(pendingResponse.requester, t.gameId.toString(), p.teamId.toString())
 
-
-        const challenge = "".concat(String(+new Date())).concat(t.gameId.toString()).concat(p.playerAddress.toLowerCase())
+        const challenge = "".concat(t.created_at.toString()).concat(t.gameId.toString()).concat(p.playerAddress.toLowerCase())
 
         // TODO delete pendingChallenge[challenge] after resolve it.
         this.pendingChallenge[challenge] = {
