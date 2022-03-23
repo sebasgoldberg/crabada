@@ -274,7 +274,7 @@ export const mineStep = async (
 
     }
 
-    await beforeStartGame()
+    // await beforeStartGame()
 
     // START GAME
 
