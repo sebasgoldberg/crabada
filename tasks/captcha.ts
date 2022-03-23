@@ -466,7 +466,7 @@ const lootLoop = async (
 
         attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
 
-    }, 2000)
+    }, 500)
 
     // Never finish
     await new Promise((resolve) => {
