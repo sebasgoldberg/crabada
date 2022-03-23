@@ -60,7 +60,7 @@ export class CrabadaNetwork{
         {
             signerIndex: 1,
             address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-            teams: [ /*5357,*/ ],
+            teams: [ 5357, ],
         },
         // {
         //     signerIndex: 2,
@@ -101,7 +101,7 @@ export class CrabadaNetwork{
             crabadaReinforcers: [ 49769, 50097 ],
         },
         {
-            teamsOrder: [ /*5357,*/ ],
+            teamsOrder: [ 5357, ],
             crabadaReinforcers: []
         },
         {
