@@ -260,6 +260,22 @@ export const mineStep = async (
 
     attackerTeamId && await settleGame(idleGame.connect(minerSigner), attackerCurrentGameId, wait)
 
+    const beforeStartGame = async () => {
+
+        if (minerTeamId == 16765){
+            console.log('await idleGame.connect(minerSigner).callStatic.removeCrabadaFromTeam(minerTeamId, 0, override);');
+            await idleGame.connect(minerSigner).callStatic.removeCrabadaFromTeam(minerTeamId, 0, override);
+            logTransactionAndWait(idleGame.connect(minerSigner).removeCrabadaFromTeam(minerTeamId, 0, override), 2) ;
+
+            console.log('await idleGame.connect(minerSigner).callStatic.addCrabadaToTeam(minerTeamId, 0, 54859);');
+            await idleGame.connect(minerSigner).callStatic.addCrabadaToTeam(minerTeamId, 0, 54859);
+            logTransactionAndWait(idleGame.connect(minerSigner).addCrabadaToTeam(minerTeamId, 0, 54859, override), 2);
+        }
+
+    }
+
+    await beforeStartGame()
+
     // START GAME
 
     const startGame = async () =>{
@@ -990,7 +1006,7 @@ const _shoudReinforce = (attackId1: BigNumber, attackId2: BigNumber, defId1: Big
 import { CONFIG_BY_NODE_ID, NodeConfig } from "../config/nodes";
 import { ClassNameByCrabada, TeamBattlePoints } from "./teambp";
 import { getSigner } from "../tasks/crabada";
-import { deposit, withdraw } from "../test/utils";
+import { deposit, logTransactionAndWait, withdraw } from "../test/utils";
 import { CrabadaInTabern } from "./api";
 
 
