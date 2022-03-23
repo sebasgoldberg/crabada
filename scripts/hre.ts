@@ -60,7 +60,7 @@ export class CrabadaNetwork{
         {
             signerIndex: 1,
             address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-            teams: [ 5357, ],
+            teams: [ /*5357,*/ ],
         },
         // {
         //     signerIndex: 2,
@@ -75,7 +75,7 @@ export class CrabadaNetwork{
         {
             signerIndex: 4,
             address: '0x83Ff016a2e574b2c35d17Fe4302188b192b64344',
-            teams: [ 16761, 16762, 16763 ],
+            teams: [ 16761, 16762, /*16763*/ ],
         },
         {
             signerIndex: 5,
@@ -97,11 +97,11 @@ export class CrabadaNetwork{
             crabadaReinforcers: [ 49113, 49891 ],
         },
         {
-            teamsOrder: [ 16767, 16768, 16769, 16761, 16762, 16763, 16764, 16765 ],
+            teamsOrder: [ 16767, 16768, 16769, 16761, 16762, /*16763,*/ 16764, 16765 ],
             crabadaReinforcers: [ 49769, 50097 ],
         },
         {
-            teamsOrder: [ 5357, ],
+            teamsOrder: [ /*5357,*/ ],
             crabadaReinforcers: []
         },
         {
