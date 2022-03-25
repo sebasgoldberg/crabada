@@ -561,7 +561,7 @@ export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame
         )).every( locked => locked )
 }
 
-export const areAllTeamsUnlocked = async (hre: HardhatRuntimeEnvironment, teams: number[], log: ()=>{}) => {
+export const areAllTeamsUnlocked = async (hre: HardhatRuntimeEnvironment, teams: number[], log = ()=>{}) => {
     const { idleGame } = getCrabadaContracts(hre)
     return (await Promise.all(
         teams.map( async(looterteamid): Promise<boolean> => await isTeamLocked(hre, idleGame, looterteamid, log)) 
