@@ -265,7 +265,7 @@ export class CrabadaNetwork{
         return ({
             gasLimit: GAS_LIMIT,
             // gasPrice: undefined,
-            maxFeePerGas: MAX_FEE,
+            maxFeePerGas: BigNumber.from(ONE_GWEI*200),
             maxPriorityFeePerGas: ONE_GWEI
         })
     }
