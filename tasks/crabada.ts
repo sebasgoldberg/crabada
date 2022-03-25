@@ -161,7 +161,7 @@ task(
                     
                     const areAllGroupTeamsUnlocked = await areAllTeamsUnlocked(hre, mineGroup.teamsOrder)
 
-                    if (areAllGroupTeamsUnlocked)
+                    if (!areAllGroupTeamsUnlocked)
                         previousTeam = mineGroup.teamsOrder[7]
                 }
 
