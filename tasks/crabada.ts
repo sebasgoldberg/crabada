@@ -154,7 +154,9 @@ task(
 
             try {
 
-                let previousTeam = undefined
+                // TODO If all teams are unlocked, should be undefined.
+                let previousTeam = mineGroup.teamsOrder.length == 8 ? 
+                    mineGroup.teamsOrder[7] : undefined
 
                 for (const teamId of mineGroup.teamsOrder){
                     const { signerIndex } = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
