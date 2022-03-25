@@ -141,6 +141,7 @@ task("addcrabadastoteam", "Add crabadas to team for the specified signer.", asyn
     .addParam("crabadas", "Crabadas to transfer.", undefined, types.string)
 
 
+
 // npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 task(
     "minestep",
@@ -154,9 +155,15 @@ task(
 
             try {
 
-                // TODO If all teams are unlocked, should be undefined.
-                let previousTeam = mineGroup.teamsOrder.length == 8 ? 
-                    mineGroup.teamsOrder[7] : undefined
+                let previousTeam = undefined
+
+                if (mineGroup.teamsOrder.length == 8){
+                    
+                    const areAllGroupTeamsUnlocked = await areAllTeamsUnlocked(hre, mineGroup.teamsOrder)
+
+                    if (areAllGroupTeamsUnlocked)
+                        previousTeam = mineGroup.teamsOrder[7]
+                }
 
                 for (const teamId of mineGroup.teamsOrder){
                     const { signerIndex } = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
@@ -548,10 +555,17 @@ export const getClassNameByCrabada = async (hre: HardhatRuntimeEnvironment): Pro
 
 }
 
-export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, lootersTeams: number[]) => {
+export const areAllTeamsLocked = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, teams: number[]) => {
     return (await Promise.all(
-        lootersTeams.map( async(looterteamid): Promise<boolean> => await isTeamLocked(hre, idleGame, looterteamid)) 
+        teams.map( async(looterteamid): Promise<boolean> => await isTeamLocked(hre, idleGame, looterteamid)) 
         )).every( locked => locked )
+}
+
+export const areAllTeamsUnlocked = async (hre: HardhatRuntimeEnvironment, teams: number[]) => {
+    const { idleGame } = getCrabadaContracts(hre)
+    return (await Promise.all(
+        teams.map( async(looterteamid): Promise<boolean> => await isTeamLocked(hre, idleGame, looterteamid)) 
+        )).every( locked => !locked )
 }
 
 
