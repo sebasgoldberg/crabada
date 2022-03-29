@@ -140,7 +140,12 @@ task("addcrabadastoteam", "Add crabadas to team for the specified signer.", asyn
     .addOptionalParam("teamid", "The Team ID. If not supplied, then the team will be created.", undefined, types.string)
     .addParam("crabadas", "Crabadas to transfer.", undefined, types.string)
 
-
+export const wait = async (ms: number, log = console.log): Promise<void> => {
+    log('WAIT', ms, 'miliseconds')
+    return new Promise((resolve) => {
+        setTimeout(()=> resolve(undefined), ms)
+    })
+}
 
 // npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 task(
@@ -148,36 +153,41 @@ task(
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
     async ({ minerteamid, attackercontract, attackerteamid, wait, testmineraccount, testattackeraccounts, accountindex }, hre: HardhatRuntimeEnvironment) => {
         
-        for (const mineGroup of hre.crabada.network.MINE_GROUPS){
+        while (true){
 
-            console.log('mineGroup.teamsOrder', ...mineGroup.teamsOrder);
-            console.log('mineGroup.crabadaReinforcers', ...mineGroup.crabadaReinforcers);
+            for (const mineGroup of hre.crabada.network.MINE_GROUPS){
 
-            try {
-
-                let previousTeam = undefined
-
-                if (mineGroup.teamsOrder.length == 8){
-                    
-                    const areAllGroupTeamsUnlocked = await areAllTeamsUnlocked(hre, mineGroup.teamsOrder)
-
-                    if (!areAllGroupTeamsUnlocked)
-                        previousTeam = mineGroup.teamsOrder[7]
+                console.log('mineGroup.teamsOrder', ...mineGroup.teamsOrder);
+                console.log('mineGroup.crabadaReinforcers', ...mineGroup.crabadaReinforcers);
+    
+                try {
+    
+                    let previousTeam = undefined
+    
+                    if (mineGroup.teamsOrder.length == 8){
+                        
+                        const areAllGroupTeamsUnlocked = await areAllTeamsUnlocked(hre, mineGroup.teamsOrder)
+    
+                        if (!areAllGroupTeamsUnlocked)
+                            previousTeam = mineGroup.teamsOrder[7]
+                    }
+    
+                    for (const teamId of mineGroup.teamsOrder){
+                        const { signerIndex } = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
+                        const minerSigner = await getSigner(hre, undefined, signerIndex);
+                        await mineStep(hre, teamId, undefined, undefined, wait, minerSigner, previousTeam, [])
+                        previousTeam = teamId
+                    }
+    
+                } catch (error) {
+    
+                    console.error(String(error));
+    
                 }
-
-                for (const teamId of mineGroup.teamsOrder){
-                    const { signerIndex } = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
-                    const minerSigner = await getSigner(hre, undefined, signerIndex);
-                    await mineStep(hre, teamId, undefined, undefined, wait, minerSigner, previousTeam, [])
-                    previousTeam = teamId
-                }
-
-            } catch (error) {
-
-                console.error(String(error));
-
+    
             }
 
+            await wait(1000)
         }
 
     })
