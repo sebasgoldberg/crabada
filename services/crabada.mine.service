@@ -9,7 +9,7 @@ Environment="HARDHAT_NETWORK=<network>"
 Type=simple
 WatchdogSec=600
 Restart=always
-RestartSec=30
+RestartSec=1
 User=cerebro
 ExecStart=/home/cerebro/crabada/services/crabada.mine.sh
 WorkingDirectory=/home/cerebro/crabada
