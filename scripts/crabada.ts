@@ -172,7 +172,7 @@ export const settleGame = async (idleGame: Contract, attackerCurrentGameId: BigN
 }
 
 export const locked = async (teamId: number, lockTo: BigNumber, timestamp: number, log: (typeof console.log) = console.log) => {
-    const extraSeconds = 10 // 10 extra seconds of lock, in case timestamp has an error.
+    const extraSeconds = 1 // 1 extra seconds of lock, in case timestamp has an error.
     const difference = (lockTo as BigNumber).sub(timestamp).add(extraSeconds)
     if (difference.lt(0)){
         log(`TEAM ${teamId} UNLOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
