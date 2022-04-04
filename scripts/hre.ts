@@ -82,11 +82,11 @@ export class CrabadaNetwork{
             address: '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8',
             teams: [ 16764, 16765, 16766 ],
         },
-        {
-            signerIndex: 6,
-            address: '0xf597AC540730B2c99A31aE1e1362867C4675de2C',
-            teams: [ 16626 ],
-        },
+        // {
+        //     signerIndex: 6,
+        //     address: '0xf597AC540730B2c99A31aE1e1362867C4675de2C',
+        //     teams: [ 16626 ],
+        // },
     ]
 
     SWIMMER_TEST_MINE_GROUPS: MineGroup[] = [
@@ -113,10 +113,10 @@ export class CrabadaNetwork{
             teamsOrder: [ 16766, ],
             crabadaReinforcers: []
         },
-        {
-            teamsOrder: [ 16626, ],
-            crabadaReinforcers: []
-        },
+        // {
+        //     teamsOrder: [ 16626, ],
+        //     crabadaReinforcers: []
+        // },
     ]
 
     MINE_CONFIG: MineConfig[]
