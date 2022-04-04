@@ -84,7 +84,7 @@ export class CrabadaNetwork{
         },
         {
             signerIndex: 6,
-            address: '0XF597AC540730B2C99A31AE1E1362867C4675DE2C',
+            address: '0xf597AC540730B2c99A31aE1e1362867C4675de2C',
             teams: [ 16626 ],
         },
     ]
