@@ -87,10 +87,10 @@ task("removecrabadasfromteam", "Removes crabadas from team.", async ({ teamid, p
     const positions = position ? [position] : [0,1,2]
 
     for (const pos of positions){
-        console.log("iddleGame.removeCrabadaFromTeam(teamId, position);", teamid, position);
-        await idleGame.connect(signer).callStatic.removeCrabadaFromTeam(teamid, position, override)
+        console.log("iddleGame.removeCrabadaFromTeam(teamId, position);", teamid, pos);
+        await idleGame.connect(signer).callStatic.removeCrabadaFromTeam(teamid, pos, override)
         await logTransactionAndWait(
-            idleGame.connect(signer).removeCrabadaFromTeam(teamid, position, override), 
+            idleGame.connect(signer).removeCrabadaFromTeam(teamid, pos, override), 
             1
         )
 
