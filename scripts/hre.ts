@@ -55,7 +55,7 @@ export class CrabadaNetwork{
         {
             signerIndex: 0,
             address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-            teams: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
+            teams: [ 3286, /*3759,*/ 5032, 19963, 19964, 19965, 19966, 19967 ],
         },
         {
             signerIndex: 1,
@@ -70,7 +70,7 @@ export class CrabadaNetwork{
         {
             signerIndex: 3,
             address: '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4',
-            teams: [ 16767, 16768, 16769 ],
+            teams: [ 16767, /*16768,*/ 16769 ],
         },
         {
             signerIndex: 4,
@@ -98,11 +98,11 @@ export class CrabadaNetwork{
 
     MAINNET_MINE_GROUPS: MineGroup[] = [
         { 
-            teamsOrder: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
+            teamsOrder: [ 3286, /*3759,*/ 5032, 19963, 19964, 19965, 19966, 19967 ],
             crabadaReinforcers: [ 49113, 49891 ],
         },
         {
-            teamsOrder: [ 16767, 16768, 16769, 16761, 16762, 16763, 16764, 16765 ],
+            teamsOrder: [ 16767, /*16768,*/ 16769, 16761, 16762, 16763, 16764, 16765 ],
             crabadaReinforcers: [ 49769, 50097 ],
         },
         {
