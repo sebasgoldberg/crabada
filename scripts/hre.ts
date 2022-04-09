@@ -55,7 +55,7 @@ export class CrabadaNetwork{
         {
             signerIndex: 0,
             address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-            teams: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
+            teams: [ 3286, 3759, 5032, 19963, 19964, /*19965,*/ 19966, 19967 ],
         },
         {
             signerIndex: 1,
@@ -98,7 +98,7 @@ export class CrabadaNetwork{
 
     MAINNET_MINE_GROUPS: MineGroup[] = [
         { 
-            teamsOrder: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
+            teamsOrder: [ 3286, 3759, 5032, 19963, 19964, /*19965,*/ 19966, 19967 ],
             crabadaReinforcers: [ 49113, 49891 ],
         },
         {
