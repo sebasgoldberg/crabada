@@ -260,7 +260,7 @@ export class CrabadaNetwork{
         if (this.isSwimmerNetwork())
             return ({gasPrice: 25*ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
         else
-            return ({maxFeePerGas: 100*ONE_GWEI, maxPriorityFeePerGas: ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
+            return ({maxFeePerGas: 150*ONE_GWEI, maxPriorityFeePerGas: ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
     }
     
     getPriorityOverride(){
