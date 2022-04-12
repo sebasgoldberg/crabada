@@ -164,13 +164,13 @@ task(
     
                     let previousTeam = undefined
     
-                    if (mineGroup.teamsOrder.length == 8){
+                    // if (mineGroup.teamsOrder.length == 8){
                         
-                        const areAllGroupTeamsUnlocked = await areAllTeamsUnlocked(hre, mineGroup.teamsOrder)
+                    //     const areAllGroupTeamsUnlocked = await areAllTeamsUnlocked(hre, mineGroup.teamsOrder)
     
-                        if (!areAllGroupTeamsUnlocked)
-                            previousTeam = mineGroup.teamsOrder[7]
-                    }
+                    //     if (!areAllGroupTeamsUnlocked)
+                    //         previousTeam = mineGroup.teamsOrder[7]
+                    // }
     
                     for (const teamId of mineGroup.teamsOrder){
                         const { signerIndex } = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
