@@ -1251,13 +1251,6 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     }
 
     if (borrowOptions.length == 0){
-
-        const mineGroupsForTeamId = hre.crabada.network.MINE_GROUPS
-            .filter( ({teamsOrder}) => teamsOrder.includes(teamId))
-
-        if (mineGroupsForTeamId[0].teamsOrder.length > 1)
-            return
-
         borrowOptions = await getCrabadasToBorrow(hre, minRealBattlePointNeeded, reinforceAttack)
     }
     
