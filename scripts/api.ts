@@ -1,6 +1,7 @@
-import axios from "axios";
+import axios, { Axios, AxiosResponse, AxiosStatic } from "axios";
 import { BigNumber } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { resolve } from "path";
 import { CrabadaNetwork } from "./hre";
 import { ClassNameByCrabada, CrabadaClassName } from "./teambp";
 
@@ -86,7 +87,19 @@ export class CrabadaAPI{
             ).data
 
         return (data as CanLootGameFromApi[])
-   }
+    }
+
+    async get(url): Promise<AxiosResponse<any,any>>{
+        return (await new Promise( (resolve, reject) => {
+            setTimeout( async () => {
+                try {
+                    resolve(await axios.get(url))
+                } catch (error) {
+                    reject(error)
+                }
+            }, 200)
+        }))
+    }
 
     // TODO Read chain data using Crabada contract: const { dna } = await crabada.crabadaInfo(4887)
     async getCrabadaInfo(crabadaId: BigNumber): Promise<CrabadaAPIInfo>{
@@ -95,7 +108,7 @@ export class CrabadaAPI{
         
         const response: { 
             result: CrabadaAPIInfo 
-        } = (await axios.get(`${this.crabadaApiBaseUrl}/public/crabada/info/${ crabadaId.toString() }`))
+        } = (await this.get(`${this.crabadaApiBaseUrl}/public/crabada/info/${ crabadaId.toString() }`))
             .data
 
         return response.result
@@ -120,7 +133,7 @@ export class CrabadaAPI{
         }
 
         console.log(`${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?limit=1&page=1`);
-        const quanResponse: Response = (await axios.get(`${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?limit=1&page=1`))
+        const quanResponse: Response = (await this.get(`${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?limit=1&page=1`))
             .data
 
         console.log('Lending totalRecord', quanResponse.result.totalRecord);
@@ -137,7 +150,7 @@ export class CrabadaAPI{
                     const url = `${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
                     console.log(url);
                     
-                    return (await axios.get(url)).data
+                    return (await this.get(url)).data
                 } catch (error) {
                     error(`ERROR getting page for lending API`, String(error))
                     return undefined
@@ -178,7 +191,7 @@ export class CrabadaAPI{
         }
 
         console.log(`${this.crabadaApiBaseUrl}/public/crabada/all?limit=1&page=1`);
-        const quanResponse: Response = (await axios.get(`${this.crabadaApiBaseUrl}/public/crabada/all?limit=1&page=1`))
+        const quanResponse: Response = (await this.get(`${this.crabadaApiBaseUrl}/public/crabada/all?limit=1&page=1`))
             .data
 
         const responses: Response[] = (await Promise.all(
@@ -188,7 +201,7 @@ export class CrabadaAPI{
                 try {
                     const url = `${this.crabadaApiBaseUrl}/public/crabada/all?limit=1000&page=${page}`
                     console.log(url);                    
-                    return (await axios.get(url)).data
+                    return (await this.get(url)).data
                 } catch (error) {
                     error(`ERROR getting page for lending API`, String(error))
                     return undefined
