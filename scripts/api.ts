@@ -114,7 +114,7 @@ export class CrabadaAPI{
                 } catch (error) {
                     reject(error)
                 }
-            }, 200)
+            }, 10)
         }))
     }
 
