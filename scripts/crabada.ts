@@ -1253,9 +1253,11 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
                 )
         }
     }
-    
-    if (borrowOptions.length == 0)
+
+    if (borrowOptions.length == 0){
+        return
         borrowOptions = await getCrabadasToBorrow(hre, minRealBattlePointNeeded, reinforceAttack)
+    }
     
     const reinforceMethodName = reinforceAttack ? 'reinforceAttack' : 'reinforceDefense'
 
