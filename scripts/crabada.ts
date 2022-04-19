@@ -1012,6 +1012,10 @@ import { CrabadaInTabern } from "./api";
 
 export const getReinforcementMinBattlePoints = async (hre: HardhatRuntimeEnvironment,
     teamId: BigNumber, reinforceAttack: boolean): Promise<number> => {
+    
+    // TODO Just to avoid query API when reinforcing defense.
+    if (!reinforceAttack)
+        return 100
 
     const { idleGame } = getCrabadaContracts(hre)
 
