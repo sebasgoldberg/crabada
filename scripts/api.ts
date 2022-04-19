@@ -152,24 +152,26 @@ export class CrabadaAPI{
 
         console.log('Lending totalRecord', quanResponse.result.totalRecord);
 
-        const responses: { 
+        const pages = Array.from(Array(Math.round((quanResponse.result.totalRecord/50)+0.5)).keys())
+            .map( value => value+1 )
+
+        let responses: { 
             result: { 
                 data: ResponseObject[] 
             } 
-        }[] = (await Promise.all(
-            Array.from(Array(Math.round((quanResponse.result.totalRecord/50)+0.5)).keys())
-            .map( value => value+1 )
-            .map( async (page: number) => {
-                try {
-                    const url = `${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
-                    return (await this.get(url)).data
-                } catch (error) {
-                    error(`ERROR getting page for lending API`, String(error))
-                    return undefined
-                }
-            })
-        )).filter(x=>x)
-
+        }[] = []
+    
+        for (const page of pages)
+        {
+            try {
+                const url = `${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
+                const response = (await this.get(url)).data
+                responses.push(response)
+            } catch (error) {
+                error(`ERROR getting page for lending API`, String(error))
+            }
+        }   
+             
         return responses.map( response => {
             return response.result.data.map( o => {
                 try {
@@ -205,19 +207,26 @@ export class CrabadaAPI{
         const quanResponse: Response = (await this.get(`${this.crabadaApiBaseUrl}/public/crabada/all?limit=1&page=1`))
             .data
 
-        const responses: Response[] = (await Promise.all(
-            Array.from(Array(Math.round((quanResponse.result.totalRecord/1000)+0.5)).keys())
+
+        const pages = Array.from(Array(Math.round((quanResponse.result.totalRecord/1000)+0.5)).keys())
             .map( value => value+1 )
-            .map( async (page: number) => {
-                try {
-                    const url = `${this.crabadaApiBaseUrl}/public/crabada/all?limit=1000&page=${page}`
-                    return (await this.get(url)).data
-                } catch (error) {
-                    error(`ERROR getting page for lending API`, String(error))
-                    return undefined
-                }
-            })
-        )).filter(x=>x)
+
+        let responses: { 
+            result: { 
+                data: ResponseObject[] 
+            } 
+        }[] = []
+    
+        for (const page of pages)
+        {
+            try {
+                const url = `${this.crabadaApiBaseUrl}/public/crabada/all?limit=1000&page=${page}`
+                const response = (await this.get(url)).data
+                responses.push(response)
+            } catch (error) {
+                error(`ERROR getting page for lending API`, String(error))
+            }
+        }   
 
         const result: ClassNameByCrabada = {}
 
