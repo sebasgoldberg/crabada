@@ -121,8 +121,6 @@ export class CrabadaAPI{
     // TODO Read chain data using Crabada contract: const { dna } = await crabada.crabadaInfo(4887)
     async getCrabadaInfo(crabadaId: BigNumber): Promise<CrabadaAPIInfo>{
 
-        console.log(`${this.crabadaApiBaseUrl}/public/crabada/info/${ crabadaId.toString() }`);
-        
         const response: { 
             result: CrabadaAPIInfo 
         } = (await this.get(`${this.crabadaApiBaseUrl}/public/crabada/info/${ crabadaId.toString() }`))
@@ -149,7 +147,6 @@ export class CrabadaAPI{
             } 
         }
 
-        console.log(`${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?limit=1&page=1`);
         const quanResponse: Response = (await this.get(`${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?limit=1&page=1`))
             .data
 
@@ -165,8 +162,6 @@ export class CrabadaAPI{
             .map( async (page: number) => {
                 try {
                     const url = `${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
-                    console.log(url);
-                    
                     return (await this.get(url)).data
                 } catch (error) {
                     error(`ERROR getting page for lending API`, String(error))
@@ -207,7 +202,6 @@ export class CrabadaAPI{
             } 
         }
 
-        console.log(`${this.crabadaApiBaseUrl}/public/crabada/all?limit=1&page=1`);
         const quanResponse: Response = (await this.get(`${this.crabadaApiBaseUrl}/public/crabada/all?limit=1&page=1`))
             .data
 
@@ -217,7 +211,6 @@ export class CrabadaAPI{
             .map( async (page: number) => {
                 try {
                     const url = `${this.crabadaApiBaseUrl}/public/crabada/all?limit=1000&page=${page}`
-                    console.log(url);                    
                     return (await this.get(url)).data
                 } catch (error) {
                     error(`ERROR getting page for lending API`, String(error))
