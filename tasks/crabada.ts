@@ -153,7 +153,7 @@ task(
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
     async ({ minerteamid, attackercontract, attackerteamid, wait, testmineraccount, testattackeraccounts, accountindex }, hre: HardhatRuntimeEnvironment) => {
         
-        // while (true){
+        while (true){
 
             for (const mineGroup of hre.crabada.network.MINE_GROUPS){
 
@@ -187,8 +187,8 @@ task(
     
             }
 
-        //     await delay(1000)
-        // }
+            await delay(1000)
+        }
 
     })
     .addOptionalParam("minerteamid", "The teams IDs to use for mining. Separated by ','", undefined, types.string)
