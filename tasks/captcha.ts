@@ -545,10 +545,7 @@ class AttackExecutor{
 
         const signers = await this.hre.ethers.getSigners()
 
-        console.log('signers.address', signers.map(s=>s.address));
-        console.log('user_address', user_address);
-        
-        const looterSigner = signers.filter( s => s.address == user_address)[0]
+        const looterSigner = signers.filter( s => s.address.toLowerCase() == user_address.toLowerCase())[0]
 
         try {
             console.log('looterSigner', looterSigner.address)
