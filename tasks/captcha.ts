@@ -543,7 +543,12 @@ class AttackExecutor{
 
         const { idleGame } = getCrabadaContracts(this.hre)
 
-        const looterSigner = (await this.hre.ethers.getSigners()).filter( s => s.address == user_address)[0]
+        const signers = await this.hre.ethers.getSigners()
+
+        console.log('signers.address', signers.map(s=>s.address));
+        console.log('user_address', user_address);
+        
+        const looterSigner = signers.filter( s => s.address == user_address)[0]
 
         try {
             console.log('looterSigner', looterSigner.address)
