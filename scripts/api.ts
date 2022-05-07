@@ -161,17 +161,34 @@ export class CrabadaAPI{
             } 
         }[] = []
     
-        for (const page of pages)
-        {
-            try {
-                const url = `${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
-                const response = (await this.get(url)).data
-                responses.push(response)
-            } catch (error) {
-                error(`ERROR getting page for lending API`, String(error))
-            }
-        }   
-             
+        // for (const page of pages)
+        // {
+        //     try {
+        //         const url = `${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
+        //         const response = (await this.get(url)).data
+        //         responses.push(response)
+        //     } catch (error) {
+        //         error(`ERROR getting page for lending API`, String(error))
+        //     }
+        // }   
+
+        const apiCallsPromises = pages.map(async(page)=>{
+            return new Promise((resolve) => {
+                setTimeout(async()=>{
+                    try {
+                        const url = `${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
+                        const response = (await this.get(url)).data
+                        responses.push(response)
+                    } catch (error) {
+                        error(`ERROR getting page for lending API`, String(error))
+                    }
+                    resolve(undefined)
+                }, 300*page)    
+            })
+        })
+
+        await Promise.all(apiCallsPromises)
+
         return responses.map( response => {
             return response.result.data.map( o => {
                 try {
