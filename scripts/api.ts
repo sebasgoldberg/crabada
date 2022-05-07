@@ -250,6 +250,7 @@ export class CrabadaAPI{
             })
         })
 
+        await Promise.all(apiCallsPromises)
 
         const result: ClassNameByCrabada = {}
 
