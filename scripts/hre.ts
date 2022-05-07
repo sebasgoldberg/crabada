@@ -310,6 +310,22 @@ export class CrabadaNetwork{
         })
     }
     
+    getAttackOverride(){
+        if (this.isSwimmerNetwork()){
+            return ({
+                gasLimit: GAS_LIMIT,
+                gasPrice: 25*ONE_GWEI,
+            })
+        }
+    
+        return ({
+            gasLimit: GAS_LIMIT,
+            // gasPrice: undefined,
+            maxFeePerGas: BigNumber.from(ONE_GWEI*400),
+            maxPriorityFeePerGas: ONE_GWEI
+        })
+    }
+    
 }
 
 

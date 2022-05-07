@@ -10,7 +10,7 @@ import { formatEther, formatUnits, parseEther } from "ethers/lib/utils";
 export const ONE_GWEI = 1000000000
 export const GAS_LIMIT = 700000
 export const MAX_FEE = BigNumber.from(ONE_GWEI*150)
-export const ATTACK_MAX_GAS_PRICE = BigNumber.from(ONE_GWEI*600)
+export const ATTACK_MAX_GAS_PRICE = BigNumber.from(ONE_GWEI*400)
 export const ATTACK_MAX_PRIORITY_GAS_PRICE = BigNumber.from(ONE_GWEI*325)
 export const ATTACK_MAX_PRIORITY_GAS_PRICE_ELITE_TEAM = BigNumber.from(ONE_GWEI*325)
 
@@ -171,6 +171,25 @@ export const settleGame = async (idleGame: Contract, attackerCurrentGameId: BigN
 
 }
 
+export const closeGame = async (idleGameConnected: Contract, gameId: number, override, wait: number=2, log=console.log) =>{
+
+    try {
+        log(`callStatic.closeGame(gameId: ${gameId})`);        
+        await idleGameConnected.callStatic.closeGame(gameId, override)
+    } catch (error) {
+        log(`ERROR: ${error.toString()}`)
+        log(`INFO: Maybe it is too early to close the game`)
+        return
+    }
+
+    log(`closeGame(gameId: ${gameId})`);
+    const transactionResponse: TransactionResponse = await idleGameConnected.closeGame(gameId, override)
+    log(`transaction: ${transactionResponse.hash}`);        
+
+    await transactionResponse.wait(wait)
+
+}
+
 export const locked = async (teamId: number, lockTo: BigNumber, timestamp: number, log: (typeof console.log) = console.log) => {
     const extraSeconds = 1 // 1 extra seconds of lock, in case timestamp has an error.
     const difference = (lockTo as BigNumber).sub(timestamp).add(extraSeconds)
@@ -232,29 +251,8 @@ export const mineStep = async (
         }
     }
 
-    // CLOSE GAME
-    
-    const closeGame = async (gameId: number) =>{
-
-        try {
-            console.log(`callStatic.closeGame(gameId: ${gameId})`);        
-            await idleGame.connect(minerSigner).callStatic.closeGame(gameId, override)
-        } catch (error) {
-            console.error(`ERROR: ${error.toString()}`)
-            console.error(`INFO: Maybe it is too early to close the game`)
-            return
-        }
-    
-        console.log(`closeGame(gameId: ${gameId})`);
-        const transactionResponse: TransactionResponse = await idleGame.connect(minerSigner).closeGame(gameId, override)
-        console.log(`transaction: ${transactionResponse.hash}`);        
-    
-        await transactionResponse.wait(2)
-    
-    }
-
-    await closeGame(minerCurrentGameId);
-    attackerTeamId && await closeGame(attackerCurrentGameId);
+    await closeGame(idleGame.connect(minerSigner), minerCurrentGameId, override);
+    attackerTeamId && await closeGame(idleGame.connect(minerSigner), attackerCurrentGameId, override);
 
     // SETTLE GAME
 

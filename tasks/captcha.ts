@@ -3,7 +3,7 @@ import { assert } from "console";
 import { BigNumber, Contract, ethers, Wallet } from "ethers";
 import { task, types } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
+import { closeGame, getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { getClassNameByCrabada, getDashboardContent, getSigner, listenStartGameEvents } from "./crabada";
 
@@ -82,6 +82,7 @@ const settleGamesAndSetInterval = async (hre: HardhatRuntimeEnvironment, playerT
             for (const p of playerTeamPairs.filter(p=> (!p.locked && !p.settled))){
                 const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
                 await settleGame(idleGame.connect(signer), currentGameId, 1, log)
+                await closeGame(idleGame.connect(signer), currentGameId, hre.crabada.network.getAttackOverride(), 1, log)
             }
                 
         } catch (error) {
