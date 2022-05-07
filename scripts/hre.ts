@@ -181,32 +181,32 @@ export class CrabadaNetwork{
             //     teams: [ 16764, 16765, 16766 ],
             // },
             {
-                signerIndex: 0,
+                signerIndex: 0+1,
                 address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
                 teams: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
             },
             {
-                signerIndex: 1,
+                signerIndex: 1+1,
                 address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
                 teams: [ 5357, 5355, 6152 ],
             },
             // {
-            //     signerIndex: 2,
+            //     signerIndex: 2+1,
             //     address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
             //     teams: [ ],
             // },
             {
-                signerIndex: 3,
+                signerIndex: 3+1,
                 address: '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4',
                 teams: [ 16767, 16768, 16769 ],
             },
             {
-                signerIndex: 4,
+                signerIndex: 4+1,
                 address: '0x83Ff016a2e574b2c35d17Fe4302188b192b64344',
                 teams: [ 16761, 16762, 16763 ],
             },
             {
-                signerIndex: 5,
+                signerIndex: 5+1,
                 address: '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8',
                 teams: [ 16764, 16765, 16766 ],
             },
