@@ -152,7 +152,7 @@ export class CrabadaAPI{
 
         console.log('Lending totalRecord', quanResponse.result.totalRecord);
 
-        const pages = Array.from(Array(Math.round((quanResponse.result.totalRecord/100)+0.5)).keys())
+        const pages = Array.from(Array(Math.round((quanResponse.result.totalRecord/50)+0.5)).keys())
             .map( value => value+1 )
 
         let responses: { 
@@ -164,7 +164,7 @@ export class CrabadaAPI{
         for (const page of pages)
         {
             try {
-                const url = `${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?orderBy=price&order=asc&limit=100&page=${page}`
+                const url = `${this.idleGameApiBaseUrl}/public/idle/crabadas/lending?orderBy=price&order=asc&limit=50&page=${page}`
                 const response = (await this.get(url)).data
                 responses.push(response)
             } catch (error) {
