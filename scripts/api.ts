@@ -183,7 +183,7 @@ export class CrabadaAPI{
                         error(`ERROR getting page for lending API`, String(error))
                     }
                     resolve(undefined)
-                }, 300*page)    
+                }, 200*page)    
             })
         })
 
