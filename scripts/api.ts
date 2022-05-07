@@ -168,7 +168,7 @@ export class CrabadaAPI{
         //         const response = (await this.get(url)).data
         //         responses.push(response)
         //     } catch (error) {
-        //         error(`ERROR getting page for lending API`, String(error))
+        //         console.error(`ERROR getting page for lending API`, String(error))
         //     }
         // }   
 
@@ -180,7 +180,7 @@ export class CrabadaAPI{
                         const response = (await this.get(url)).data
                         responses.push(response)
                     } catch (error) {
-                        error(`ERROR getting page for lending API`, String(error))
+                        console.error(`ERROR getting page for lending API`, String(error))
                     }
                     resolve(undefined)
                 }, 200*page)    
@@ -243,7 +243,7 @@ export class CrabadaAPI{
                         const response = (await this.get(url)).data
                         responses.push(response)
                     } catch (error) {
-                        error(`ERROR getting page for lending API`, String(error))
+                        console.error(`ERROR getting page for lending API`, String(error))
                     }
                     resolve(undefined)
                 }, 200*page)    
