@@ -234,16 +234,22 @@ export class CrabadaAPI{
             } 
         }[] = []
     
-        for (const page of pages)
-        {
-            try {
-                const url = `${this.crabadaApiBaseUrl}/public/crabada/all?limit=1000&page=${page}`
-                const response = (await this.get(url)).data
-                responses.push(response)
-            } catch (error) {
-                error(`ERROR getting page for lending API`, String(error))
-            }
-        }   
+
+        const apiCallsPromises = pages.map(async(page)=>{
+            return new Promise((resolve) => {
+                setTimeout(async()=>{
+                    try {
+                        const url = `${this.crabadaApiBaseUrl}/public/crabada/all?limit=1000&page=${page}`
+                        const response = (await this.get(url)).data
+                        responses.push(response)
+                    } catch (error) {
+                        error(`ERROR getting page for lending API`, String(error))
+                    }
+                    resolve(undefined)
+                }, 200*page)    
+            })
+        })
+
 
         const result: ClassNameByCrabada = {}
 
