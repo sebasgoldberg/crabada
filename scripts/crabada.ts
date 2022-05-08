@@ -252,6 +252,7 @@ export const mineStep = async (
     }
 
     await closeGame(idleGame.connect(minerSigner), minerCurrentGameId, override);
+    await settleGame(idleGame.connect(minerSigner), minerCurrentGameId, wait)
     attackerTeamId && await closeGame(idleGame.connect(minerSigner), attackerCurrentGameId, override);
 
     // SETTLE GAME
