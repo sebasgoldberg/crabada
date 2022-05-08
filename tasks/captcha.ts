@@ -350,7 +350,7 @@ const attackTeams = async (
 const lootLoop = async (
     hre: HardhatRuntimeEnvironment, looters: Player[], 
     blockstoanalyze: number, firstdefendwindow: number, testmode: boolean,
-    lootFunction: LootFunction) => {
+    lootFunction: LootFunction, needsToContinueRunning: () => Promise<boolean>) => {
 
     // const updateGasPrice = updateGasPriceFunction(hre)
     // const gasPriceUpdateInterval = setInterval(updateGasPrice, 10_000)
@@ -471,6 +471,18 @@ const lootLoop = async (
 
     // Never finish
     await new Promise((resolve) => {
+
+        const checkContinueRunningInterval = setInterval(async () => {
+            try {
+                if (await needsToContinueRunning())
+                    return
+                console.log('No need to continue running.');
+                clearInterval(checkContinueRunningInterval)
+                resolve(undefined)
+            } catch (error) {
+                console.error('Error when trying to verify if needed to continue running:', String(error))
+            }
+        }, 60_000)
 
         // TODO Verify if applies.
         // const endProcessInterval = setInterval(()=>{
@@ -761,6 +773,19 @@ class AttackServer {
     authServer: AuthServer
 
     hre: HardhatRuntimeEnvironment
+
+    async needsToContinueRunning(): Promise<boolean>{
+
+        const {
+            players
+        } = await getDashboardContent(this.hre)
+
+        const secondsToUnlock: number[] = players
+            .flatMap( ({ teams }) => teams.map( ({ info: { secondsToUnlock }}) => secondsToUnlock ) )
+
+        return secondsToUnlock.some(x => x < 600)
+
+    }
 
     // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
     constructor(hre: HardhatRuntimeEnvironment){
@@ -1232,7 +1257,8 @@ task(
 
         }
 
-        await lootLoop(hre, hre.crabada.network.LOOT_CAPTCHA_CONFIG.players, blockstoanalyze, firstdefendwindow, testmode, returnCaptchaData )
+        await lootLoop(hre, hre.crabada.network.LOOT_CAPTCHA_CONFIG.players, blockstoanalyze, firstdefendwindow, testmode, returnCaptchaData,
+            async (): Promise<boolean> => { return await attackServer.needsToContinueRunning() })
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
