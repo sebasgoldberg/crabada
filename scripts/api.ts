@@ -80,7 +80,7 @@ export class CrabadaAPI{
             }
         } = (await axios.get(
                 // TODO address should be for each player.
-                `${this.idleGameApiBaseUrl}/public/idle/mines?page=1&status=open&looter_address=0xe90a22064f415896f1f72e041874da419390cc6d&can_loot=1&limit=10`,
+                `${this.idleGameApiBaseUrl}/public/idle/mines?page=1&status=open&looter_address=0xe90a22064f415896f1f72e041874da419390cc6d&can_loot=1&limit=100`,
                 {
                     headers
                 })
@@ -309,17 +309,19 @@ export const listenCanLootGamesFromApi = async (hre: HardhatRuntimeEnvironment, 
 
             const newCanLootGamesFromApi = canLootGamesFromApi.filter(({game_id})=>{
                 const result = !gameAlreadyProcessed[game_id]
-                gameAlreadyProcessed[game_id] = true
+                // TODO Enable in case need to control the gameAlreadyProcessed
+                // gameAlreadyProcessed[game_id] = true
                 return result
             })
 
             task(newCanLootGamesFromApi)
 
-            setTimeout(()=>{
-                newCanLootGamesFromApi.forEach( ({game_id}) =>{ 
-                    delete gameAlreadyProcessed[game_id]
-                })
-            },60_000)
+            // TODO Enable in case need to control the gameAlreadyProcessed
+            // setTimeout(()=>{
+            //     newCanLootGamesFromApi.forEach( ({game_id}) =>{ 
+            //         delete gameAlreadyProcessed[game_id]
+            //     })
+            // },60_000)
                 
         } catch (error) {
             console.error('ERROR retrieving canLootGames', String(error));
