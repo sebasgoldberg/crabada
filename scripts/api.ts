@@ -309,19 +309,17 @@ export const listenCanLootGamesFromApi = async (hre: HardhatRuntimeEnvironment, 
 
             const newCanLootGamesFromApi = canLootGamesFromApi.filter(({game_id})=>{
                 const result = !gameAlreadyProcessed[game_id]
-                // TODO Enable in case need to control the gameAlreadyProcessed
-                // gameAlreadyProcessed[game_id] = true
+                gameAlreadyProcessed[game_id] = true
                 return result
             })
 
             task(newCanLootGamesFromApi)
 
-            // TODO Enable in case need to control the gameAlreadyProcessed
-            // setTimeout(()=>{
-            //     newCanLootGamesFromApi.forEach( ({game_id}) =>{ 
-            //         delete gameAlreadyProcessed[game_id]
-            //     })
-            // },60_000)
+            setTimeout(()=>{
+                newCanLootGamesFromApi.forEach( ({game_id}) =>{ 
+                    delete gameAlreadyProcessed[game_id]
+                })
+            },15_000)
                 
         } catch (error) {
             console.error('ERROR retrieving canLootGames', String(error));
