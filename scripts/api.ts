@@ -80,7 +80,7 @@ export class CrabadaAPI{
             }
         } = (await axios.get(
                 // TODO address should be for each player.
-                `${this.idleGameApiBaseUrl}/public/idle/mines?page=1&status=open&looter_address=0xe90a22064f415896f1f72e041874da419390cc6d&can_loot=1&limit=100`,
+                `${this.idleGameApiBaseUrl}/public/idle/mines?page=1&status=open&looter_address=0xe90a22064f415896f1f72e041874da419390cc6d&can_loot=1&limit=10`,
                 {
                     headers
                 })
