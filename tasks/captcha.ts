@@ -1245,6 +1245,11 @@ task(
 
         const attackServer = new AttackServer(hre)
 
+        if (!(await attackServer.needsToContinueRunning())){
+            console.log('No need to continue running.');
+            return
+        }
+
         const returnCaptchaData: LootFunction = (
             unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
             targets: Target[],
