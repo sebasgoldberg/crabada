@@ -92,32 +92,32 @@ export class CrabadaNetwork{
     ]
 
     MAINNET_MINE_GROUPS: MineGroup[] = [
-        // { 
-        //     teamsOrder: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
-        //     crabadaReinforcers: [ 49113, 49891 ],
-        // },
-        // {
-        //     teamsOrder: [ 16767, 16768, 16769, 16761, 16762, 16763, 16764, 16765 ],
-        //     crabadaReinforcers: [ 49769, 50097 ],
-        // },
-        // {
-        //     teamsOrder: [ 5357, ],
-        //     crabadaReinforcers: []
-        // },
+        { 
+            teamsOrder: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
+            crabadaReinforcers: [ 49113, 49891 ],
+        },
+        {
+            teamsOrder: [ 16767, 16768, 16769, 16761, 16762, 16763, 16764, 16765 ],
+            crabadaReinforcers: [ 49769, 50097 ],
+        },
+        {
+            teamsOrder: [ 5357, ],
+            crabadaReinforcers: []
+        },
 
-        // {
-        //     teamsOrder: [ 5355, ],
-        //     crabadaReinforcers: []
-        // },
+        {
+            teamsOrder: [ 5355, ],
+            crabadaReinforcers: []
+        },
 
-        // {
-        //     teamsOrder: [ 6152, ],
-        //     crabadaReinforcers: []
-        // },
-        // {
-        //     teamsOrder: [ 16766, ],
-        //     crabadaReinforcers: []
-        // },
+        {
+            teamsOrder: [ 6152, ],
+            crabadaReinforcers: []
+        },
+        {
+            teamsOrder: [ 16766, ],
+            crabadaReinforcers: []
+        },
     ]
 
     MINE_CONFIG: MineConfig[]
