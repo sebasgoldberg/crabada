@@ -147,12 +147,23 @@ export const delay = async (ms: number, log = console.log): Promise<void> => {
     })
 }
 
+export const isLootingPeriod = ():boolean => {
+    const d = new Date()
+    const hours = d.getUTCHours()
+    return (hours >= 7 && hours < 20)
+}
+
 // npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
 task(
     "minestep",
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
     async ({ minerteamid, attackercontract, attackerteamid, wait, testmineraccount, testattackeraccounts, accountindex }, hre: HardhatRuntimeEnvironment) => {
         
+        if (isLootingPeriod()){
+            console.log('Looting period.');
+            return
+        }
+
         // while (true){
 
             for (const mineGroup of hre.crabada.network.MINE_GROUPS){

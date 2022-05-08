@@ -5,7 +5,7 @@ import { task, types } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { closeGame, getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
-import { getClassNameByCrabada, getDashboardContent, getSigner, listenStartGameEvents } from "./crabada";
+import { getClassNameByCrabada, getDashboardContent, getSigner, isLootingPeriod, listenStartGameEvents } from "./crabada";
 
 
 import * as express from "express"
@@ -1212,6 +1212,11 @@ task(
     "captchaloot",
     "Loot using captcha.",
     async ({ blockstoanalyze, firstdefendwindow, testmode }, hre: HardhatRuntimeEnvironment) => {
+
+        if (!isLootingPeriod()){
+            console.log('Mining period.');
+            return
+        }
 
         const attackServer = new AttackServer(hre)
 
