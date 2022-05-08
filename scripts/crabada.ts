@@ -252,7 +252,13 @@ export const mineStep = async (
     }
 
     await closeGame(idleGame.connect(minerSigner), minerCurrentGameId, override);
-    await settleGame(idleGame.connect(minerSigner), minerCurrentGameId, wait)
+
+    const { attackTeamId } = await idleGame.getGameBattleInfo(minerCurrentGameId)
+
+    if ((attackTeamId as BigNumber).eq(minerTeamId)){
+        await settleGame(idleGame.connect(minerSigner), minerCurrentGameId, wait)
+    }
+
     attackerTeamId && await closeGame(idleGame.connect(minerSigner), attackerCurrentGameId, override);
 
     // SETTLE GAME
