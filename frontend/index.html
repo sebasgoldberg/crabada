@@ -46,10 +46,7 @@
 
         function loadCaptcha(challenge, token) {
 
-            // const apiServer = params.captcha_server_same_origin ?
-            //     window.location.origin+'/proxy/captcha' :
-            //     'https://idle-api.crabada.com/public'
-            const apiServer = 'https://ava.amst.iamsoft.org/proxy/captcha'
+            const apiServer = window.location.origin+'/proxy/captcha'
 
             // To get the captcha: GET `${apiServer}/load/`
             // After resolving captcha: GET `${apiServer}/verify/`
