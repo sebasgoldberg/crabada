@@ -175,6 +175,7 @@ task(
                     for (const teamId of mineGroup.teamsOrder){
                         const { signerIndex } = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
                         const minerSigner = await getSigner(hre, undefined, signerIndex);
+                        previousTeam = undefined // TODO Remove in case do only mining.
                         await mineStep(hre, teamId, undefined, undefined, wait, minerSigner, previousTeam, [])
                         previousTeam = teamId
                     }
@@ -1911,7 +1912,7 @@ export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.lo
     }
 
     for (const {address, teamsQuantity} of lootPendingAddresses){
-        const target = MINE_MODE ? MINER_TEAM_TARGET.mul(teamsQuantity) : LOOTER_TARGET_BALANCE
+        const target = MINER_TEAM_TARGET.mul(teamsQuantity)
         await _refillAvax(signer, address, target)
     }
     
@@ -2056,7 +2057,14 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
             
         let avaxConsumed = SETTLER_TARGET_BALANCE
             // .add(REINFORCE_TARGET_BALANCE)
-            .add(LOOTER_TARGET_BALANCE.mul(hre.crabada.network.LOOT_CAPTCHA_CONFIG.players.length))
+            .add(
+                MINER_TEAM_TARGET.mul(
+                    hre.crabada.network.MINE_CONFIG.reduce( 
+                        (prev, {teams: {length: teamsQuantity}}) => prev+teamsQuantity, 
+                        0
+                    ) 
+                )
+            )
         
         const getAvaxBalance = async (address: string): Promise<IDashboardAvaxAccount> => {
             return {
