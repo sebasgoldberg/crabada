@@ -1888,7 +1888,7 @@ export const SETTLER_ACCOUNT = "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4"
 export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
 const LOOTER_TARGET_BALANCE = parseEther('2')
-const SETTLER_TARGET_BALANCE = parseEther('6')
+const SETTLER_TARGET_BALANCE = parseEther('8')
 
 export const MINE_MODE = false
 export const ATTACK_MODE = !MINE_MODE
