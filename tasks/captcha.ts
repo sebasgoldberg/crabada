@@ -5,7 +5,7 @@ import { task, types } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { closeGame, getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
-import { getClassNameByCrabada, getDashboardContent, getSigner, isLootingPeriod, listenStartGameEvents } from "./crabada";
+import { getClassNameByCrabada, getDashboardContent, getSigner, isLootingPeriod } from "./crabada";
 
 
 import * as express from "express"
@@ -787,6 +787,23 @@ class AttackServer {
 
     }
 
+    async waitUntilNeedsToContinueRunning(log: typeof console.log = console.log): Promise<void>{
+        return new Promise((resolve) => {
+
+            const waitUntilNeedsToContinueRunningInterval = setInterval(async () => {
+
+                if (await this.needsToContinueRunning()){
+                    clearInterval(waitUntilNeedsToContinueRunningInterval)
+                    resolve(undefined)
+                } else {
+                    log('Waiting until needs to continue running')
+                }
+
+            }, 30_000)
+
+        })
+    }
+
     // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
     constructor(hre: HardhatRuntimeEnvironment){
 
@@ -1246,8 +1263,7 @@ task(
         const attackServer = new AttackServer(hre)
 
         if (!(await attackServer.needsToContinueRunning())){
-            console.log('No need to continue running.');
-            return
+            await attackServer.waitUntilNeedsToContinueRunning()
         }
 
         const returnCaptchaData: LootFunction = (
@@ -1264,6 +1280,8 @@ task(
 
         await lootLoop(hre, hre.crabada.network.LOOT_CAPTCHA_CONFIG.players, blockstoanalyze, firstdefendwindow, testmode, returnCaptchaData,
             async (): Promise<boolean> => { return await attackServer.needsToContinueRunning() })
+
+        await attackServer.waitUntilNeedsToContinueRunning()
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
