@@ -1284,6 +1284,6 @@ task(
         await attackServer.waitUntilNeedsToContinueRunning()
 
     })
-    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)
+    .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 86400 /*48 hours*/ , types.int)
     .addOptionalParam("firstdefendwindow", "First defend window (blocks to be skiped).", 900 /*30 minutes*/, types.int)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
