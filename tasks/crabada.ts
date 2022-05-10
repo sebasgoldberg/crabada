@@ -1887,7 +1887,6 @@ export const LOOT_PENDING_AVAX_ACCOUNTS = [
 export const SETTLER_ACCOUNT = "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4"
 export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
-const LOOTER_TARGET_BALANCE = parseEther('2')
 const SETTLER_TARGET_BALANCE = parseEther('8')
 
 export const MINE_MODE = false
@@ -2062,6 +2061,33 @@ interface IDashboardContent {
     players: IDashboardPlayer[],
 }
 
+const sum = (prev, current) => prev+current
+
+const getMinersRevenge = async (
+    hre: HardhatRuntimeEnvironment, 
+    reinforcementAttackId1: BigNumber, reinforcementAttackId2: BigNumber, 
+    reinforcementDefId1: BigNumber, reinforcementDefId2: BigNumber,
+    attackerBattlePoint: TeamBattlePoints, minerBattlePoint: TeamBattlePoints,
+    minerTimePoint: number ): Promise<number> => {
+
+    const attackReinforceBattlePoint = (await Promise.all([ reinforcementAttackId1, reinforcementAttackId2 ].map(x => hre.crabada.api.crabadaIdToBattlePointPromise(x))))
+    .reduce(sum,0)
+
+    const defenseReinforceBattlePoint = (await Promise.all([ reinforcementDefId1, reinforcementDefId2 ].map(x => hre.crabada.api.crabadaIdToBattlePointPromise(x))))
+        .reduce(sum,0)
+
+    const defenseReinforceMinePoint = (await Promise.all([ reinforcementDefId1, reinforcementDefId2 ].map( x => hre.crabada.api.crabadaIdToMinePointPromise(x))))
+        .reduce(sum,0)
+
+    const bpDiff = attackerBattlePoint.getRelativeBP(minerBattlePoint.teamFaction)+attackReinforceBattlePoint
+        -minerBattlePoint.getRelativeBP(attackerBattlePoint.teamFaction)-defenseReinforceBattlePoint
+
+    const minersRevenge = calcMinersRevenge(minerTimePoint+defenseReinforceMinePoint, bpDiff)
+
+    return minersRevenge
+
+}
+
 export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardContent> => {
 
     const getDashboardAvax = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardAvax> => {
@@ -2135,6 +2161,8 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
                         const { teamId: minerTeam } = await idleGame.getGameBasicInfo(currentGameId)
                         const { timePoint: minerTimePoint } = await idleGame.getTeamInfo(minerTeam)
                         const minerBattlePoint = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, minerTeam)
+
+                        const minersRevenge = await getMinersRevenge(hre, attackId1, attackId2, defId1, defId2, battlePoint, minerBattlePoint, minerTimePoint)
                     
                         return {
                             id: String(team),
@@ -2159,9 +2187,9 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
                                             rbp: minerBattlePoint.getRelativeBP(battlePoint.teamFaction),
                                             mp: minerTimePoint
                                         }
-                                    }
+                                    },
+                                    minersRevenge
                                 },
-
                             }
                         }
 
@@ -2207,6 +2235,19 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment): Promi
 }
 
 const MINER_TEAM_TARGET = parseEther('0.8')
+
+const calcMinersRevenge = (defenseMP: number, diffBP: number): number => {
+    return diffBP <=0 ? 
+        100 :
+        Math.min(
+            Math.floor(
+                ( 7 + (((defenseMP)/5)-56)*1.25
+                    + 20/(diffBP**0.5) ) 
+                * 100
+            ) / 100,
+            40
+        )  
+}
 
 export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardContent> => {
 
@@ -2266,35 +2307,8 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
                     
                         const { timePoint: attackerTimePoint } = await idleGame.getTeamInfo(attackTeamId)
                         const attackerBattlePoint = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, attackTeamId)
-                    
-                        const sum = (prev, current) => prev+current
-                    
-                        const attackReinforceBattlePoint = (await Promise.all([ attackId1, attackId2 ].map(x => hre.crabada.api.crabadaIdToBattlePointPromise(x))))
-                            .reduce(sum,0)
-                        
-                        const defenseReinforceBattlePoint = (await Promise.all([ defId1, defId2 ].map(x => hre.crabada.api.crabadaIdToBattlePointPromise(x))))
-                            .reduce(sum,0)
 
-                        const defenseReinforceMinePoint = (await Promise.all([ defId1, defId2 ].map( x => hre.crabada.api.crabadaIdToMinePointPromise(x))))
-                            .reduce(sum,0)
-
-                        const bpDiff = attackerBattlePoint.getRelativeBP(battlePoint.teamFaction)+attackReinforceBattlePoint
-                            -battlePoint.getRelativeBP(attackerBattlePoint.teamFaction)-defenseReinforceBattlePoint
-
-                        const calcMinersRevenge = (defenseMP: number, diffBP: number): number => {
-                            return bpDiff <=0 ? 
-                                100 :
-                                Math.min(
-                                    Math.floor(
-                                        ( 7 + (((defenseMP)/5)-56)*1.25
-                                            + 20/(diffBP**0.5) ) 
-                                        * 100
-                                    ) / 100,
-                                    40
-                                )  
-                        }
-
-                        const minersRevenge = calcMinersRevenge(timePoint+defenseReinforceMinePoint, bpDiff)
+                        const minersRevenge = await getMinersRevenge(hre, attackId1, attackId2, defId1, defId2, attackerBattlePoint, battlePoint, timePoint)
 
                         return {
                             id: String(team),
