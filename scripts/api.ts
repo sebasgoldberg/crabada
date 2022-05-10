@@ -288,7 +288,7 @@ export class CrabadaAPI{
 
 type CanLootGamesFromApiTask = (canLootGamesFromApi: CanLootGameFromApi[]) => void
 
-export const listenCanLootGamesFromApi = async (hre: HardhatRuntimeEnvironment, task: CanLootGamesFromApiTask, interval: number = 500): Promise<NodeJS.Timer> => {
+export const listenCanLootGamesFromApi = async (hre: HardhatRuntimeEnvironment, task: CanLootGamesFromApiTask, interval: number = 1500): Promise<NodeJS.Timer> => {
 
     const gameAlreadyProcessed: {
         [game_id: number]: boolean
