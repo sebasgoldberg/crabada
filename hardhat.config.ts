@@ -141,7 +141,7 @@ export default {
       gasPrice: 25000000000,
       chainId: 43114,
       accounts: USE_MAINNET_ACCOUNT ? [ ...MAINNET_AVAX_MAIN_ACCOUNTS_PKS, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS,
-      timeout: 60000,
+      timeout: 120_000,
     },
 
     swimmertest: {
@@ -149,7 +149,7 @@ export default {
       gasPrice: 25000000000,
       chainId: 73771,
       accounts: USE_MAINNET_ACCOUNT ? [ ...MAINNET_AVAX_MAIN_ACCOUNTS_PKS, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS,
-      timeout: 60000,
+      timeout: 60_000,
     },
     
   },
