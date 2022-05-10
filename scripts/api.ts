@@ -74,6 +74,9 @@ export class CrabadaAPI{
             'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
         }
 
+        // TODO Remove
+        console.log('GET', `${this.idleGameApiBaseUrl}/public/idle/mines?page=1&status=open&looter_address=0xe90a22064f415896f1f72e041874da419390cc6d&can_loot=1&limit=10`);
+        
         const { 
             result: {
                 data
@@ -93,6 +96,9 @@ export class CrabadaAPI{
         return (await new Promise( (resolve, reject) => {
             setTimeout( async () => {
                 try {
+                    // TODO Remove
+                    console.log('GET', url)
+
                     resolve(await axios.get(url,{
                         headers: {
                             //'authority': 'idle-api.crabada.com',

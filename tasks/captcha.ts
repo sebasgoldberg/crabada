@@ -721,6 +721,9 @@ export class AuthServer {
                 }
     
                 try {
+
+                    // TODO Remove
+                    console.log('POST', url);
     
                     const response = await axios.post(url, {
                         address: signedAddress,
@@ -902,6 +905,9 @@ class AttackServer {
             }
 
             try {
+
+                // TODO Remove
+                console.log('GET', url);
 
                 const response = await axios.get(url,{
                     headers
@@ -1128,6 +1134,9 @@ class AttackServer {
 
         if (!token)
             console.error('Token not found for address', user_address);
+
+        // TODO Remove
+        console.log('PUT', `${this.hre.crabada.network.getIdleGameApiBaseUrl()}/public/idle/attack/${game_id}`);
 
         const attackResponse = await axios.put(`${this.hre.crabada.network.getIdleGameApiBaseUrl()}/public/idle/attack/${game_id}`, {
             user_address, team_id, lot_number, pass_token, gen_time, captcha_output
