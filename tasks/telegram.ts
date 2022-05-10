@@ -47,7 +47,7 @@ task(
                 avax,
                 rewards,
                 players
-            } = await getDashboard(hre)
+            } = await getDashboard(hre, true)
 
             ATTACK_MODE && ctx.reply(`
 AVAX consumed 
@@ -104,7 +104,7 @@ ${ revenge.reduce((prev, curr)=>prev+curr, 0)/revenge.length }
         
             const {
                 players
-            } = await getDashboard(hre)
+            } = await getDashboard(hre, true)
 
             players.forEach( player => {
 

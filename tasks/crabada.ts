@@ -2251,7 +2251,7 @@ const calcMinersRevenge = (defenseMP: number, diffBP: number): number => {
         )  
 }
 
-export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardContent> => {
+export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment, includeMinersRevenge: boolean=false): Promise<IDashboardContent> => {
 
     const getDashboardAvax = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardAvax> => {
             
@@ -2310,7 +2310,9 @@ export const getMineDashboardContent = async (hre: HardhatRuntimeEnvironment): P
                         const { timePoint: attackerTimePoint } = await idleGame.getTeamInfo(attackTeamId)
                         const attackerBattlePoint = await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(hre, attackTeamId)
 
-                        const minersRevenge = await getMinersRevenge(hre, attackId1, attackId2, defId1, defId2, attackerBattlePoint, battlePoint, timePoint)
+                        const minersRevenge = includeMinersRevenge ? 
+                            await getMinersRevenge(hre, attackId1, attackId2, defId1, defId2, attackerBattlePoint, battlePoint, timePoint)
+                            : undefined
 
                         return {
                             id: String(team),
