@@ -148,6 +148,8 @@ export const delay = async (ms: number, log = console.log): Promise<void> => {
 }
 
 export const isLootingPeriod = ():boolean => {
+    if (MINE_MODE)
+        return false
     const d = new Date()
     const hours = d.getUTCHours()
     return (hours >= (8+3) && hours < (20+3))
@@ -394,7 +396,7 @@ task(
 
         const { currentGameId } = await idleGame.getTeamInfo(teamid)
 
-        await settleGame(idleGame.connect(signer), currentGameId, 3)
+        await settleGame(hre, idleGame.connect(signer), currentGameId, 3)
 
     })
     .addParam("teamid", "Team ID which have a game to settle.", undefined, types.int)
@@ -934,7 +936,7 @@ task(
 
                 for (const p of playerTeamPairs.filter(p=> (!p.locked && !p.settled))){
                     const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
-                    await settleGame(idleGame.connect(settleSigner), currentGameId, 1, log)
+                    await settleGame(hre, idleGame.connect(settleSigner), currentGameId, 1, log)
                 }
                     
             } catch (error) {
@@ -1889,7 +1891,7 @@ export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
 const SETTLER_TARGET_BALANCE = parseEther('8')
 
-export const MINE_MODE = false
+export const MINE_MODE = true
 export const ATTACK_MODE = !MINE_MODE
 
 export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.log ) => {

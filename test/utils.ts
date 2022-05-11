@@ -69,7 +69,7 @@ export const withdrawTeam = async (hre: HardhatRuntimeEnvironment, signer: Signe
       throw new Error(`Signer ${ signer.address } does not match owner ${ owner } of team ${ teamId }`);
     }
 
-    await settleGame(idleGame.connect(signer), currentGameId, 3)
+    await settleGame(hre, idleGame.connect(signer), currentGameId, 3)
 
     const override = hre.crabada.network.getOverride()
 

@@ -144,13 +144,9 @@ const logTokenBalance = async (token: Contract, symbol: string, address: string,
     console.log(`${symbol} balanceOf(${address}): ${ formatUnits(await token.balanceOf(address), decimals) }`);
 }
 
-export const settleGame = async (idleGame: Contract, attackerCurrentGameId: BigNumber, wait: number, log: (typeof console.log) = console.log): Promise<TransactionResponse|undefined> =>{
+export const settleGame = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, attackerCurrentGameId: BigNumber, wait: number, log: (typeof console.log) = console.log): Promise<TransactionResponse|undefined> =>{
 
-    const override = {
-        gasLimit: GAS_LIMIT,
-        maxFeePerGas: ATTACK_MAX_GAS_PRICE,
-        maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
-    }
+    const override = hre.crabada.network.getPriorityOverride()
 
     try {
         log(`callStatic.settleGame(gameId: ${attackerCurrentGameId})`);        
@@ -256,14 +252,14 @@ export const mineStep = async (
     const { attackTeamId } = await idleGame.getGameBattleInfo(minerCurrentGameId)
 
     if ((attackTeamId as BigNumber).eq(minerTeamId)){
-        await settleGame(idleGame.connect(minerSigner), minerCurrentGameId, wait)
+        await settleGame(hre, idleGame.connect(minerSigner), minerCurrentGameId, wait)
     }
 
     attackerTeamId && await closeGame(idleGame.connect(minerSigner), attackerCurrentGameId, override);
 
     // SETTLE GAME
 
-    attackerTeamId && await settleGame(idleGame.connect(minerSigner), attackerCurrentGameId, wait)
+    attackerTeamId && await settleGame(hre, idleGame.connect(minerSigner), attackerCurrentGameId, wait)
 
     const beforeStartGame = async () => {
 
@@ -1399,7 +1395,7 @@ export const loot = async (
         if (await locked(looterteamid, looterLockTo, timestamp, log))
             return
 
-        await settleGame(idleGame.connect(signer), looterCurrentGameId, 10, log)
+        await settleGame(hre, idleGame.connect(signer), looterCurrentGameId, 10, log)
 
     }
 
@@ -1429,7 +1425,7 @@ export const loot = async (
         // to avoid attack transactions to be reverted with 'GAME:TEAM IS BUSY', we set an
         // interval to call settleGame every minute.
         const settleGameInterval = setInterval(async()=>{
-            await settleGame(idleGame.connect(signer), looterCurrentGameId, 1, log)
+            await settleGame(hre, idleGame.connect(signer), looterCurrentGameId, 1, log)
         }, 60*1000)
 
         const attackStartedGameInterval = setInterval(async () => {
