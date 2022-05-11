@@ -81,7 +81,7 @@ const settleGamesAndSetInterval = async (hre: HardhatRuntimeEnvironment, playerT
 
             for (const p of playerTeamPairs.filter(p=> (!p.locked && !p.settled))){
                 const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
-                await settleGame(idleGame.connect(signer), currentGameId, 1, log)
+                await settleGame(hre, idleGame.connect(signer), currentGameId, 1, log)
                 await closeGame(idleGame.connect(signer), currentGameId, hre.crabada.network.getAttackOverride(), 1, log)
             }
                 
