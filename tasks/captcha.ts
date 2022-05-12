@@ -565,11 +565,11 @@ class AttackExecutor{
             console.log('idleGame.attack(game_id, team_id, expire_time, signature)', game_id, team_id, expire_time, signature);
             await idleGame.connect(looterSigner).callStatic["attack(uint256,uint256,uint256,bytes)"](
                 BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature, 
-                this.hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackTransaction.override
+                this.hre.crabada.network.getAttackOverride()
             )
             const txr: ethers.providers.TransactionResponse = await idleGame.connect(looterSigner)["attack(uint256,uint256,uint256,bytes)"](
                 BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature,
-                this.hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackTransaction.override
+                this.hre.crabada.network.getAttackOverride()
             )
             console.log('txr.hash', txr.hash);
             delete this.attackTransactionsDataByGameId[game_id]

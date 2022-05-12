@@ -23,14 +23,6 @@ export interface Player {
 
 interface LootCaptchaConfig {
     players: Player[],
-    attackTransaction: {
-        override: {
-            gasLimit: number,
-            gasPrice?: BigNumber,
-            maxFeePerGas?: BigNumber,
-            maxPriorityFeePerGas?: BigNumber,
-        }
-    },
     attackOnlyTeamsThatPlayToLoose: boolean
 }
 
@@ -47,7 +39,15 @@ export class CrabadaNetwork{
         {
             signerIndex: 0,
             address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-            teams: [ 3790/*, 3791*/ ],
+            teams: [ 1363, 1364, 1365 ],
+        },
+    ]
+
+    private SWIMMER_MINE_CONFIG = [
+        {
+            signerIndex: 0,
+            address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
+            teams: [  ],
         },
     ]
 
@@ -86,8 +86,15 @@ export class CrabadaNetwork{
 
     SWIMMER_TEST_MINE_GROUPS: MineGroup[] = [
         {
-            teamsOrder: [ 3790/*, 3791*/ ],
-            crabadaReinforcers: [ 49817, 49819, /*49823,*/ ],
+            teamsOrder: [ 1363, 1364, 1365 ],
+            crabadaReinforcers: [ ],
+        },
+    ]
+
+    SWIMMER_MINE_GROUPS: MineGroup[] = [
+        {
+            teamsOrder: [ 1363, 1364, 1365 ],
+            crabadaReinforcers: [ ],
         },
     ]
 
@@ -136,34 +143,27 @@ export class CrabadaNetwork{
 
         this.MINE_CONFIG = this.isSwimmerTestNetwork() ? 
             this.SWIMMER_TEST_MINE_CONFIG
-            : this.MAINNET_MINE_CONFIG
+            : this.isSwimmerMainnetNetwork() ?
+                this.SWIMMER_MINE_CONFIG
+                : this.MAINNET_MINE_CONFIG
 
         this.initializeMineConfigByTeamId()
 
         this.MINE_GROUPS = this.isSwimmerTestNetwork() ?
             this.SWIMMER_TEST_MINE_GROUPS
-            : this.MAINNET_MINE_GROUPS
+            : this.isSwimmerMainnetNetwork() ?
+                this.SWIMMER_MINE_GROUPS
+                : this.MAINNET_MINE_GROUPS
 
     }
 
     LOOT_CAPTCHA_CONFIG: LootCaptchaConfig;
 
-    private LOOT_CAPTCHA_CONFIG_MAINNET: LootCaptchaConfig = {
-        players: this.MAINNET_MINE_CONFIG.map( x => ({...x, signerIndex: x.signerIndex+1}) ),
-        attackTransaction: {
-            override: {
-                gasLimit: 1000000,
-                maxFeePerGas: BigNumber.from(ONE_GWEI*400),
-                maxPriorityFeePerGas: BigNumber.from(ONE_GWEI)
-            }
-        },
-        attackOnlyTeamsThatPlayToLoose: true
-    }
-
     private initializeLootCaptchaConfig(){
-        this.LOOT_CAPTCHA_CONFIG = this.isSwimmerTestNetwork() ?
-            undefined
-            : this.LOOT_CAPTCHA_CONFIG_MAINNET
+        this.LOOT_CAPTCHA_CONFIG = {
+            players: (this.MINE_CONFIG as MineConfig[]).map( x => ({...x, signerIndex: x.signerIndex+1}) ),
+            attackOnlyTeamsThatPlayToLoose: true
+        }
     }
     
 
@@ -177,13 +177,23 @@ export class CrabadaNetwork{
         return /swimmer/.test(this.hre.network.name)
     }
 
+    isTestNetwork(): boolean{
+        return /test/.test(this.hre.network.name)
+    }
+
     isSwimmerTestNetwork(): boolean{
         return this.hre.network.name == 'swimmertest'
+    }
+
+    isSwimmerMainnetNetwork(): boolean{
+        return this.hre.network.name == 'swimmer'
     }
 
     getIdleGameApiBaseUrl(): string{
         if (this.isSwimmerTestNetwork()){
             return 'https://idle-game-subnet-test-api.crabada.com'
+        }else if (this.isSwimmerMainnetNetwork()){
+            throw new Error('IdleGameApiBaseUrl not defined')
         }else{
             return 'https://idle-api.crabada.com'
         }
@@ -193,6 +203,8 @@ export class CrabadaNetwork{
     getCrabadaApiBaseUrl(): string{
         if (this.isSwimmerTestNetwork()){
             return 'https://subnet-test-api.crabada.com'
+        }else if (this.isSwimmerMainnetNetwork()){
+            throw new Error('CrabadaApiBaseUrl not defined')
         }else{
             return 'https://api.crabada.com'
         }
@@ -211,10 +223,17 @@ export class CrabadaNetwork{
 
         if (this.isSwimmerTestNetwork()){
             return ({
-                IdleGame: '0x801B5Bb19e9052dB964b94ed5b4d6730D8FcCA25',
-                tusToken: '0x00000000000000000000000000000000000000F2',
-                craToken: '0xC1350BB5b4FDB0abcd83aFEc3ce68983cf4d11B9',
-                crabada: '0x0382696A7C2df25680ABa02e3444E506Ef097b3F',
+                IdleGame: '0x88586dF1EB949E2b7b9A8b7DB468aF2251908465',
+                tusToken: '0x57bf0eCe401d3126d37B3c23d35b1c1EE3EaE733',
+                craToken: '0x26b77eeF7A38E3FD8C631FF8a268a5BB98CE1552',
+                crabada: '0xe56cb40A104cf2783EA912859B4Ca7dE77cdC961',
+            })
+        } else if (this.isSwimmerMainnetNetwork()){
+            return ({ // TODO Verify addresses.
+                IdleGame: '0x9ab9e81Be39b73de3CCd9408862b1Fc6D2144d2B',
+                tusToken: '0x9c765eEE6Eff9CF1337A1846c0D93370785F6C92',
+                craToken: '0xC1a1F40D558a3E82C3981189f61EF21e17d6EB48',
+                crabada: '0x620FF3d705EDBc1bd03e17E6afcaC36a9779f78D', 
             })
         }
     
@@ -227,18 +246,39 @@ export class CrabadaNetwork{
     }
 
     getOverride(){
-        if (this.isSwimmerNetwork())
-            return ({gasPrice: 25*ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
+        if (this.isSwimmerNetwork()){
+            if (this.isTestNetwork()){
+                return ({
+                    gasLimit: GAS_LIMIT,
+                    gasPrice: 4200*ONE_GWEI,
+                    nonce: undefined
+                })    
+            } else {
+                return ({...this.SWIMMER_OVERRIDE, nonce: undefined})
+            }
+        }
         else
             return ({maxFeePerGas: 150*ONE_GWEI, maxPriorityFeePerGas: ONE_GWEI, gasLimit: GAS_LIMIT, nonce: undefined})
+    }
+
+    SWIMMER_BASE_FEE = 10_000*ONE_GWEI
+    SWIMMER_MAX_FEE = 20*this.SWIMMER_BASE_FEE
+    SWIMMER_OVERRIDE = {
+        gasLimit: GAS_LIMIT,
+        maxFeePerGas: this.SWIMMER_MAX_FEE,
+        maxPriorityFeePerGas: ONE_GWEI
     }
     
     getPriorityOverride(){
         if (this.isSwimmerNetwork()){
-            return ({
-                gasLimit: GAS_LIMIT,
-                gasPrice: 25*ONE_GWEI,
-            })
+            if (this.isTestNetwork()){
+                return ({
+                    gasLimit: GAS_LIMIT,
+                    gasPrice: 4200*ONE_GWEI,
+                })    
+            } else {
+                return this.SWIMMER_OVERRIDE
+            }
         }
     
         return ({
@@ -251,10 +291,14 @@ export class CrabadaNetwork{
     
     getAttackOverride(){
         if (this.isSwimmerNetwork()){
-            return ({
-                gasLimit: GAS_LIMIT,
-                gasPrice: 25*ONE_GWEI,
-            })
+            if (this.isTestNetwork()){
+                return ({
+                    gasLimit: GAS_LIMIT,
+                    gasPrice: 4200*ONE_GWEI,
+                })    
+            } else {
+                return this.SWIMMER_OVERRIDE
+            }
         }
     
         return ({
