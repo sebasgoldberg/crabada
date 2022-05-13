@@ -151,6 +151,10 @@ const getUpdateTeamBattlePointListener = (
     const { idleGame } = getCrabadaContracts(hre)
 
     const updateTeamBattlePointListener = async (teamId: BigNumber)=>{
+
+        console.log('updateTeamBattlePointListener');
+        
+
         if (!teamsThatPlayToLooseByTeamId[teamId.toString()])
             return
         const battlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamId(idleGame, teamId, classNameByCrabada)

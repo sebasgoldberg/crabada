@@ -445,6 +445,8 @@ export const updateTeamsThatWereChaged = async (
     hre: HardhatRuntimeEnvironment, teamInfoByTeam: TeamInfoByTeam,
     classNameByCrabada: ClassNameByCrabada,
     blockstoanalyze: number, log = console.log): Promise<TeamInfoByTeam> => {
+
+    console.log('updateTeamsThatWereChaged');
     
     const teamsThatWereChanged: BigNumber[] = await getTeamsThatWereChanged(hre, blockstoanalyze, log)
 
@@ -468,6 +470,9 @@ export const updateTeamsThatWereChaged = async (
 export const getTeamsThatPlayToLooseByTeamId = async (
     hre: HardhatRuntimeEnvironment, blockstoanalyze: number, 
     firstdefendwindow: number, classNameByCrabada: ClassNameByCrabada, log = console.log, queryPageSize=3600): Promise<TeamInfoByTeam> =>{
+
+    console.log('getTeamsThatPlayToLooseByTeamId');
+    
 
     const { idleGame } = getCrabadaContracts(hre)
 
