@@ -92,7 +92,9 @@ export class CrabadaAPI{
                 })
             ).data
 
-        return (data as CanLootGameFromApi[])
+        console.log('data', data);
+        
+        return data
     }
 
     async getCanLootGamesPageQuantity(minesPerPage: number): Promise<number>{
