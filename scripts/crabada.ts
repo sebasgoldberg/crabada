@@ -335,7 +335,7 @@ export const mineStep = async (
 
     }
 
-    // await startGame();
+    await startGame();
 
 }
 
