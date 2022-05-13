@@ -1342,10 +1342,12 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
     if (currentGameId.isZero())
         return
 
-    const { attackId1, attackId2, defId1, defId2, attackTeamId } = await idleGame.getGameBattleInfo(currentGameId)
+    const { attackId1, attackId2, defId1, defId2, attackTeamId, attackTime, lastAttackTime, lastDefTime } = await idleGame.getGameBattleInfo(currentGameId)
 
     if ((attackTeamId as BigNumber).isZero())
         return
+
+    log('attackTime, lastAttackTime, lastDefTime', attackTime, lastAttackTime, lastDefTime)
 
     const reinforceAttack = (attackTeamId as BigNumber).eq(teamId)
 
