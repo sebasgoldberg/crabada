@@ -559,7 +559,8 @@ const lootLoop = async (
     clearInterval(listenCanLootGamesFromApiInterval)
     updateTeamBattlePointListener && idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
     clearInterval(updateLockStatusInterval)
-    settleGameInterval && clearInterval(settleGameInterval)
+    // TODO Create service or enable again.
+    // settleGameInterval && clearInterval(settleGameInterval)
 
 }
 
