@@ -104,33 +104,38 @@ export const abi = {
     Crabada: CrabadaAbi,
 }
 
+let idleGame: Contract = undefined
+let tusToken: Contract = undefined
+let craToken: Contract = undefined
+let crabada: Contract = undefined
+
 export const getCrabadaContracts = (hre: HardhatRuntimeEnvironment) => {
 
     const addresses = hre.crabada.network.getContractAddresses()
 
-    const idleGame = new Contract(
+    !idleGame && (idleGame = new Contract(
         addresses.IdleGame,
         abi.IdleGame,
         hre.ethers.provider
-    )
+    ))
   
-    const tusToken = new Contract(
+    !tusToken && (tusToken = new Contract(
         addresses.tusToken,
         abi.ERC20,
         hre.ethers.provider
-    )
+    ))
   
-    const craToken = new Contract(
+    !craToken && (craToken = new Contract(
         addresses.craToken,
         abi.ERC20,
         hre.ethers.provider
-    )
+    ))
   
-    const crabada = new Contract(
+    !crabada && (crabada = new Contract(
         addresses.crabada,
         abi.Crabada,
         hre.ethers.provider
-    )
+    ))
 
     return {idleGame, tusToken, craToken, crabada}
   
