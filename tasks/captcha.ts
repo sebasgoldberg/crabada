@@ -97,7 +97,7 @@ const settleGamesAndSetInterval = async (hre: HardhatRuntimeEnvironment, playerT
 
     !testmode && (await settleGames(console.log))
 
-    const settleGameInterval = !testmode && setInterval(() => settleGames(()=>{}), 2000)
+    const settleGameInterval = !testmode && setInterval(() => settleGames(()=>{}), 10_000)
 
     return settleGameInterval
 }
