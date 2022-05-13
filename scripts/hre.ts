@@ -229,7 +229,7 @@ export class CrabadaNetwork{
                 crabada: '0xe56cb40A104cf2783EA912859B4Ca7dE77cdC961',
             })
         } else if (this.isSwimmerMainnetNetwork()){
-            return ({ // TODO Verify addresses.
+            return ({
                 IdleGame: '0x9ab9e81Be39b73de3CCd9408862b1Fc6D2144d2B',
                 tusToken: '0x9c765eEE6Eff9CF1337A1846c0D93370785F6C92',
                 craToken: '0xC1a1F40D558a3E82C3981189f61EF21e17d6EB48',
