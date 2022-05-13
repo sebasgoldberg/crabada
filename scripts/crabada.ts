@@ -1067,7 +1067,7 @@ export interface CrabadaToBorrow {
     price: BigNumber
 }
 
-const MAX_REINFORCE_DEFENSE_PRICE = parseEther('40')
+const MAX_REINFORCE_DEFENSE_PRICE = parseEther('20')
 const BORROW_STEP_PRICE_IN_TUS = 2
 const BORROW_MAX_PRICE_IN_TUS = 36
 const BORROW_PRICE_STEPS = Math.floor((BORROW_MAX_PRICE_IN_TUS/BORROW_STEP_PRICE_IN_TUS)+0.5)
@@ -1087,7 +1087,7 @@ export const getCrabadasToBorrow = async (hre: HardhatRuntimeEnvironment, minBat
     const possibleCrabadasToBorrowOrderByPrice = crabadasInTabernOrderByPrice
         .filter( x => x.battle_point >= minBattlePointNeeded)
         .filter( x => reinforceAttack ? 
-            true : (x.battle_point >= 150 && x.mine_point >= 60 && x.price.lte(MAX_REINFORCE_DEFENSE_PRICE))
+            true : (x.battle_point >= 220 && x.mine_point >= 79 && x.price.lte(MAX_REINFORCE_DEFENSE_PRICE))
         )
 
     console.log('possibleCrabadasToBorrowOrderByPrice', possibleCrabadasToBorrowOrderByPrice.length);
