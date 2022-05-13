@@ -65,6 +65,9 @@ const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contra
         }
     }
 
+    console.log('settledByTeamId', settledByTeamId);
+    
+
     playerTeamPairs.map( (playerTeamPair) => {
         playerTeamPair.settled = testmode || settledByTeamId[String(playerTeamPair.teamId)]
         playerTeamPair.locked = !testmode && !playerTeamPair.settled
