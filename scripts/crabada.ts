@@ -1294,10 +1294,10 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
 
                 console.log('idleGame.', reinforceMethodName, '(currentGameId, crabadaId, borrowPrice)', currentGameId.toString(), crabadaId.toString(), formatEther(borrowPrice));
         
-                await idleGame.connect(signer).callStatic[reinforceMethodName](currentGameId, crabadaId, borrowPrice, override)
+                await idleGame.connect(signer).callStatic[reinforceMethodName](currentGameId, crabadaId, borrowPrice, {...override, value: borrowPrice})
         
                 if (!testMode){
-                    const tr: TransactionResponse = await idleGame.connect(signer)[reinforceMethodName](currentGameId, crabadaId, borrowPrice, override)
+                    const tr: TransactionResponse = await idleGame.connect(signer)[reinforceMethodName](currentGameId, crabadaId, borrowPrice, {...override, value: borrowPrice})
             
                     console.log('Transaction hash', tr.hash);
 
