@@ -61,8 +61,8 @@ const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contra
     for (const { address } of hre.crabada.network.LOOT_CAPTCHA_CONFIG.players){
         const teams = await hre.crabada.api.getTeams(address)
         for (const team of teams){
-            console.log('teams.game_id', teams.game_id);
-            settledByTeamId[String(team.team_id)] = teams.game_id == null ? true : false
+            console.log('team.game_id', team.game_id);
+            settledByTeamId[String(team.team_id)] = team.game_id ? false : true
         }
     }
 
@@ -457,7 +457,7 @@ const lootLoop = async (
 
     // Set interval for updating teams' lock status.
 
-    const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, ()=>{}), 20_000);
+    const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, ()=>{}), 10_000);
 
     // Listen pending startGame transactions or StartGame events.
 

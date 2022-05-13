@@ -92,8 +92,6 @@ export class CrabadaAPI{
                 })
             ).data
 
-        console.log('data', data);
-        
         return data
     }
 
