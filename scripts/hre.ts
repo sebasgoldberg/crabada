@@ -47,7 +47,17 @@ export class CrabadaNetwork{
         {
             signerIndex: 0,
             address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-            teams: [  ],
+            teams: [ 12929, 12942, 12949, 12954, 12958, 12964, 12968, 12973 ],
+        },
+        {
+            signerIndex: 1,
+            address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
+            teams: [ 13001, 13008, 13012, 13015, 13020, 13026, 13031, 13035 ],
+        },
+        {
+            signerIndex: 2,
+            address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
+            teams: [ 13291, 13294, 13299, 13303 ],
         },
     ]
 
@@ -93,8 +103,16 @@ export class CrabadaNetwork{
 
     SWIMMER_MINE_GROUPS: MineGroup[] = [
         {
-            teamsOrder: [ 1363, 1364, 1365 ],
-            crabadaReinforcers: [ ],
+            teamsOrder: [ 12929, 12942, 12949, 12954, 12958, 12964, 12968, 12973 ],
+            crabadaReinforcers: [ /*87155, 87156,*/ ],
+        },
+        {
+            teamsOrder: [ 13001, 13008, 13012, 13015, 13020, 13026, 13031, 13035 ],
+            crabadaReinforcers: [ /*50097, 49769,*/ ],
+        },
+        {
+            teamsOrder: [ 13291, 13294, 13299, 13303 ],
+            crabadaReinforcers: [  ],
         },
     ]
 
@@ -193,7 +211,7 @@ export class CrabadaNetwork{
         if (this.isSwimmerTestNetwork()){
             return 'https://idle-game-subnet-test-api.crabada.com'
         }else if (this.isSwimmerMainnetNetwork()){
-            return 'https://idle-game-api.crabada.com/'
+            return 'https://idle-game-api.crabada.com'
         }else{
             return 'https://idle-api.crabada.com'
         }
@@ -204,7 +222,7 @@ export class CrabadaNetwork{
         if (this.isSwimmerTestNetwork()){
             return 'https://subnet-test-api.crabada.com'
         }else if (this.isSwimmerMainnetNetwork()){
-            throw new Error('CrabadaApiBaseUrl not defined')
+            return 'https://market-api.crabada.com'
         }else{
             return 'https://api.crabada.com'
         }
@@ -262,7 +280,7 @@ export class CrabadaNetwork{
     }
 
     SWIMMER_BASE_FEE = 10_000*ONE_GWEI
-    SWIMMER_MAX_FEE = 20*this.SWIMMER_BASE_FEE
+    SWIMMER_MAX_FEE = 3*this.SWIMMER_BASE_FEE
     SWIMMER_OVERRIDE = {
         gasLimit: GAS_LIMIT,
         maxFeePerGas: this.SWIMMER_MAX_FEE,
