@@ -33,7 +33,7 @@ interface PlayerTeamPair {
 const initializePlayerTeamPair = async (hre: HardhatRuntimeEnvironment, players: Player[]): Promise<PlayerTeamPair[]> => {
 
     const { idleGame } = getCrabadaContracts(hre)
-    
+
     const playerTeamPairs: PlayerTeamPair[] = await Promise.all(players
         .map( p => p.teams
             .map( async(teamId) => {
@@ -53,15 +53,22 @@ const initializePlayerTeamPair = async (hre: HardhatRuntimeEnvironment, players:
 }
 
 const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, playerTeamPairs: PlayerTeamPair[], testmode: boolean, log: (typeof console.log)) => {
-    return (await Promise.all(
-        playerTeamPairs.map( async(playerTeamPair): Promise<any> => {
-            playerTeamPair.locked = !testmode && await isTeamLocked(hre, idleGame, playerTeamPair.teamId, log)
-            const { currentGameId }: { currentGameId: BigNumber } = 
-                await idleGame.getTeamInfo(playerTeamPair.teamId)
-            playerTeamPair.settled = testmode || currentGameId.isZero()
+    // TODO Restore comented parallel processing
+    for (const playerTeamPair of playerTeamPairs){
+        playerTeamPair.locked = !testmode && await isTeamLocked(hre, idleGame, playerTeamPair.teamId, log)
+        const { currentGameId }: { currentGameId: BigNumber } = 
+            await idleGame.getTeamInfo(playerTeamPair.teamId)
+        playerTeamPair.settled = testmode || currentGameId.isZero()
+    }
+    // return (await Promise.all(
+    //     playerTeamPairs.map( async(playerTeamPair): Promise<any> => {
+    //         playerTeamPair.locked = !testmode && await isTeamLocked(hre, idleGame, playerTeamPair.teamId, log)
+    //         const { currentGameId }: { currentGameId: BigNumber } = 
+    //             await idleGame.getTeamInfo(playerTeamPair.teamId)
+    //         playerTeamPair.settled = testmode || currentGameId.isZero()
 
-        }) 
-    ))
+    //     }) 
+    // ))
 }
 
 const settleGamesAndSetInterval = async (hre: HardhatRuntimeEnvironment, playerTeamPairs: PlayerTeamPair[], signer: SignerWithAddress, testmode: boolean): Promise<NodeJS.Timer|false> => {
@@ -97,7 +104,7 @@ const settleGamesAndSetInterval = async (hre: HardhatRuntimeEnvironment, playerT
 
     !testmode && (await settleGames(console.log))
 
-    const settleGameInterval = !testmode && setInterval(() => settleGames(()=>{}), 10_000)
+    const settleGameInterval = !testmode && setInterval(() => settleGames(()=>{}), 20_000)
 
     return settleGameInterval
 }
@@ -415,7 +422,7 @@ const lootLoop = async (
 
     // Set interval for updating teams' lock status.
 
-    const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, ()=>{}), 10_000);
+    const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, ()=>{}), 20_000);
 
     // Listen pending startGame transactions or StartGame events.
 
