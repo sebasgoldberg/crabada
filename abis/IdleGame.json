@@ -969,7 +969,7 @@
         ],
         "name": "reinforceAttack",
         "outputs": [],
-        "stateMutability": "nonpayable",
+        "stateMutability": "payable",
         "type": "function"
     },
     {
@@ -992,7 +992,7 @@
         ],
         "name": "reinforceDefense",
         "outputs": [],
-        "stateMutability": "nonpayable",
+        "stateMutability": "payable",
         "type": "function"
     },
     {
