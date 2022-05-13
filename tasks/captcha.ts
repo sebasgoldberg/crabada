@@ -151,10 +151,6 @@ const getUpdateTeamBattlePointListener = (
     const { idleGame } = getCrabadaContracts(hre)
 
     const updateTeamBattlePointListener = async (teamId: BigNumber)=>{
-
-        console.log('updateTeamBattlePointListener');
-        
-
         if (!teamsThatPlayToLooseByTeamId[teamId.toString()])
             return
         const battlePoint: TeamBattlePoints = await TeamBattlePoints.createFromTeamId(idleGame, teamId, classNameByCrabada)
@@ -418,8 +414,7 @@ const lootLoop = async (
 
     // Sets interval to settleGame for unlocked teams.
     
-    // TODO Create service or enable again.
-    //const settleGameInterval = await settleGamesAndSetInterval(hre, playerTeamPairs, settleSigner, testmode)
+    const settleGameInterval = await settleGamesAndSetInterval(hre, playerTeamPairs, settleSigner, testmode)
 
 
     // TODO Verify if applies.
@@ -563,8 +558,7 @@ const lootLoop = async (
     clearInterval(listenCanLootGamesFromApiInterval)
     updateTeamBattlePointListener && idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
     clearInterval(updateLockStatusInterval)
-    // TODO Create service or enable again.
-    // settleGameInterval && clearInterval(settleGameInterval)
+    settleGameInterval && clearInterval(settleGameInterval)
 
 }
 
