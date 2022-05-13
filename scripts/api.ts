@@ -58,6 +58,43 @@ export class CrabadaAPI{
 
     }
 
+    async getTeams(address: string): Promise<any>{
+        const headers = {
+            'authority': 'idle-api.crabada.com',
+            'pragma': 'no-cache',
+            'cache-control': 'no-cache',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
+            accept: 'application/json, text/plain, */*',
+            // TODO authorization should use the bearer token for each player.
+            authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDcyNTQ3MDMsImV4cCI6MTY0OTg0NjcwMywiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.GFRl3lK53u45oG-lDx58paC6rtZFyPGgcQhCCDgi6sA',
+            'sec-ch-ua-mobile': '?0',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
+            'sec-ch-ua-platform': '"Windows"',
+            origin: this.network.getOrigin(),
+            'sec-fetch-site': 'same-site',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-dest': 'empty',
+            'referer': this.network.getReferer(),
+            'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
+        }
+
+        DEBUG && console.log('GET', `${this.idleGameApiBaseUrl}/public/idle/teams?user_address=${address}&page=1&limit=10`);
+        
+        const { 
+            result: {
+                data
+            }
+        } = (await axios.get(
+                // TODO address should be for each player.
+                `${this.idleGameApiBaseUrl}/public/idle/teams?user_address=${address}&page=1&limit=10`,
+                {
+                    headers
+                })
+            ).data
+
+        return (data as CanLootGameFromApi[])
+    }
+
     async getCanLootGamesPageQuantity(minesPerPage: number): Promise<number>{
 
         const headers = {

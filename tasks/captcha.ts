@@ -53,6 +53,37 @@ const initializePlayerTeamPair = async (hre: HardhatRuntimeEnvironment, players:
 }
 
 const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, playerTeamPairs: PlayerTeamPair[], testmode: boolean, log: (typeof console.log)) => {
+
+    // TODO Restor off chain requests.
+
+    const settledByTeamId = {}
+
+    for (const address in hre.crabada.network.LOOT_CAPTCHA_CONFIG){
+        const teams = await hre.crabada.api.getTeams(address)
+        for (const team of teams){
+            settledByTeamId[String(team.team_id)] = teams.game_id ? false : true
+        }
+    }
+
+    playerTeamPairs.map( (playerTeamPair) => {
+        playerTeamPair.settled = testmode || settledByTeamId[String(playerTeamPair.teamId)]
+        playerTeamPair.locked = !testmode && !playerTeamPair.settled
+    })
+
+    return
+
+
+    return (await Promise.all(
+        playerTeamPairs.map( async(playerTeamPair): Promise<any> => {
+            playerTeamPair.locked = !testmode && await isTeamLocked(hre, idleGame, playerTeamPair.teamId, log)
+            const { currentGameId }: { currentGameId: BigNumber } = 
+                await idleGame.getTeamInfo(playerTeamPair.teamId)
+            playerTeamPair.settled = testmode || currentGameId.isZero()
+
+        }) 
+    ))
+
+
     // TODO Restore comented parallel processing
     for (const playerTeamPair of playerTeamPairs){
         playerTeamPair.locked = !testmode && await isTeamLocked(hre, idleGame, playerTeamPair.teamId, log)
@@ -422,8 +453,7 @@ const lootLoop = async (
 
     // Set interval for updating teams' lock status.
 
-    // TODO
-    // const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, ()=>{}), 20_000);
+    const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, ()=>{}), 20_000);
 
     // Listen pending startGame transactions or StartGame events.
 
