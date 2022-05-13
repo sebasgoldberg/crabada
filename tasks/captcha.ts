@@ -415,7 +415,7 @@ const lootLoop = async (
 
     // Set interval for updating teams' lock status.
 
-    const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, ()=>{}), 1000);
+    const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, ()=>{}), 10_000);
 
     // Listen pending startGame transactions or StartGame events.
 
