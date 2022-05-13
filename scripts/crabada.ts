@@ -1349,12 +1349,6 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
 
     const reinforceAttack = (attackTeamId as BigNumber).eq(teamId)
 
-    // TODO Remove for mine only scenarios
-    if (!reinforceAttack){
-        log('Not reinforce attack.')
-        return
-    }
-
     log('attackId1, attackId2, defId1, defId2', [ attackId1, attackId2, defId1, defId2 ].map(x => x.toString()))
 
     if (!_shoudReinforce(attackId1, attackId2, defId1, defId2, reinforceAttack))
