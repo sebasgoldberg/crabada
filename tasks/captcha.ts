@@ -70,7 +70,7 @@ const settleGamesAndSetInterval = async (hre: HardhatRuntimeEnvironment, playerT
 
     let settleInProgress = false
 
-    const settleGames = async(log: (typeof console.log) = console.log)=>{
+    const settleGames = async(log: (typeof console.log) = ()=>{})=>{
 
         if (settleInProgress)
             return
@@ -415,7 +415,7 @@ const lootLoop = async (
 
     // Set interval for updating teams' lock status.
 
-    const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, console.log), 10_000);
+    const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, ()=>{}), 10_000);
 
     // Listen pending startGame transactions or StartGame events.
 
