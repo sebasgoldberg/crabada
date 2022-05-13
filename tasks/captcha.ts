@@ -61,13 +61,9 @@ const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contra
     for (const { address } of hre.crabada.network.LOOT_CAPTCHA_CONFIG.players){
         const teams = await hre.crabada.api.getTeams(address)
         for (const team of teams){
-            console.log('team.game_id', team.game_id);
             settledByTeamId[String(team.team_id)] = team.game_id ? false : true
         }
     }
-
-    console.log('settledByTeamId', settledByTeamId);
-    
 
     playerTeamPairs.map( (playerTeamPair) => {
         playerTeamPair.settled = testmode || settledByTeamId[String(playerTeamPair.teamId)]
