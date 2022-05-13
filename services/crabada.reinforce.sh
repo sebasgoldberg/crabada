@@ -3,7 +3,7 @@
 
 if [ -z "$HARDHAT_NETWORK" ]
 then 
-    HARDHAT_NETWORK=localmainnet
+    HARDHAT_NETWORK=swimmer
 fi
 
 npx hardhat reinforce --network "$HARDHAT_NETWORK" --testmode false
