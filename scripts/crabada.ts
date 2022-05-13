@@ -1321,6 +1321,23 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
 
 }
 
+const isPossibleToReinforce = async (
+    hre: HardhatRuntimeEnvironment, 
+    lastAttackTime: number, lastDefTime: number, 
+    reinforceAttack: boolean): Promise<boolean> => {
+
+    const timestamp = await currentBlockTimeStamp(hre)
+
+    const lastOperation = reinforceAttack ? lastDefTime : lastAttackTime
+
+    const difference = timestamp-lastOperation
+
+    console.log('isPossibleToReinforce difference', difference);
+    
+    return difference < 1800
+
+}
+
 export const reinforce = async (hre: HardhatRuntimeEnvironment,
     teamId: number, signer: SignerWithAddress, player: string|undefined,
     log: (typeof console.log) = console.log, testMode=true): Promise<TransactionResponse|undefined> => {
@@ -1354,6 +1371,9 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
     log('attackId1, attackId2, defId1, defId2', [ attackId1, attackId2, defId1, defId2 ].map(x => x.toString()))
 
     if (!_shoudReinforce(attackId1, attackId2, defId1, defId2, reinforceAttack))
+        return
+
+    if (!(await isPossibleToReinforce(hre, lastAttackTime, lastDefTime, reinforceAttack)))
         return
 
     const reinforcementMinBattlePoints: number = await getReinforcementMinBattlePoints(
