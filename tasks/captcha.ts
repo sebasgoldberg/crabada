@@ -414,7 +414,8 @@ const lootLoop = async (
 
     // Sets interval to settleGame for unlocked teams.
     
-    const settleGameInterval = await settleGamesAndSetInterval(hre, playerTeamPairs, settleSigner, testmode)
+    // TODO Create service or enable again.
+    //const settleGameInterval = await settleGamesAndSetInterval(hre, playerTeamPairs, settleSigner, testmode)
 
 
     // TODO Verify if applies.

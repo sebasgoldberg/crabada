@@ -1890,7 +1890,7 @@ export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
 const SETTLER_TARGET_BALANCE = parseEther('8')
 
-export const MINE_MODE = true
+export const MINE_MODE = false
 export const ATTACK_MODE = !MINE_MODE
 
 export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.log ) => {
