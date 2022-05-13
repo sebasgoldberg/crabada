@@ -193,7 +193,7 @@ export class CrabadaNetwork{
         if (this.isSwimmerTestNetwork()){
             return 'https://idle-game-subnet-test-api.crabada.com'
         }else if (this.isSwimmerMainnetNetwork()){
-            throw new Error('IdleGameApiBaseUrl not defined')
+            return 'https://idle-game-api.crabada.com/'
         }else{
             return 'https://idle-api.crabada.com'
         }
