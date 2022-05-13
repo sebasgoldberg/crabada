@@ -165,7 +165,7 @@ describe('Team BP & Factions', function () {
 
     expect(
       teamWithDisadvantage.teamFaction
-      ).to.eq('NO FACTION')
+      ).to.eq('NO_FACTION')
 
     expect(
       teamWithAdvantage.getRelativeBP(teamWithDisadvantage.teamFaction)
@@ -193,11 +193,11 @@ describe('Team BP & Factions', function () {
 
     expect(
       teamWithAdvantage.teamFaction
-      ).to.eq('NO FACTION')
+      ).to.eq('NO_FACTION')
 
     expect(
       teamWithDisadvantage.teamFaction
-      ).to.eq('NO FACTION')
+      ).to.eq('NO_FACTION')
 
     expect(
       teamWithAdvantage.getRelativeBP(teamWithDisadvantage.teamFaction)

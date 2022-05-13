@@ -384,25 +384,31 @@ const lootLoop = async (
     //     return
 
     
-    const classNameByCrabada: ClassNameByCrabada = await getClassNameByCrabada(hre)
+    const classNameByCrabada: ClassNameByCrabada = hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackOnlyTeamsThatPlayToLoose ? 
+        await getClassNameByCrabada(hre) : {}
     
     // Teams that play to loose...
 
     const teamsThatPlayToLooseByTeamId = await (
         hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackOnlyTeamsThatPlayToLoose ? 
             getTeamsThatPlayToLooseByTeamId(hre, blockstoanalyze, firstdefendwindow, classNameByCrabada)
-            : getTeamsBattlePoint(hre, blockstoanalyze, classNameByCrabada)
+            //: getTeamsBattlePoint(hre, blockstoanalyze, classNameByCrabada)
+            : {}
     )
 
     console.log('teamsThatPlayToLooseByTeamId', Object.keys(teamsThatPlayToLooseByTeamId).length);
 
     // Update teams thar were changed and set interval to update regularly...
 
-    await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, classNameByCrabada, blockstoanalyze)
+    if (hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackOnlyTeamsThatPlayToLoose){
+        await updateTeamsThatWereChaged(hre, teamsThatPlayToLooseByTeamId, classNameByCrabada, blockstoanalyze)
+    }
 
-    const updateTeamBattlePointListener = getUpdateTeamBattlePointListener(hre, teamsThatPlayToLooseByTeamId, classNameByCrabada)
+    const updateTeamBattlePointListener = hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackOnlyTeamsThatPlayToLoose ?
+        getUpdateTeamBattlePointListener(hre, teamsThatPlayToLooseByTeamId, classNameByCrabada)
+        : undefined
 
-    idleGame.on(
+    updateTeamBattlePointListener && idleGame.on(
         idleGame.filters.AddCrabada(), 
         updateTeamBattlePointListener
     )
@@ -465,6 +471,14 @@ const lootLoop = async (
                 created_at
             }))
 
+        if (!hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackOnlyTeamsThatPlayToLoose){
+            canLootGamesFromApi.forEach( ({faction, team_id, defense_point}) => {
+                teamsThatPlayToLooseByTeamId[String(team_id)] = {
+                    battlePoint: new TeamBattlePoints(faction, defense_point)
+                }
+            })    
+        }
+            
         attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
 
     }, 1000)
@@ -504,7 +518,7 @@ const lootLoop = async (
     // clearInterval(pendingStartGameTransactionInterval)
     // clearInterval(startGameEventsInterval)
     clearInterval(listenCanLootGamesFromApiInterval)
-    idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
+    updateTeamBattlePointListener && idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
     clearInterval(updateLockStatusInterval)
     settleGameInterval && clearInterval(settleGameInterval)
 

@@ -180,7 +180,7 @@ export class CrabadaNetwork{
     private initializeLootCaptchaConfig(){
         this.LOOT_CAPTCHA_CONFIG = {
             players: (this.MINE_CONFIG as MineConfig[]).map( x => ({...x, signerIndex: x.signerIndex+1}) ),
-            attackOnlyTeamsThatPlayToLoose: true
+            attackOnlyTeamsThatPlayToLoose: false
         }
     }
     

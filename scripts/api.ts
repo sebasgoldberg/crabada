@@ -3,7 +3,7 @@ import { BigNumber } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { resolve } from "path";
 import { CrabadaNetwork } from "./hre";
-import { ClassNameByCrabada, CrabadaClassName } from "./teambp";
+import { ClassNameByCrabada, CrabadaClassName, TeamFaction } from "./teambp";
 
 export interface CrabadaInTabern{ 
     id: BigNumber,
@@ -34,6 +34,9 @@ export interface CanLootGameFromApi{
     team_id: number,
     start_time: number,
     created_at: number,
+    faction: TeamFaction,
+    attack_team_id: number,
+    defense_point: number,
 }
 
 export const DEBUG = false
@@ -55,7 +58,45 @@ export class CrabadaAPI{
 
     }
 
-    async getCanLootGames(): Promise<CanLootGameFromApi[]>{
+    async getCanLootGamesPageQuantity(minesPerPage: number): Promise<number>{
+
+        const headers = {
+            'authority': 'idle-api.crabada.com',
+            'pragma': 'no-cache',
+            'cache-control': 'no-cache',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
+            accept: 'application/json, text/plain, */*',
+            // TODO authorization should use the bearer token for each player.
+            authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDcyNTQ3MDMsImV4cCI6MTY0OTg0NjcwMywiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.GFRl3lK53u45oG-lDx58paC6rtZFyPGgcQhCCDgi6sA',
+            'sec-ch-ua-mobile': '?0',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
+            'sec-ch-ua-platform': '"Windows"',
+            origin: this.network.getOrigin(),
+            'sec-fetch-site': 'same-site',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-dest': 'empty',
+            'referer': this.network.getReferer(),
+            'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
+        }
+
+        DEBUG && console.log('GET', `${this.idleGameApiBaseUrl}/public/idle/mines?page=1&status=open&looter_address=0xe90a22064f415896f1f72e041874da419390cc6d&can_loot=1&limit=10`);
+        
+        const { 
+            result: {
+                totalPages
+            }
+        } = (await axios.get(
+                // TODO address should be for each player.
+                `${this.idleGameApiBaseUrl}/public/idle/mines?page=1&status=open&looter_address=0xe90a22064f415896f1f72e041874da419390cc6d&can_loot=1&limit=${minesPerPage}`,
+                {
+                    headers
+                })
+            ).data
+
+        return totalPages
+    }
+
+    async getCanLootGames(actualPage: number, minesPerPage: number): Promise<CanLootGameFromApi[]>{
 
         const headers = {
             'authority': 'idle-api.crabada.com',
@@ -84,7 +125,7 @@ export class CrabadaAPI{
             }
         } = (await axios.get(
                 // TODO address should be for each player.
-                `${this.idleGameApiBaseUrl}/public/idle/mines?page=1&status=open&looter_address=0xe90a22064f415896f1f72e041874da419390cc6d&can_loot=1&limit=10`,
+                `${this.idleGameApiBaseUrl}/public/idle/mines?page=${actualPage}&status=open&looter_address=0xe90a22064f415896f1f72e041874da419390cc6d&can_loot=1&limit=${minesPerPage}`,
                 {
                     headers
                 })
@@ -302,6 +343,10 @@ export const listenCanLootGamesFromApi = async (hre: HardhatRuntimeEnvironment, 
 
     let processing: boolean = false
 
+    let actualPage = 0
+    let maxPage = 0
+    const minesPerPage = 10
+
     return setInterval(async () => {
 
         if (processing)
@@ -311,7 +356,14 @@ export const listenCanLootGamesFromApi = async (hre: HardhatRuntimeEnvironment, 
 
         try {
 
-            const canLootGamesFromApi: CanLootGameFromApi[] = await hre.crabada.api.getCanLootGames()
+            actualPage++
+
+            if (actualPage > maxPage){
+                maxPage = await hre.crabada.api.getCanLootGamesPageQuantity(minesPerPage)
+                actualPage = 0
+            }
+
+            const canLootGamesFromApi: CanLootGameFromApi[] = await hre.crabada.api.getCanLootGames(actualPage, minesPerPage)
 
             const newCanLootGamesFromApi = canLootGamesFromApi.filter(({game_id})=>{
                 const result = !gameAlreadyProcessed[game_id]

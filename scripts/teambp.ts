@@ -26,7 +26,7 @@ export const classNameFromDna = (dna: BigNumber): CrabadaClassName => {
 
 }
 
-export type TeamFaction = 'ABYSS' | 'TRENCH' | 'ORE' | 'LUX' | 'MACHINE' | 'FAERIES' | 'NO FACTION'
+export type TeamFaction = 'ABYSS' | 'TRENCH' | 'ORE' | 'LUX' | 'MACHINE' | 'FAERIES' | 'NO_FACTION'
 
 const FACTIONS: TeamFaction[] = [ 'ABYSS' , 'TRENCH' , 'ORE' , 'LUX' , 'MACHINE' , 'FAERIES' ]
 
@@ -70,7 +70,7 @@ export const getTeamFaction = (
 
     }
 
-    return "NO FACTION"
+    return "NO_FACTION"
 
 }
 
@@ -91,7 +91,7 @@ const ADVANTAGE_MATRIX: AdvantagesByFaction = {
     ABYSS: [ "TRENCH", "MACHINE" ],
     TRENCH: [ "MACHINE", "LUX" ],
     MACHINE: [ "LUX", "FAERIES" ],
-    "NO FACTION": []
+    "NO_FACTION": []
 }
 
 export interface ClassNameByCrabada {
@@ -114,7 +114,7 @@ export class TeamBattlePoints{
     constructor(teamFaction: TeamFaction, realBP: number){
         this.teamFaction = teamFaction
         this.realBP = realBP
-        if (ADVANTAGE_MATRIX.LUX.includes(teamFaction) || teamFaction === "NO FACTION")
+        if (ADVANTAGE_MATRIX.LUX.includes(teamFaction) || teamFaction === "NO_FACTION")
             this.addBPToRelative = 1
     }
 
@@ -220,7 +220,7 @@ export class TeamBattlePoints{
 
     getRelativeBP(otherTeamFaction: TeamFaction): number{
 
-        if (this.teamFaction == "NO FACTION"){
+        if (this.teamFaction == "NO_FACTION"){
             if (USE_LOOTERS_ADVANTAGE)
                 return Math.floor(0.97 * this.realBP)+this.addBPToRelative
             else
@@ -236,7 +236,7 @@ export class TeamBattlePoints{
 
     getRelativeBPForAdvantage(hasDisadvantage: boolean): number{
 
-        if (this.teamFaction == "NO FACTION"){
+        if (this.teamFaction == "NO_FACTION"){
             if (USE_LOOTERS_ADVANTAGE)
                 return Math.floor(0.97 * this.realBP)+this.addBPToRelative
             else
