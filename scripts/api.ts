@@ -39,7 +39,7 @@ export interface CanLootGameFromApi{
     defense_point: number,
 }
 
-export const DEBUG = true
+export const DEBUG = false
 
 export class CrabadaAPI{
 
