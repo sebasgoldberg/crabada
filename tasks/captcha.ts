@@ -1202,7 +1202,8 @@ class AttackServer {
 
         pendingChallenge.status.resolveStatusResponse(undefined)
 
-        delete this.pendingChallenge[challenge]
+        // TODO Maybe this should be deleted.
+        //delete this.pendingChallenge[challenge]
 
     }
 
