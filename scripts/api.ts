@@ -180,7 +180,12 @@ export class CrabadaAPI{
 
         return (data as CanLootGameFromApi[])
             .filter( mine => {
+                
                 const maxAttackWindow = mine.defense_mine_point > 230 ? 3600 : 3600+1800
+                console.log('maxAttackWindow', maxAttackWindow);
+                console.log('timestamp', timestamp);
+                console.log('mine.start_time', mine.start_time);
+
                 return (timestamp - mine.start_time) < (maxAttackWindow-120)
               })
     }
