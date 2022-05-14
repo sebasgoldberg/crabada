@@ -524,7 +524,14 @@ const lootLoop = async (
             
         attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
 
-    }, hasToReadNextMineToLootPage, 1_000)
+    }, () => {
+
+        const unlockedPlayerTeamPairs = playerTeamPairs
+            .filter( p => (!p.locked && p.settled) || testmode )
+
+        return hasToReadNextMineToLootPage() && unlockedPlayerTeamPairs.length > 0
+
+    }, 1_000)
 
     // Never finish
     await new Promise((resolve) => {
@@ -600,12 +607,17 @@ class AttackExecutor{
     hre: HardhatRuntimeEnvironment
     attackTransactionsDataByGameId: AttackTransactionDataByGameId = {}
     idleGame: Contract
+    teamsThatPerformedAttack: number[]
 
     constructor(hre: HardhatRuntimeEnvironment){
         this.hre = hre
     }
 
-    isUsingTeamId(teamId: number): boolean{
+    isTeamBusy(teamId: number): boolean{
+
+        if (this.teamsThatPerformedAttack.includes(teamId))
+            return true
+
         const teamsAlreadyAttacking = []
 
         for (const gameId in this.attackTransactionsDataByGameId){
@@ -640,6 +652,7 @@ class AttackExecutor{
                 this.hre.crabada.network.getAttackOverride()
             )
             console.log('txr.hash', txr.hash);
+            this.teamsThatPerformedAttack.push(Number(team_id))
             delete this.attackTransactionsDataByGameId[game_id]
         } catch (error) {
             console.error('Error trying to attack', String(error));
@@ -1309,7 +1322,7 @@ class AttackServer {
 
             for (const p of playerTeamPairsOrderByNotInRecentTeams){
 
-                if (this.attackExecutor.isUsingTeamId(p.teamId))
+                if (this.attackExecutor.isTeamBusy(p.teamId))
                     continue
 
                 // Do not use same team for different targets.
