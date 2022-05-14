@@ -390,19 +390,27 @@ export class CrabadaAPI{
 
 type CanLootGamesFromApiTask = (canLootGamesFromApi: CanLootGameFromApi[]) => void
 
-export const listenCanLootGamesFromApi = async (hre: HardhatRuntimeEnvironment, task: CanLootGamesFromApiTask, interval: number = 500): Promise<NodeJS.Timer> => {
+export type HasToReadNextPageFunction = () => boolean
 
-    const gameAlreadyProcessed: {
-        [game_id: number]: boolean
-    } = {}
+export const listenCanLootGamesFromApi = async (
+    hre: HardhatRuntimeEnvironment, 
+    task: CanLootGamesFromApiTask, 
+    hasToReadNextPage: HasToReadNextPageFunction,
+    interval: number = 2000): Promise<NodeJS.Timer> => {
+
+    // const gameAlreadyProcessed: {
+    //     [game_id: number]: boolean
+    // } = {}
 
     let processing: boolean = false
 
     let actualPage = 0
-    let maxPage = 0
-    const minesPerPage = 10
+    const minesPerPage = 25
 
     return setInterval(async () => {
+
+        if (!hasToReadNextPage())
+            return
 
         if (processing)
             return
@@ -413,35 +421,34 @@ export const listenCanLootGamesFromApi = async (hre: HardhatRuntimeEnvironment, 
 
             actualPage++
 
-            if (actualPage > maxPage){
-                maxPage = await hre.crabada.api.getCanLootGamesPageQuantity(minesPerPage)
-                actualPage = 1
-            }
-
             const canLootGamesFromApi: CanLootGameFromApi[] = await hre.crabada.api.getCanLootGames(actualPage, minesPerPage)
 
             if (canLootGamesFromApi.length == 0){
-                maxPage = await hre.crabada.api.getCanLootGamesPageQuantity(minesPerPage)
-                actualPage = 1
-                const canLootGamesFromApi: CanLootGameFromApi[] = await hre.crabada.api.getCanLootGames(actualPage, minesPerPage)
+
+                actualPage = 0
+
+            } else {
+
+                const newCanLootGamesFromApi = canLootGamesFromApi
+                // .filter(({game_id})=>{
+                //     const result = !gameAlreadyProcessed[game_id]
+                //     gameAlreadyProcessed[game_id] = true
+                //     return result
+                // })
+
+                task(newCanLootGamesFromApi)
+
+                // setTimeout(()=>{
+                //     newCanLootGamesFromApi.forEach( ({game_id}) =>{ 
+                //         delete gameAlreadyProcessed[game_id]
+                //     })
+                // },15_000)
+
             }
-
-            const newCanLootGamesFromApi = canLootGamesFromApi.filter(({game_id})=>{
-                const result = !gameAlreadyProcessed[game_id]
-                gameAlreadyProcessed[game_id] = true
-                return result
-            })
-
-            task(newCanLootGamesFromApi)
-
-            setTimeout(()=>{
-                newCanLootGamesFromApi.forEach( ({game_id}) =>{ 
-                    delete gameAlreadyProcessed[game_id]
-                })
-            },15_000)
                 
         } catch (error) {
             console.error('ERROR retrieving canLootGames', String(error));
+            actualPage=0
         }
 
         processing = false

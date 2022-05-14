@@ -57,7 +57,13 @@ export const getPercentualStepDistribution = (sortedValues: Array<any>, steps): 
     return stepMaxValuesByPercentage
 }
 
+export const currentServerTimeStamp = (): number => {
+    return Math.floor((+new Date())/1000)
+}
+
 export const currentBlockTimeStamp = async (hre: HardhatRuntimeEnvironment): Promise<number> => {
+    // TODO Change to off chain request when possible.
+    return currentServerTimeStamp()
     const blockNumber = await hre.ethers.provider.getBlockNumber()
     const timestamp = (await hre.ethers.provider.getBlock(blockNumber)).timestamp;
     return timestamp

@@ -12,7 +12,7 @@ import * as express from "express"
 import axios from "axios";
 import { MAINNET_AVAX_MAIN_ACCOUNTS_PKS } from "../hardhat.config";
 import { Player } from "../scripts/hre";
-import { CanLootGameFromApi, DEBUG, listenCanLootGamesFromApi } from "../scripts/api";
+import { CanLootGameFromApi, DEBUG, HasToReadNextPageFunction, listenCanLootGamesFromApi } from "../scripts/api";
 
 type LootFunction = (
     unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
@@ -54,7 +54,7 @@ const initializePlayerTeamPair = async (hre: HardhatRuntimeEnvironment, players:
 
 const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contract, playerTeamPairs: PlayerTeamPair[], testmode: boolean, log: (typeof console.log)) => {
 
-    // TODO Restor off chain requests.
+    // TODO Restore off chain requests.
 
     const settledByTeamId = {}
     const lockedByTeamId = {}
@@ -393,7 +393,8 @@ const attackTeams = async (
 const lootLoop = async (
     hre: HardhatRuntimeEnvironment, looters: Player[], 
     blockstoanalyze: number, firstdefendwindow: number, testmode: boolean,
-    lootFunction: LootFunction, needsToContinueRunning: () => Promise<boolean>) => {
+    lootFunction: LootFunction, needsToContinueRunning: () => Promise<boolean>,
+    hasToReadNextMineToLootPage: HasToReadNextPageFunction) => {
 
     // const updateGasPrice = updateGasPriceFunction(hre)
     // const gasPriceUpdateInterval = setInterval(updateGasPrice, 10_000)
@@ -458,7 +459,7 @@ const lootLoop = async (
 
     // Set interval for updating teams' lock status.
 
-    const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, ()=>{}), 10_000);
+    const updateLockStatusInterval = setInterval(() => updateLockStatus(hre, idleGame, playerTeamPairs, testmode, ()=>{}), 5_000);
 
     // Listen pending startGame transactions or StartGame events.
 
@@ -502,7 +503,6 @@ const lootLoop = async (
 
     // }, 50)
 
-
     const listenCanLootGamesFromApiInterval = await listenCanLootGamesFromApi(hre, (canLootGamesFromApi: CanLootGameFromApi[]) => {
 
         const teamsAndTheirTransaction: TeamAndItsTransaction[] = canLootGamesFromApi
@@ -524,7 +524,7 @@ const lootLoop = async (
             
         attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
 
-    }, 1000)
+    }, hasToReadNextMineToLootPage, 1_000)
 
     // Never finish
     await new Promise((resolve) => {
@@ -657,7 +657,7 @@ class AttackExecutor{
 
             attackInExecution = false
 
-        },10_000)
+        },5_000)
 
     }
 
@@ -847,6 +847,10 @@ class AttackServer {
         }
 
         return secondsToUnlock
+    }
+
+    hasPendingCaptchaResponses(){
+        return this.pendingResponses.length > 0
     }
 
     async needsToContinueRunning(): Promise<boolean>{
@@ -1345,8 +1349,15 @@ task(
 
         }
 
-        await lootLoop(hre, hre.crabada.network.LOOT_CAPTCHA_CONFIG.players, blockstoanalyze, firstdefendwindow, testmode, returnCaptchaData,
-            async (): Promise<boolean> => { return await attackServer.needsToContinueRunning() })
+        const hasToReadNextMineToLootPage = (): boolean => {
+            return attackServer.hasPendingCaptchaResponses()
+        }
+
+        await lootLoop(
+            hre, hre.crabada.network.LOOT_CAPTCHA_CONFIG.players, blockstoanalyze, firstdefendwindow, testmode, 
+            returnCaptchaData,
+            async (): Promise<boolean> => { return await attackServer.needsToContinueRunning() },
+            hasToReadNextMineToLootPage)
 
         await attackServer.waitUntilNeedsToContinueRunning()
 
