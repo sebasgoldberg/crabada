@@ -2,6 +2,7 @@ import axios, { Axios, AxiosResponse, AxiosStatic } from "axios";
 import { BigNumber } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { resolve } from "path";
+import { currentBlockTimeStamp } from "./crabada";
 import { CrabadaNetwork } from "./hre";
 import { ClassNameByCrabada, CrabadaClassName, TeamFaction } from "./teambp";
 
@@ -37,6 +38,7 @@ export interface CanLootGameFromApi{
     faction: TeamFaction,
     attack_team_id: number,
     defense_point: number,
+    defense_mine_point: number
 }
 
 export const DEBUG = false
@@ -141,6 +143,8 @@ export class CrabadaAPI{
 
     async getCanLootGames(actualPage: number, minesPerPage: number): Promise<CanLootGameFromApi[]>{
 
+        const timestamp = Math.floor(+new Date()/10)
+
         const headers = {
             'authority': 'idle-api.crabada.com',
             'pragma': 'no-cache',
@@ -175,6 +179,10 @@ export class CrabadaAPI{
             ).data
 
         return (data as CanLootGameFromApi[])
+            .filter( mine => {
+                const maxAttackWindow = mine.defense_mine_point > 230 ? 3600 : 3600+1800
+                return (timestamp - mine.start_time) < (maxAttackWindow-120)
+              })
     }
 
     async get(url): Promise<AxiosResponse<any,any>>{
@@ -403,10 +411,16 @@ export const listenCanLootGamesFromApi = async (hre: HardhatRuntimeEnvironment, 
 
             if (actualPage > maxPage){
                 maxPage = await hre.crabada.api.getCanLootGamesPageQuantity(minesPerPage)
-                actualPage = 0
+                actualPage = 1
             }
 
             const canLootGamesFromApi: CanLootGameFromApi[] = await hre.crabada.api.getCanLootGames(actualPage, minesPerPage)
+
+            if (canLootGamesFromApi.length == 0){
+                maxPage = await hre.crabada.api.getCanLootGamesPageQuantity(minesPerPage)
+                actualPage = 1
+                const canLootGamesFromApi: CanLootGameFromApi[] = await hre.crabada.api.getCanLootGames(actualPage, minesPerPage)
+            }
 
             const newCanLootGamesFromApi = canLootGamesFromApi.filter(({game_id})=>{
                 const result = !gameAlreadyProcessed[game_id]
