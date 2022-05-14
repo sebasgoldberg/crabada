@@ -57,17 +57,21 @@ const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contra
     // TODO Restor off chain requests.
 
     const settledByTeamId = {}
+    const lockedByTeamId = {}
+
+    const timestamp = await currentBlockTimeStamp(hre)
 
     for (const { address } of hre.crabada.network.LOOT_CAPTCHA_CONFIG.players){
         const teams = await hre.crabada.api.getTeams(address)
         for (const team of teams){
+            lockedByTeamId[String(team.team_id)] = (team.game_end_time-timestamp >= 0)
             settledByTeamId[String(team.team_id)] = team.game_id ? false : true
         }
     }
 
     playerTeamPairs.map( (playerTeamPair) => {
+        playerTeamPair.locked = !testmode && lockedByTeamId[String(playerTeamPair.teamId)]
         playerTeamPair.settled = testmode || settledByTeamId[String(playerTeamPair.teamId)]
-        playerTeamPair.locked = !testmode && !playerTeamPair.settled
     })
 
     return
