@@ -656,7 +656,7 @@ class AttackExecutor{
 
             attackInExecution = false
 
-        },2000)
+        },10_000)
 
     }
 
