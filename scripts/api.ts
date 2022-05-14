@@ -47,6 +47,8 @@ interface ITeamsFromAddress{
     game_end_time: number,
     team_id: number,
     game_id: number,
+    game_type: string,
+    game_start_time: number,
 }
 
 export class CrabadaAPI{
