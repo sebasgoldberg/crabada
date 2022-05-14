@@ -26,9 +26,9 @@ export const classNameFromDna = (dna: BigNumber): CrabadaClassName => {
 
 }
 
-export type TeamFaction = 'ABYSS' | 'TRENCH' | 'ORE' | 'LUX' | 'MACHINE' | 'FAERIES' | 'NO_FACTION'
+export type TeamFaction = 'ABYSS' | 'TRENCH' | 'ORE' | 'LUX' | 'MACHINE' | 'FAERIE' | 'NO_FACTION'
 
-const FACTIONS: TeamFaction[] = [ 'ABYSS' , 'TRENCH' , 'ORE' , 'LUX' , 'MACHINE' , 'FAERIES' ]
+const FACTIONS: TeamFaction[] = [ 'ABYSS' , 'TRENCH' , 'ORE' , 'LUX' , 'MACHINE' , 'FAERIE' ]
 
 type FactionByClassName = {
     [className in CrabadaClassName]: TeamFaction;
@@ -41,7 +41,7 @@ const FACTION_BY_CLASS_NAME: FactionByClassName = {
     'PRIME': 'LUX',
     'GEM': 'LUX',
     'CRABOID': 'MACHINE',
-    'ORGANIC': 'FAERIES',
+    'ORGANIC': 'FAERIE',
 }
 
 export const getTeamFaction = (
@@ -85,12 +85,12 @@ export const LOOTERS_FACTION: TeamFaction = "LUX"
 const USE_LOOTERS_ADVANTAGE = true
 
 const ADVANTAGE_MATRIX: AdvantagesByFaction = {
-    LUX: USE_LOOTERS_ADVANTAGE ? [ "ORE", "FAERIES" ] : [],
-    FAERIES: [ "ORE", "ABYSS" ],
+    LUX: USE_LOOTERS_ADVANTAGE ? [ "ORE", "FAERIE" ] : [],
+    FAERIE: [ "ORE", "ABYSS" ],
     ORE: [ "ABYSS", "TRENCH" ],
     ABYSS: [ "TRENCH", "MACHINE" ],
     TRENCH: [ "MACHINE", "LUX" ],
-    MACHINE: [ "LUX", "FAERIES" ],
+    MACHINE: [ "LUX", "FAERIE" ],
     "NO_FACTION": []
 }
 
