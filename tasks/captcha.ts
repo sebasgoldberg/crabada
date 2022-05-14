@@ -836,7 +836,7 @@ class AttackServer {
         for (const {address} of this.hre.crabada.network.LOOT_CAPTCHA_CONFIG.players){
             const teams = await this.hre.crabada.api.getTeams(address)
             for (const team of teams){
-                secondsToUnlock.push(teams.game_end_time-timestamp)
+                secondsToUnlock.push(team.game_end_time-timestamp)
             }
         }
 
