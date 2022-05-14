@@ -605,6 +605,17 @@ class AttackExecutor{
         this.hre = hre
     }
 
+    isUsingTeamId(teamId: number): boolean{
+        const teamsAlreadyAttacking = []
+
+        for (const gameId in this.attackTransactionsDataByGameId){
+            const data = this.attackTransactionsDataByGameId[gameId]
+            teamsAlreadyAttacking.push(Number(data.team_id))
+        }
+
+        return teamsAlreadyAttacking.includes(teamId)
+    }
+
     addAttackTransactionData(attackTransactionData: AttackTransactionData){
         this.attackTransactionsDataByGameId[attackTransactionData.game_id] = attackTransactionData
     }
@@ -1161,9 +1172,13 @@ class AttackServer {
 
     }
 
+    gameIdAlreadyProcessed: { [gameId: string]: boolean } = {}
+
     respondStatusPendingChallenge(challenge: string){
 
         const pendingChallenge = this.pendingChallenge[challenge]
+
+        this.gameIdAlreadyProcessed[String(pendingChallenge.game_id)] = true
 
         if (!pendingChallenge)
             return
@@ -1187,7 +1202,7 @@ class AttackServer {
 
         pendingChallenge.status.resolveStatusResponse(undefined)
 
-        delete pendingChallenge[challenge]
+        delete this.pendingChallenge[challenge]
 
     }
 
@@ -1287,7 +1302,14 @@ class AttackServer {
         const teamIdsAlreadyUsed: number[] = []
 
         for (const t of targetsOrderByGameIdDescending){
+
+            if (this.gameIdAlreadyProcessed[String(t.gameId)])
+                continue
+
             for (const p of playerTeamPairsOrderByNotInRecentTeams){
+
+                if (this.attackExecutor.isUsingTeamId(p.teamId))
+                    continue
 
                 // Do not use same team for different targets.
                 if (teamIdsAlreadyUsed.includes(p.teamId))

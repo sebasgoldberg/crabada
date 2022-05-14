@@ -405,7 +405,7 @@ export const listenCanLootGamesFromApi = async (
     let processing: boolean = false
 
     let actualPage = 0
-    const minesPerPage = 25
+    const minesPerPage = 50
 
     return setInterval(async () => {
 
