@@ -3,9 +3,9 @@ import { assert } from "console";
 import { BigNumber, Contract, ethers, Wallet } from "ethers";
 import { task, types } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { closeGame, getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
+import { closeGame, currentBlockTimeStamp, getCrabadaContracts, getTeamsBattlePoint, getTeamsThatPlayToLooseByTeamId, isTeamLocked, ONE_GWEI, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
-import { getClassNameByCrabada, getDashboardContent, getSigner, isLootingPeriod } from "./crabada";
+import { getClassNameByCrabada, getSigner, isLootingPeriod } from "./crabada";
 
 
 import * as express from "express"
@@ -828,16 +828,24 @@ class AttackServer {
 
     hre: HardhatRuntimeEnvironment
 
+    async teamsSecondsToUnlock(): Promise<number[]>{
+        const timestamp = await currentBlockTimeStamp(this.hre)
+
+        const secondsToUnlock: number[] = []
+
+        for (const {address} of this.hre.crabada.network.LOOT_CAPTCHA_CONFIG.players){
+            const teams = await this.hre.crabada.api.getTeams(address)
+            for (const team of teams){
+                secondsToUnlock.push(teams.game_end_time-timestamp)
+            }
+        }
+
+        return secondsToUnlock
+    }
+
     async needsToContinueRunning(): Promise<boolean>{
 
-        const {
-            players
-        } = await getDashboardContent(this.hre)
-
-        const secondsToUnlock: number[] = players
-            .flatMap( ({ teams }) => teams.map( ({ info: { secondsToUnlock }}) => secondsToUnlock ) )
-
-        return secondsToUnlock.some(x => x < 600)
+        return (await this.teamsSecondsToUnlock()).some(x => x < 600)
 
     }
 
@@ -873,12 +881,7 @@ class AttackServer {
 
         this.app.get('/status/', async (req, res) => {
 
-            const {
-                players
-            } = await getDashboardContent(hre)
-
-            const secondsToUnlock: number[] = players
-                .flatMap( ({ teams }) => teams.map( ({ info: { secondsToUnlock }}) => secondsToUnlock ) )
+            const secondsToUnlock: number[] = await this.teamsSecondsToUnlock()
 
             res.json({
                 unlocked: secondsToUnlock.filter( x => x < 0 ).length,
