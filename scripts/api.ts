@@ -417,7 +417,7 @@ export const listenCanLootGamesFromApi = async (
         
         processing = true
 
-        // try {
+        try {
 
             actualPage++
 
@@ -446,10 +446,10 @@ export const listenCanLootGamesFromApi = async (
 
             }
                 
-        // } catch (error) {
-        //     console.error('ERROR retrieving canLootGames', String(error));
-        //     actualPage=0
-        // }
+        } catch (error) {
+            console.error('ERROR retrieving canLootGames', String(error));
+            actualPage=0
+        }
 
         processing = false
 

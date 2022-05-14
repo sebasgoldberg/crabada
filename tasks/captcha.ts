@@ -216,11 +216,7 @@ const attackTeamsThatStartedAGame = (
             return
         }
 
-        const pairsStrongerThanTarget = playerTeamPairs.filter( p => {
-            console.log('p.battlePoint', p.battlePoint.teamFaction);
-            console.log('targetTeamInfo.battlePoint', targetTeamInfo.battlePoint.teamFaction);
-            return p.battlePoint.gt(targetTeamInfo.battlePoint)
-        })
+        const pairsStrongerThanTarget = playerTeamPairs.filter( p => p.battlePoint.gt(targetTeamInfo.battlePoint))
 
         if (pairsStrongerThanTarget.length == 0){
             return
