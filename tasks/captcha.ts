@@ -1307,6 +1307,8 @@ class AttackServer {
 
     recentTeams = []
 
+    lastAddressSentCaptcha = undefined
+
     returnCaptchaData(unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[], targets: Target[]){
 
         const targetsOrderByGameIdDescending = targets.sort((a, b) => b.gameId < a.gameId ? -1 : b.gameId > a.gameId ? 1 : 0 )
@@ -1317,6 +1319,10 @@ class AttackServer {
             return aInRecentTeams == bInRecentTeams ? 0 : aInRecentTeams ? 1 : -1
         })
 
+        const excludedAddress = playerTeamPairsOrderByNotInRecentTeams
+            .filter( p => p.playerAddress.toLowerCase() != this.lastAddressSentCaptcha )
+            .length > 0 ? this.lastAddressSentCaptcha : undefined
+
         const teamIdsAlreadyUsed: number[] = []
 
         for (const t of targetsOrderByGameIdDescending){
@@ -1325,6 +1331,9 @@ class AttackServer {
                 continue
 
             for (const p of playerTeamPairsOrderByNotInRecentTeams){
+
+                if (p.playerAddress == excludedAddress)
+                    continue
 
                 if (this.attackExecutor.isTeamBusy(p.teamId))
                     continue
@@ -1348,6 +1357,8 @@ class AttackServer {
                         return
 
                     teamIdsAlreadyUsed.push(p.teamId)
+
+                    this.lastAddressSentCaptcha = p.playerAddress
 
                     // Do not use same target for different teams.
                     break
