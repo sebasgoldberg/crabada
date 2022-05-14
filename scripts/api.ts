@@ -41,6 +41,12 @@ export interface CanLootGameFromApi{
 
 export const DEBUG = false
 
+interface ITeamsFromAddress{
+    game_end_time: number,
+    team_id: number,
+    game_id: number,
+}
+
 export class CrabadaAPI{
 
     idleGameApiBaseUrl: string
@@ -58,7 +64,7 @@ export class CrabadaAPI{
 
     }
 
-    async getTeams(address: string): Promise<any>{
+    async getTeams(address: string): Promise<ITeamsFromAddress[]>{
         const headers = {
             'authority': 'idle-api.crabada.com',
             'pragma': 'no-cache',
