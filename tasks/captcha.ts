@@ -607,7 +607,7 @@ class AttackExecutor{
     hre: HardhatRuntimeEnvironment
     attackTransactionsDataByGameId: AttackTransactionDataByGameId = {}
     idleGame: Contract
-    teamsThatPerformedAttack: number[]
+    teamsThatPerformedAttack: number[] = []
 
     constructor(hre: HardhatRuntimeEnvironment){
         this.hre = hre
