@@ -1399,11 +1399,11 @@ task(
 
         const attackServer = new AttackServer(hre)
 
+        await attackServer.initialize()
+
         if (!(await attackServer.needsToContinueRunning())){
             await attackServer.waitUntilNeedsToContinueRunning()
         }
-
-        await attackServer.initialize()
 
         const returnCaptchaData: LootFunction = (
             unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
