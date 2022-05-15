@@ -1162,7 +1162,7 @@ class AttackServer {
 
     async initialize(){
         this.teamsThatPlayToLooseByTeamId = AttackServer.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE ? 
-            await getTeamsThatPlayToLooseByTeamIdUsingApi(this.hre) : {}
+            (await getTeamsThatPlayToLooseByTeamIdUsingApi(this.hre)) : {}
     }
 
     async registerOrRetryAttack(challenge: string, captchaVerifyResponse: CaptchaVerifyResult){

@@ -40,7 +40,7 @@ export interface CanLootGameFromApi{
     defense_mine_point: number
 }
 
-export const DEBUG = false
+export const DEBUG = true
 
 interface ITeamsFromAddress{
     game_end_time: number,
