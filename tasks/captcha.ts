@@ -1158,9 +1158,11 @@ class AttackServer {
     }
 
     teamsThatPlayToLooseByTeamId: ITeamsThatPlayToLooseByTeamId = {}
+    static ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
 
     async initialize(){
-        this.teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamIdUsingApi(this.hre)
+        this.teamsThatPlayToLooseByTeamId = AttackServer.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE ? 
+            await getTeamsThatPlayToLooseByTeamIdUsingApi(this.hre) : {}
     }
 
     async registerOrRetryAttack(challenge: string, captchaVerifyResponse: CaptchaVerifyResult){
@@ -1327,7 +1329,6 @@ class AttackServer {
     }
 
     recentTeams = []
-    static ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
 
     returnCaptchaData(unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[], targets: Target[]){
 

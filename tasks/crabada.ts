@@ -148,6 +148,7 @@ export const delay = async (ms: number, log = console.log): Promise<void> => {
 }
 
 export const isLootingPeriod = ():boolean => {
+    return true
     const d = new Date()
     const hours = d.getUTCHours()
     return (hours >= (7+3) && hours < (20+3))
