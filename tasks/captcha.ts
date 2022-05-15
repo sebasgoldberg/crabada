@@ -13,6 +13,7 @@ import axios from "axios";
 import { MAINNET_AVAX_MAIN_ACCOUNTS_PKS } from "../hardhat.config";
 import { Player } from "../scripts/hre";
 import { CanLootGameFromApi, DEBUG, listenCanLootGamesFromApi } from "../scripts/api";
+import { getTeamsThatPlayToLooseByTeamIdUsingApi, ITeamsThatPlayToLooseByTeamId } from "../scripts/strategy";
 
 type LootFunction = (
     unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
@@ -1156,6 +1157,12 @@ class AttackServer {
 
     }
 
+    teamsThatPlayToLooseByTeamId: ITeamsThatPlayToLooseByTeamId = {}
+
+    async initialize(){
+        this.teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamIdUsingApi(this.hre)
+    }
+
     async registerOrRetryAttack(challenge: string, captchaVerifyResponse: CaptchaVerifyResult){
 
         const pendingChallenge = this.pendingChallenge[challenge]
@@ -1320,6 +1327,7 @@ class AttackServer {
     }
 
     recentTeams = []
+    static ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
 
     returnCaptchaData(unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[], targets: Target[]){
 
@@ -1334,6 +1342,9 @@ class AttackServer {
         const teamIdsAlreadyUsed: number[] = []
 
         for (const t of targetsOrderByGameIdDescending){
+
+            if (AttackServer.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE && !this.teamsThatPlayToLooseByTeamId[Number(t.teamId)])
+                continue
 
             if (this.gameIdAlreadyProcessed[String(t.gameId)])
                 continue
@@ -1390,6 +1401,8 @@ task(
         if (!(await attackServer.needsToContinueRunning())){
             await attackServer.waitUntilNeedsToContinueRunning()
         }
+
+        await attackServer.initialize()
 
         const returnCaptchaData: LootFunction = (
             unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
