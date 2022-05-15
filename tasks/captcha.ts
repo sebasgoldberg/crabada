@@ -1361,6 +1361,8 @@ class AttackServer {
                     teamIdsAlreadyUsed.push(p.teamId)
 
                     this.lastAddressSentCaptcha = p.playerAddress
+                    console.log('this.lastAddressSentCaptcha', this.lastAddressSentCaptcha);
+                    console.log('p.playerAddress', p.playerAddress);
 
                     // Do not use same target for different teams.
                     break
