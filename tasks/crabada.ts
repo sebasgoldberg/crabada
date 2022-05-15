@@ -148,6 +148,7 @@ export const delay = async (ms: number, log = console.log): Promise<void> => {
 }
 
 export const isLootingPeriod = ():boolean => {
+    return false
     const d = new Date()
     const hours = d.getUTCHours()
     return (hours >= (7+3) && hours < (20+3))
@@ -186,7 +187,7 @@ task(
                     for (const teamId of mineGroup.teamsOrder){
                         const { signerIndex } = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
                         const minerSigner = await getSigner(hre, undefined, signerIndex);
-                        previousTeam = undefined // TODO Remove in case do only mining.
+                        // previousTeam = undefined // TODO Remove in case do only mining.
                         await mineStep(hre, teamId, undefined, undefined, wait, minerSigner, previousTeam, [])
                         previousTeam = teamId
                     }
@@ -1889,7 +1890,7 @@ export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
 const SETTLER_TARGET_BALANCE = parseEther('8')
 
-export const MINE_MODE = false
+export const MINE_MODE = true
 export const ATTACK_MODE = !MINE_MODE
 
 export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.log ) => {

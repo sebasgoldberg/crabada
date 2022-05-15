@@ -104,15 +104,15 @@ export class CrabadaNetwork{
     SWIMMER_MINE_GROUPS: MineGroup[] = [
         {
             teamsOrder: [ 12929, 12942, 12949, 12954, 12958, 12964, 12968, 12973 ],
-            crabadaReinforcers: [ /*87155, 87156,*/ ],
+            crabadaReinforcers: [ 87155, 87156, ],
         },
         {
             teamsOrder: [ 13001, 13008, 13012, 13015, 13020, 13026, 13031, 13035 ],
-            crabadaReinforcers: [ /*50097, 49769,*/ ],
+            crabadaReinforcers: [ 50097, 49769, ],
         },
         {
             teamsOrder: [ 13291, 13294, 13299, 13303 ],
-            crabadaReinforcers: [  ],
+            crabadaReinforcers: [ 121603, 121309 ],
         },
     ]
 
