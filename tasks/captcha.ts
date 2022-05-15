@@ -1315,14 +1315,14 @@ class AttackServer {
             return aInRecentTeams == bInRecentTeams ? 0 : aInRecentTeams ? 1 : -1
         })
 
-        console.log('this.lastAddressSentCaptcha', this.lastAddressSentCaptcha);
-        console.log('playerTeamPairsOrderByNotInRecentTeams', playerTeamPairsOrderByNotInRecentTeams.map(({playerAddress})=>playerAddress));
+        // console.log('this.lastAddressSentCaptcha', this.lastAddressSentCaptcha);
+        // console.log('playerTeamPairsOrderByNotInRecentTeams', playerTeamPairsOrderByNotInRecentTeams.map(({playerAddress})=>playerAddress));
         
         const excludedAddress = playerTeamPairsOrderByNotInRecentTeams
             .filter( p => p.playerAddress.toLowerCase() != this.lastAddressSentCaptcha )
             .length > 0 ? this.lastAddressSentCaptcha : undefined
 
-        console.log('excludedAddress', excludedAddress);
+        // console.log('excludedAddress', excludedAddress);
         
 
         const teamIdsAlreadyUsed: number[] = []
@@ -1334,7 +1334,7 @@ class AttackServer {
 
             for (const p of playerTeamPairsOrderByNotInRecentTeams){
 
-                if (p.playerAddress == excludedAddress)
+                if (p.playerAddress.toLowerCase() == excludedAddress.toLowerCase())
                     continue
 
                 if (this.attackExecutor.isTeamBusy(p.teamId))
@@ -1347,8 +1347,8 @@ class AttackServer {
                 if (p.battlePoint.gt(t.battlePoint)){
 
                     this.lastAddressSentCaptcha = p.playerAddress
-                    console.log('this.lastAddressSentCaptcha', this.lastAddressSentCaptcha);
-                    console.log('p.playerAddress', p.playerAddress);
+                    // console.log('this.lastAddressSentCaptcha', this.lastAddressSentCaptcha);
+                    // console.log('p.playerAddress', p.playerAddress);
 
                     // TODO Search captcha response for (p, t)
                     // TODO With captcha response try to attack.
