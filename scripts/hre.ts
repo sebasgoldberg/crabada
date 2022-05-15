@@ -47,7 +47,7 @@ export class CrabadaNetwork{
         {
             signerIndex: 0,
             address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-            teams: [ 12942, 12954, 12929, 12949, 12958, 12964, 12968/*, 12973*/ ],
+            teams: [ 12942, 12954, 12929, 12949, 12958, 12964, 12968, 12973 ],
         },
         {
             signerIndex: 1,
@@ -103,7 +103,7 @@ export class CrabadaNetwork{
 
     SWIMMER_MINE_GROUPS: MineGroup[] = [
         {
-            teamsOrder: [ 12942, 12954, 12929, 12949, 12958, 12964, 12968/*, 12973*/ ],
+            teamsOrder: [ 12942, 12954, 12929, 12949, 12958, 12964, 12968, 12973 ],
             crabadaReinforcers: [ 87155, 87156, ],
         },
         {
