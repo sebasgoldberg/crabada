@@ -1161,8 +1161,8 @@ class AttackServer {
     static ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
 
     async initialize(){
-        this.teamsThatPlayToLooseByTeamId = AttackServer.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE ? 
-            (await getTeamsThatPlayToLooseByTeamIdUsingApi(this.hre)) : {}
+        if (AttackServer.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE)
+            this.teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamIdUsingApi(this.hre)
     }
 
     async registerOrRetryAttack(challenge: string, captchaVerifyResponse: CaptchaVerifyResult){
