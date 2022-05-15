@@ -633,6 +633,7 @@ class AttackExecutor{
 
     addAttackTransactionData(attackTransactionData: AttackTransactionData){
         this.attackTransactionsDataByGameId[attackTransactionData.game_id] = attackTransactionData
+        this.setAddressRecentlyAttacked(attackTransactionData.user_address)
     }
 
     addressRecentlyAttackedByAdress: {
@@ -672,7 +673,6 @@ class AttackExecutor{
             console.log('txr.hash', txr.hash);
             this.teamsThatPerformedAttack.push(Number(team_id))
             delete this.attackTransactionsDataByGameId[game_id]
-            this.setAddressRecentlyAttacked(looterSigner.address)
         } catch (error) {
             console.error('Error trying to attack', String(error));
             if ((+new Date()/1000)>Number(expire_time))
