@@ -1404,9 +1404,15 @@ task(
         }
 
         const hasToReadNextMineToLootPage = (playerTeamPairs: PlayerTeamPair[]): boolean => {
-            const playerTeamPairsThatRecentlyAttacked = playerTeamPairs
+
+            const playerTeamPairsSettled = playerTeamPairs
+                .filter( p => p.settled)
+
+            const playerTeamPairsThatRecentlyAttacked = playerTeamPairsSettled
                 .filter( p => attackServer.attackExecutor.hasAddressRecentlyAttacked(p.playerAddress))
-            const allTeamsRecentlyAttacked = playerTeamPairsThatRecentlyAttacked.length == playerTeamPairs.length
+
+            const allTeamsRecentlyAttacked = playerTeamPairsSettled.length == playerTeamPairs.length
+
             return attackServer.hasPendingCaptchaResponses() && !allTeamsRecentlyAttacked
         }
 
