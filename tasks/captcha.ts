@@ -1334,8 +1334,8 @@ class AttackServer {
 
             for (const p of playerTeamPairsOrderByNotInRecentTeams){
 
-                if (excludedAddress && p.playerAddress.toLowerCase() == excludedAddress.toLowerCase())
-                    continue
+                // if (excludedAddress && p.playerAddress.toLowerCase() == excludedAddress.toLowerCase())
+                //     continue
 
                 if (this.attackExecutor.isTeamBusy(p.teamId))
                     continue
