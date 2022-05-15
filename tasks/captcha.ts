@@ -1315,9 +1315,15 @@ class AttackServer {
             return aInRecentTeams == bInRecentTeams ? 0 : aInRecentTeams ? 1 : -1
         })
 
+        console.log('this.lastAddressSentCaptcha', this.lastAddressSentCaptcha);
+        console.log('playerTeamPairsOrderByNotInRecentTeams', playerTeamPairsOrderByNotInRecentTeams.map(({playerAddress})=>playerAddress));
+        
         const excludedAddress = playerTeamPairsOrderByNotInRecentTeams
             .filter( p => p.playerAddress.toLowerCase() != this.lastAddressSentCaptcha )
             .length > 0 ? this.lastAddressSentCaptcha : undefined
+
+        console.log('excludedAddress', excludedAddress);
+        
 
         const teamIdsAlreadyUsed: number[] = []
 
