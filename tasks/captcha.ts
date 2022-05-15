@@ -12,7 +12,7 @@ import * as express from "express"
 import axios from "axios";
 import { MAINNET_AVAX_MAIN_ACCOUNTS_PKS } from "../hardhat.config";
 import { Player } from "../scripts/hre";
-import { CanLootGameFromApi, DEBUG, HasToReadNextPageFunction, listenCanLootGamesFromApi } from "../scripts/api";
+import { CanLootGameFromApi, DEBUG, listenCanLootGamesFromApi } from "../scripts/api";
 
 type LootFunction = (
     unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
@@ -22,7 +22,7 @@ type LootFunction = (
     testmode: boolean
     ) => void
 
-interface PlayerTeamPair {
+export interface PlayerTeamPair {
     playerAddress: string,
     teamId: number,
     locked: boolean,
@@ -390,6 +390,8 @@ const attackTeams = async (
 
 }
 
+type HasToReadNextPageFunction = (playerTeamPairs: PlayerTeamPair[]) => boolean
+
 const lootLoop = async (
     hre: HardhatRuntimeEnvironment, looters: Player[], 
     blockstoanalyze: number, firstdefendwindow: number, testmode: boolean,
@@ -529,7 +531,7 @@ const lootLoop = async (
         const unlockedPlayerTeamPairs = playerTeamPairs
             .filter( p => (!p.locked && p.settled) || testmode )
 
-        return hasToReadNextMineToLootPage() && unlockedPlayerTeamPairs.length > 0
+        return hasToReadNextMineToLootPage(playerTeamPairs) && unlockedPlayerTeamPairs.length > 0
 
     }, 1_000)
 
@@ -632,6 +634,21 @@ class AttackExecutor{
         this.attackTransactionsDataByGameId[attackTransactionData.game_id] = attackTransactionData
     }
 
+    addressRecentlyAttackedByAdress: {
+        [addressInLowerCase: string]: boolean
+    } = {}
+
+    hasAddressRecentlyAttacked(address: string){
+        return this.addressRecentlyAttackedByAdress[address.toLowerCase()]
+    }
+
+    setAddressRecentlyAttacked(address: string){
+        this.addressRecentlyAttackedByAdress[address.toLowerCase()] = true
+        setTimeout(() => {
+            this.addressRecentlyAttackedByAdress[address.toLowerCase()] = false
+        }, 30_000)
+    }
+
     async attackTransaction({user_address, game_id, team_id, expire_time, signature}: AttackTransactionData){
 
         const { idleGame } = getCrabadaContracts(this.hre)
@@ -654,6 +671,7 @@ class AttackExecutor{
             console.log('txr.hash', txr.hash);
             this.teamsThatPerformedAttack.push(Number(team_id))
             delete this.attackTransactionsDataByGameId[game_id]
+            this.setAddressRecentlyAttacked(looterSigner.address)
         } catch (error) {
             console.error('Error trying to attack', String(error));
             if ((+new Date()/1000)>Number(expire_time))
@@ -1303,8 +1321,6 @@ class AttackServer {
 
     recentTeams = []
 
-    lastAddressSentCaptcha = undefined
-
     returnCaptchaData(unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[], targets: Target[]){
 
         const targetsOrderByGameIdDescending = targets.sort((a, b) => b.gameId < a.gameId ? -1 : b.gameId > a.gameId ? 1 : 0 )
@@ -1315,16 +1331,6 @@ class AttackServer {
             return aInRecentTeams == bInRecentTeams ? 0 : aInRecentTeams ? 1 : -1
         })
 
-        // console.log('this.lastAddressSentCaptcha', this.lastAddressSentCaptcha);
-        // console.log('playerTeamPairsOrderByNotInRecentTeams', playerTeamPairsOrderByNotInRecentTeams.map(({playerAddress})=>playerAddress));
-        
-        const excludedAddress = playerTeamPairsOrderByNotInRecentTeams
-            .filter( p => p.playerAddress != this.lastAddressSentCaptcha )
-            .length > 0 ? this.lastAddressSentCaptcha : undefined
-
-        // console.log('excludedAddress', excludedAddress);
-        
-
         const teamIdsAlreadyUsed: number[] = []
 
         for (const t of targetsOrderByGameIdDescending){
@@ -1334,7 +1340,7 @@ class AttackServer {
 
             for (const p of playerTeamPairsOrderByNotInRecentTeams){
 
-                if (excludedAddress && p.playerAddress == excludedAddress)
+                if (this.attackExecutor.hasAddressRecentlyAttacked(p.playerAddress))
                     continue
 
                 if (this.attackExecutor.isTeamBusy(p.teamId))
@@ -1345,13 +1351,6 @@ class AttackServer {
                     continue
 
                 if (p.battlePoint.gt(t.battlePoint)){
-
-                    this.lastAddressSentCaptcha = p.playerAddress
-                    // console.log('this.lastAddressSentCaptcha', this.lastAddressSentCaptcha);
-                    // console.log('p.playerAddress', p.playerAddress);
-
-                    // TODO Search captcha response for (p, t)
-                    // TODO With captcha response try to attack.
 
                     this.sendCaptchaDataResponse(p, t);
                     this.recentTeams.push(p.teamId.toString())
@@ -1404,8 +1403,11 @@ task(
 
         }
 
-        const hasToReadNextMineToLootPage = (): boolean => {
-            return attackServer.hasPendingCaptchaResponses()
+        const hasToReadNextMineToLootPage = (playerTeamPairs: PlayerTeamPair[]): boolean => {
+            const playerTeamPairsThatRecentlyAttacked = playerTeamPairs
+                .filter( p => attackServer.attackExecutor.hasAddressRecentlyAttacked(p.playerAddress))
+            const allTeamsRecentlyAttacked = playerTeamPairsThatRecentlyAttacked.length == playerTeamPairs.length
+            return attackServer.hasPendingCaptchaResponses() && !allTeamsRecentlyAttacked
         }
 
         await lootLoop(
