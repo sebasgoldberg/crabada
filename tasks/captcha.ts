@@ -533,7 +533,7 @@ const lootLoop = async (
 
         return hasToReadNextMineToLootPage(playerTeamPairs) && unlockedPlayerTeamPairs.length > 0
 
-    }, 1_000)
+    }, 500)
 
     // Never finish
     await new Promise((resolve) => {
