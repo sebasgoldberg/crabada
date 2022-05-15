@@ -1319,7 +1319,7 @@ class AttackServer {
         // console.log('playerTeamPairsOrderByNotInRecentTeams', playerTeamPairsOrderByNotInRecentTeams.map(({playerAddress})=>playerAddress));
         
         const excludedAddress = playerTeamPairsOrderByNotInRecentTeams
-            .filter( p => p.playerAddress.toLowerCase() != this.lastAddressSentCaptcha )
+            .filter( p => p.playerAddress != this.lastAddressSentCaptcha )
             .length > 0 ? this.lastAddressSentCaptcha : undefined
 
         // console.log('excludedAddress', excludedAddress);
@@ -1334,8 +1334,8 @@ class AttackServer {
 
             for (const p of playerTeamPairsOrderByNotInRecentTeams){
 
-                // if (excludedAddress && p.playerAddress.toLowerCase() == excludedAddress.toLowerCase())
-                //     continue
+                if (excludedAddress && p.playerAddress == excludedAddress)
+                    continue
 
                 if (this.attackExecutor.isTeamBusy(p.teamId))
                     continue
