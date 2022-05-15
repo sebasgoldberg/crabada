@@ -470,7 +470,8 @@ export const updateTeamsThatWereChaged = async (
 
     return teamInfoByTeam
 }
-    
+
+
 export const getTeamsThatPlayToLooseByTeamId = async (
     hre: HardhatRuntimeEnvironment, blockstoanalyze: number, 
     firstdefendwindow: number, classNameByCrabada: ClassNameByCrabada, log = console.log, queryPageSize=3600): Promise<TeamInfoByTeam> =>{
