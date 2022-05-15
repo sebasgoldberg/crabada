@@ -392,7 +392,7 @@ type CanLootGamesFromApiTask = (canLootGamesFromApi: CanLootGameFromApi[]) => vo
 
 export type HasToReadNextPageFunction = () => boolean
 
-const READ_ONLY_FIRST_PAGE = true
+const READ_ONLY_FIRST_PAGE = false
 
 export const listenCanLootGamesFromApi = async (
     hre: HardhatRuntimeEnvironment, 
