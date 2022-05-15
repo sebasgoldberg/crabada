@@ -165,7 +165,7 @@ task(
             return
         }
 
-        // while (true){
+        while (true){
 
             for (const mineGroup of hre.crabada.network.MINE_GROUPS){
 
@@ -200,8 +200,8 @@ task(
     
             }
 
-        //     await delay(1000)
-        // }
+            await delay(1000)
+        }
 
     })
     .addOptionalParam("minerteamid", "The teams IDs to use for mining. Separated by ','", undefined, types.string)
