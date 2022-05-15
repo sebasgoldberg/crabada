@@ -646,7 +646,7 @@ class AttackExecutor{
         this.addressRecentlyAttackedByAdress[address.toLowerCase()] = true
         setTimeout(() => {
             this.addressRecentlyAttackedByAdress[address.toLowerCase()] = false
-        }, 30_000)
+        }, 45_000)
     }
 
     async attackTransaction({user_address, game_id, team_id, expire_time, signature}: AttackTransactionData){
