@@ -1425,7 +1425,7 @@ task(
             const playerTeamPairsThatRecentlyAttacked = playerTeamPairsSettled
                 .filter( p => attackServer.attackExecutor.hasAddressRecentlyAttacked(p.playerAddress))
 
-            const allTeamsRecentlyAttacked = playerTeamPairsSettled.length == playerTeamPairs.length
+            const allTeamsRecentlyAttacked = playerTeamPairsSettled.length == playerTeamPairsThatRecentlyAttacked.length
 
             return attackServer.hasPendingCaptchaResponses() && !allTeamsRecentlyAttacked
         }
