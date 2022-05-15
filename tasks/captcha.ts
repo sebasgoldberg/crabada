@@ -1346,6 +1346,10 @@ class AttackServer {
 
                 if (p.battlePoint.gt(t.battlePoint)){
 
+                    this.lastAddressSentCaptcha = p.playerAddress
+                    console.log('this.lastAddressSentCaptcha', this.lastAddressSentCaptcha);
+                    console.log('p.playerAddress', p.playerAddress);
+
                     // TODO Search captcha response for (p, t)
                     // TODO With captcha response try to attack.
 
@@ -1359,10 +1363,6 @@ class AttackServer {
                         return
 
                     teamIdsAlreadyUsed.push(p.teamId)
-
-                    this.lastAddressSentCaptcha = p.playerAddress
-                    console.log('this.lastAddressSentCaptcha', this.lastAddressSentCaptcha);
-                    console.log('p.playerAddress', p.playerAddress);
 
                     // Do not use same target for different teams.
                     break
