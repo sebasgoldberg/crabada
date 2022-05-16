@@ -898,7 +898,7 @@ class AttackServer {
 
     async needsToContinueRunning(): Promise<boolean>{
 
-        return (await this.teamsSecondsToUnlock()).some(x => x < 600)
+        return (await this.teamsSecondsToUnlock()).some(x => x < 900)
 
     }
 
@@ -1158,7 +1158,7 @@ class AttackServer {
     }
 
     teamsThatPlayToLooseByTeamId: ITeamsThatPlayToLooseByTeamId = {}
-    static ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
+    static ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
 
     async initialize(){
         if (AttackServer.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE)

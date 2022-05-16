@@ -70,7 +70,7 @@ export const getTeamsThatPlayToLooseByTeamIdUsingApi = async (hre: HardhatRuntim
             
             })
                 
-        }, 500)
+        }, 1_000)
 
     })
 
