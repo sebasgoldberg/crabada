@@ -31,50 +31,88 @@ export const getTeamsThatPlayToLooseByTeamIdUsingApi = async (hre: HardhatRuntim
 
     const teamsAnalisys: ITeamDefenseAnalisysByTeamId = {}
 
-    await new Promise((resolve) => {
+    while (true){
 
-        const queryMinesInterval = setInterval( async () => {
+        page++
 
-            page++
+        // TODO https://idle-game-api.crabada.com/public/idle/mines?page=1&limit=100
+        const mines: IApiMine[] = await hre.crabada.api.getMines(page, limit)
 
-            // TODO https://idle-game-api.crabada.com/public/idle/mines?page=1&limit=100
-            const mines: IApiMine[] = await hre.crabada.api.getMines(page, limit)
-    
-            const minesFromTimestamp = mines
-                .filter( mine => mine.start_time >= fromTimestamp)
-    
-            if (minesFromTimestamp.length == 0){
-                clearInterval(queryMinesInterval)
-                resolve(undefined)
-                return
+        const minesFromTimestamp = mines
+            .filter( mine => mine.start_time >= fromTimestamp)
+
+        if (minesFromTimestamp.length == 0){
+            break
+        }
+
+        const minesBetweenPeriod = minesFromTimestamp
+            .filter( mine => mine.start_time <= toTimestamp)
+
+        minesBetweenPeriod.forEach( mine => {
+
+            const teamAnalisys: ITeamDefenseAnalisys = teamsAnalisys[mine.team_id] || {
+                defended: 0,
+                notDefended: 0
             }
-    
-            const minesBetweenPeriod = minesFromTimestamp
-                .filter( mine => mine.start_time <= toTimestamp)
-    
-            minesBetweenPeriod.forEach( mine => {
-    
-                const teamAnalisys: ITeamDefenseAnalisys = teamsAnalisys[mine.team_id] || {
-                    defended: 0,
-                    notDefended: 0
-                }
-    
-                const actions = mine.process.map(step => step.action)
 
-                if (actions.includes('attack')){
-                    if (actions.includes('reinforce-defense'))
-                        teamAnalisys.defended += 1
-                    else
-                        teamAnalisys.notDefended += 1 
-                }
+            const actions = mine.process.map(step => step.action)
+
+            if (actions.includes('attack')){
+                if (actions.includes('reinforce-defense'))
+                    teamAnalisys.defended += 1
+                else
+                    teamAnalisys.notDefended += 1 
+            }
+
+            teamsAnalisys[mine.team_id] = teamAnalisys
+        
+        })
+    }
+
+    // await new Promise((resolve) => {
+
+    //     const queryMinesInterval = setInterval( async () => {
+
+    //         page++
+
+    //         // TODO https://idle-game-api.crabada.com/public/idle/mines?page=1&limit=100
+    //         const mines: IApiMine[] = await hre.crabada.api.getMines(page, limit)
     
-                teamsAnalisys[mine.team_id] = teamAnalisys
+    //         const minesFromTimestamp = mines
+    //             .filter( mine => mine.start_time >= fromTimestamp)
+    
+    //         if (minesFromTimestamp.length == 0){
+    //             clearInterval(queryMinesInterval)
+    //             resolve(undefined)
+    //             return
+    //         }
+    
+    //         const minesBetweenPeriod = minesFromTimestamp
+    //             .filter( mine => mine.start_time <= toTimestamp)
+    
+    //         minesBetweenPeriod.forEach( mine => {
+    
+    //             const teamAnalisys: ITeamDefenseAnalisys = teamsAnalisys[mine.team_id] || {
+    //                 defended: 0,
+    //                 notDefended: 0
+    //             }
+    
+    //             const actions = mine.process.map(step => step.action)
+
+    //             if (actions.includes('attack')){
+    //                 if (actions.includes('reinforce-defense'))
+    //                     teamAnalisys.defended += 1
+    //                 else
+    //                     teamAnalisys.notDefended += 1 
+    //             }
+    
+    //             teamsAnalisys[mine.team_id] = teamAnalisys
             
-            })
+    //         })
                 
-        }, 1_000)
+    //     }, 1_000)
 
-    })
+    // })
 
     const result: ITeamsThatPlayToLooseByTeamId = {}
 
