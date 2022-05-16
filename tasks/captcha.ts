@@ -510,7 +510,7 @@ const lootLoop = async (
 
         const teamsAndTheirTransaction: TeamAndItsTransaction[] = canLootGamesFromApi
             // Latest have the priority
-            .sort(({start_time: a}, { start_time: b}) => a < b ? 1 : a > b ? -1 : 0)
+            .sort(({start_time: a}, { start_time: b}) => a < b ? -1 : a > b ? 1 : 0)
             .map(({game_id, team_id, created_at})=>({
                 gameId: BigNumber.from(game_id), 
                 teamId: BigNumber.from(team_id),
