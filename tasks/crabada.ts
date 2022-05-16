@@ -148,10 +148,9 @@ export const delay = async (ms: number, log = console.log): Promise<void> => {
 }
 
 export const isLootingPeriod = ():boolean => {
-    return true
     const d = new Date()
     const hours = d.getUTCHours()
-    return (hours >= (7+3) && hours < (20+3))
+    return (hours >= (10+3) || hours < (2))
 }
 
 // npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
@@ -165,7 +164,7 @@ task(
             return
         }
 
-        while (true){
+        // while (true){
 
             for (const mineGroup of hre.crabada.network.MINE_GROUPS){
 
@@ -200,8 +199,8 @@ task(
     
             }
 
-            await delay(1000)
-        }
+        //     await delay(1000)
+        // }
 
     })
     .addOptionalParam("minerteamid", "The teams IDs to use for mining. Separated by ','", undefined, types.string)
