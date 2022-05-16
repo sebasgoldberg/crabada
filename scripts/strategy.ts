@@ -1,4 +1,5 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
+import { delay } from "../tasks/crabada"
 import { currentServerTimeStamp } from "./crabada"
 
 export interface IApiMine{
@@ -67,6 +68,8 @@ export const getTeamsThatPlayToLooseByTeamIdUsingApi = async (hre: HardhatRuntim
             teamsAnalisys[mine.team_id] = teamAnalisys
         
         })
+
+        await delay(500)
     }
 
     // await new Promise((resolve) => {
