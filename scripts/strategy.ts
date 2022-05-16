@@ -27,13 +27,15 @@ export const getTeamsThatPlayToLooseByTeamIdUsingApi = async (hre: HardhatRuntim
     toTimestamp: number=currentServerTimeStamp()-30*60-1): Promise<ITeamsThatPlayToLooseByTeamId> => {
 
     const limit = 100
-    let page = 1
+    let page = 0
 
     const teamsAnalisys: ITeamDefenseAnalisysByTeamId = {}
 
     await new Promise((resolve) => {
 
         const queryMinesInterval = setInterval( async () => {
+
+            page++
 
             // TODO https://idle-game-api.crabada.com/public/idle/mines?page=1&limit=100
             const mines: IApiMine[] = await hre.crabada.api.getMines(page, limit)
