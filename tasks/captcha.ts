@@ -1332,7 +1332,7 @@ class AttackServer {
 
     returnCaptchaData(unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[], targets: Target[]){
 
-        const targetsOrderByGameIdDescending = targets.sort((a, b) => b.gameId < a.gameId ? -1 : b.gameId > a.gameId ? 1 : 0 )
+        const targetsOrderByGameIdAscending = targets.sort((a, b) => b.gameId < a.gameId ? 1 : b.gameId > a.gameId ? -1 : 0 )
 
         const playerTeamPairsOrderByNotInRecentTeams = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.sort((a, b) => {
             const aInRecentTeams = this.recentTeams.includes(a.teamId.toString())
@@ -1342,7 +1342,7 @@ class AttackServer {
 
         const teamIdsAlreadyUsed: number[] = []
 
-        for (const t of targetsOrderByGameIdDescending){
+        for (const t of targetsOrderByGameIdAscending){
 
             if (AttackServer.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE && !this.teamsThatPlayToLooseByTeamId[Number(t.teamId)])
                 continue
