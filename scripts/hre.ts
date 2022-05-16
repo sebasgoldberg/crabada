@@ -47,17 +47,32 @@ export class CrabadaNetwork{
         {
             signerIndex: 0,
             address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-            teams: [ 12942, 12954, 12929, 12949, 12958, 12964, 12968, 12973 ],
+            teams: [ 12929, 12942, 12949, 12954 ],
         },
         {
             signerIndex: 1,
             address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-            teams: [ 13001, 13008, 13012, 13015, 13020, 13026, 13031, 13035 ],
+            teams: [ 13001, 13008, 13012, 13015 ],
         },
         {
             signerIndex: 2,
             address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
             teams: [ 13291, 13294, 13299, 13303 ],
+        },
+        {
+            signerIndex: 3,
+            address: '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4',
+            teams: [  22568, 22569, 22570 ],
+        },
+        {
+            signerIndex: 4,
+            address: '0x83Ff016a2e574b2c35d17Fe4302188b192b64344',
+            teams: [ 22571, 22572, 22573 ],
+        },
+        {
+            signerIndex: 5,
+            address: '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8',
+            teams: [ 22574, 22575 ],
         },
     ]
 
@@ -103,11 +118,11 @@ export class CrabadaNetwork{
 
     SWIMMER_MINE_GROUPS: MineGroup[] = [
         {
-            teamsOrder: [ 12929, 12942, 12949, 12954, 12958, 12964, 12968, 12973 ],
+            teamsOrder: [ 12929, 12942, 12949, 12954, 22568, 22569, 22570, 22574 ],
             crabadaReinforcers: [ /*87155, 87156,*/ ],
         },
         {
-            teamsOrder: [ 13001, 13008, 13012, 13015, 13020, 13026, 13031, 13035 ],
+            teamsOrder: [ 13001, 13008, 13012, 13015, 22571, 22572, 22573, 22575 ],
             crabadaReinforcers: [ /*50097, 49769,*/ ],
         },
         {
