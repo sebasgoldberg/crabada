@@ -90,7 +90,7 @@ export class CrabadaAPI{
             'accept-language': 'pt-BR,pt;q=0.9,es;q=0.8,en;q=0.7,de;q=0.6,en-US;q=0.5,he;q=0.4',
         }
 
-        DEBUG && console.log('GET', `${this.idleGameApiBaseUrl}/public/idle/mines?page=${page}&limit=${limit}`);
+        /*DEBUG && */console.log('GET', `${this.idleGameApiBaseUrl}/public/idle/mines?page=${page}&limit=${limit}`);
         
         const { 
             result: {
