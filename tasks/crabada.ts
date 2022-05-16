@@ -150,7 +150,7 @@ export const delay = async (ms: number, log = console.log): Promise<void> => {
 export const isLootingPeriod = ():boolean => {
     const d = new Date()
     const hours = d.getUTCHours()
-    return (hours >= (9+3) || hours < (1/*22+3*/))
+    return (hours >= (9+3) || hours < (2/*23+3*/))
 }
 
 // npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
