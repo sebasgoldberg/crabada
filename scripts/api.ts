@@ -48,6 +48,9 @@ interface ITeamsFromAddress{
     game_id: number,
     game_type: string,
     game_start_time: number,
+    crabada_id_1: number,
+    crabada_id_2: number,
+    crabada_id_3: number,
 }
 
 export class CrabadaAPI{
@@ -101,6 +104,11 @@ export class CrabadaAPI{
             ).data
 
         return data
+    }
+
+    async getCompletedTeams(address: string): Promise<ITeamsFromAddress[]>{
+        return ((await this.getTeams(address))
+            .filter( team => team.crabada_id_1 && team.crabada_id_2 && team.crabada_id_3 ))
     }
 
     async getTeams(address: string): Promise<ITeamsFromAddress[]>{

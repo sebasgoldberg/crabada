@@ -63,7 +63,7 @@ const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contra
     const timestamp = await currentBlockTimeStamp(hre)
 
     for (const { address } of hre.crabada.network.LOOT_CAPTCHA_CONFIG.players){
-        const teams = await hre.crabada.api.getTeams(address)
+        const teams = await hre.crabada.api.getCompletedTeams(address)
         for (const team of teams){
             const game_end_time = team.game_type == "stealing" ? team.game_start_time+3600 : team.game_end_time
             lockedByTeamId[String(team.team_id)] = (game_end_time-timestamp >= 0)
@@ -882,7 +882,7 @@ class AttackServer {
         const secondsToUnlock: number[] = []
 
         for (const {address} of this.hre.crabada.network.LOOT_CAPTCHA_CONFIG.players){
-            const teams = await this.hre.crabada.api.getTeams(address)
+            const teams = await this.hre.crabada.api.getCompletedTeams(address)
             for (const team of teams){
                 const game_end_time = team.game_type == "stealing" ? team.game_start_time+3600 : team.game_end_time
                 secondsToUnlock.push(game_end_time-timestamp)
