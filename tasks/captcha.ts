@@ -681,6 +681,16 @@ class AttackExecutor{
 
     }
 
+    hasTeamPendingAttack(teamId: any){
+        for (const gameId in this.attackTransactionsDataByGameId){
+            const { team_id } = this.attackTransactionsDataByGameId[gameId]
+            if (String(teamId) == String(teamId)){
+                return true
+            }
+        }
+        return false
+    }
+
     beginAttackInterval(): NodeJS.Timer {
 
         let attackInExecution = false
@@ -692,11 +702,12 @@ class AttackExecutor{
 
             attackInExecution = true
 
-            for (const gameId in this.attackTransactionsDataByGameId){
+            const gameIdsToAttack = Object.keys(this.attackTransactionsDataByGameId)
+
+            for (const gameId of gameIdsToAttack){
                 const attackTransactionData: AttackTransactionData = this.attackTransactionsDataByGameId[gameId]
                 await this.attackTransaction(attackTransactionData)
             }
-            
 
             attackInExecution = false
 
@@ -1352,6 +1363,9 @@ class AttackServer {
 
             for (const p of playerTeamPairsOrderByNotInRecentTeams){
 
+                if (this.attackExecutor.hasTeamPendingAttack(p.teamId))
+                    continue
+
                 if (this.attackExecutor.hasAddressRecentlyAttacked(p.playerAddress))
                     continue
 
@@ -1418,6 +1432,11 @@ task(
         }
 
         const hasToReadNextMineToLootPage = (playerTeamPairs: PlayerTeamPair[]): boolean => {
+
+            if (playerTeamPairs
+                .filter( ({ teamId }) => !attackServer.attackExecutor.hasTeamPendingAttack(teamId) )
+                .length == 0)
+                return false
 
             const playerTeamPairsSettled = playerTeamPairs
                 .filter( p => p.settled)
