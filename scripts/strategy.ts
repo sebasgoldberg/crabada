@@ -69,7 +69,7 @@ export const getTeamsThatPlayToLooseByTeamIdUsingApi = async (hre: HardhatRuntim
         
         })
 
-        await delay(500)
+        await delay(1_000)
     }
 
     // await new Promise((resolve) => {
