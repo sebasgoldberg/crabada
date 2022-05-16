@@ -150,7 +150,7 @@ export const delay = async (ms: number, log = console.log): Promise<void> => {
 export const isLootingPeriod = ():boolean => {
     const d = new Date()
     const hours = d.getUTCHours()
-    return (hours >= (10+3) || hours < (1))
+    return (hours >= (9+3) || hours < (1/*22+3*/))
 }
 
 // npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
@@ -1889,8 +1889,8 @@ export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
 const SETTLER_TARGET_BALANCE = parseEther('8')
 
-export const MINE_MODE = false
-export const ATTACK_MODE = !MINE_MODE
+export const ATTACK_MODE = isLootingPeriod()
+export const MINE_MODE = !ATTACK_MODE
 
 export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.log ) => {
 
