@@ -65,7 +65,7 @@ task(
 
         while (true){
 
-            await delay(500, ()=>{})
+            // await delay(500, ()=>{})
 
             page++
             iterations++
