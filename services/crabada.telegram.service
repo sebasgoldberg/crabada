@@ -4,7 +4,7 @@ After=network.target
 StartLimitIntervalSec=0
 
 [Service]
-Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<private key operation account>"
+Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<private key operation account>,<player 1>,..,<player n>"
 Environment="HARDHAT_NETWORK=<network>"
 Environment="BOT_TOKEN=<Telegram bot token>"
 Type=simple

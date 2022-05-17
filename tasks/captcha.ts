@@ -605,6 +605,13 @@ interface AttackTransactionDataByGameId{
     [game_id: string]: AttackTransactionData
 }
 
+export const getSignerForAddress = (signers: SignerWithAddress[], user_address: string) => {
+    const signer = signers.filter( s => s.address.toLowerCase() == user_address.toLowerCase())
+    if (signer.length == 0)
+        throw new Error(`Signer not found for address ${user_address}`)
+    return signer[0]
+}
+
 class AttackExecutor{
 
     hre: HardhatRuntimeEnvironment
@@ -657,7 +664,7 @@ class AttackExecutor{
 
         const signers = await this.hre.ethers.getSigners()
 
-        const looterSigner = signers.filter( s => s.address.toLowerCase() == user_address.toLowerCase())[0]
+        const looterSigner = getSignerForAddress(signers, user_address)
 
         try {
             console.log('looterSigner', looterSigner.address)

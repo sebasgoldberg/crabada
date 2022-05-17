@@ -14,6 +14,7 @@ import { deposit, logTransactionAndWait, withdraw, withdrawTeam } from "../test/
 import { ClassNameByCrabada, classNameFromDna, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { assert } from "console";
 import { PLAYER_TUS_RESERVE } from "./player";
+import { getSignerForAddress } from "./captcha";
 
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
@@ -1836,34 +1837,68 @@ task(
     })
     .addOptionalParam("operationaddress", "Operation account address.", OPERATION_ADDRESS, types.string)
 
+export const sendEther = async ({ signer, to, value, override}:
+    { signer: SignerWithAddress, to: string, value: BigNumber, override: Object}, log=console.log) => {
+
+    if (value.lt(0))
+        return
+    
+    log('sendTransaction(to, value)', to, formatEther(value));
+
+    await logTransactionAndWait(signer.sendTransaction({
+        to, 
+        value,
+        ...override
+    }), 1, log)
+
+}
+
 export const withdrawRewards = async (hre: HardhatRuntimeEnvironment, log=console.log) => {
 
-    const { tusToken, craToken } = getCrabadaContracts(hre)
+    const { craToken } = getCrabadaContracts(hre)
 
-    const signer = (await hre.ethers.getSigners())[0]
+    const signers = await hre.ethers.getSigners()
+    const operation = signers[0]
 
-    const rewardsTo = signer.address
+    const rewardsTo = operation.address
 
     const override = hre.crabada.network.getOverride()
 
     for (const {address: from, teams: { length: teamsQuantity } } of hre.crabada.network.MINE_CONFIG){
 
-        for (const erc20 of [tusToken, craToken]){
+        for (const erc20 of [craToken]){
 
                 let value: BigNumber = await erc20.balanceOf(from)
 
-                if (erc20.address === tusToken.address)
-                    value = value.sub(parseEther(String((20*2*teamsQuantity)))) // Backup value for reinforcements
-
                 if (value.gt(0)){
                     log('erc20.transferFrom(from, rewardsto, value)', from, rewardsTo, formatEther(value));
-                    await erc20.connect(signer).callStatic.transferFrom(from, rewardsTo, value, override)
-                    await logTransactionAndWait(erc20.connect(signer).transferFrom(from, rewardsTo, value, override), 1, log)
+                    await erc20.connect(operation).callStatic.transferFrom(from, rewardsTo, value, override)
+                    await logTransactionAndWait(erc20.connect(operation).transferFrom(from, rewardsTo, value, override), 1, log)
                 }
 
         }
 
+        const tusBalance: BigNumber = await hre.ethers.provider.getBalance(from);
+        const tusToTransfer = tusBalance.sub(parseEther('75').mul(teamsQuantity))
+
+        await sendEther({
+            signer: getSignerForAddress(signers, from),
+            to: operation.address,
+            value: tusToTransfer,
+            override
+        })
+
     }
+
+    const tusBalance: BigNumber = await hre.ethers.provider.getBalance(SETTLER_ACCOUNT);
+    const tusToTransfer = SETTLER_TARGET_BALANCE.sub(tusBalance)
+
+    await sendEther({
+        signer: operation,
+        to: SETTLER_ACCOUNT,
+        value: tusToTransfer,
+        override: override
+    })
 
 }
 
@@ -1887,7 +1922,7 @@ export const LOOT_PENDING_AVAX_ACCOUNTS = [
 export const SETTLER_ACCOUNT = "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4"
 export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
-const SETTLER_TARGET_BALANCE = parseEther('8')
+const SETTLER_TARGET_BALANCE = parseEther('1100')
 
 export const ATTACK_MODE = isLootingPeriod()
 export const MINE_MODE = !ATTACK_MODE
@@ -1934,6 +1969,9 @@ task(
     "refillavax",
     "Refill accounts with avax.",
     async ({ lootpending, settler, reinforce }, hre: HardhatRuntimeEnvironment) => {
+
+        // Disabled refillavax
+        return
 
         await refillavax(hre)
 
