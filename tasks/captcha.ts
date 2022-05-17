@@ -13,7 +13,8 @@ import axios from "axios";
 import { MAINNET_AVAX_MAIN_ACCOUNTS_PKS } from "../hardhat.config";
 import { Player } from "../scripts/hre";
 import { CanLootGameFromApi, DEBUG, listenCanLootGamesFromApi } from "../scripts/api";
-import { getTeamsThatPlayToLooseByTeamIdUsingApi, ITeamsThatPlayToLooseByTeamId } from "../scripts/strategy";
+import { getTeamsThatPlayToLooseByTeamIdUsingDb, ITeamsThatPlayToLooseByTeamId } from "../scripts/strategy";
+import { connectToDatabase } from "../scripts/srv/database";
 
 type LootFunction = (
     unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
@@ -1176,11 +1177,11 @@ class AttackServer {
     }
 
     teamsThatPlayToLooseByTeamId: ITeamsThatPlayToLooseByTeamId = {}
-    static ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
+    static ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
 
     async initialize(){
         if (AttackServer.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE)
-            this.teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamIdUsingApi(this.hre)
+            this.teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamIdUsingDb(this.hre)
     }
 
     async registerOrRetryAttack(challenge: string, captchaVerifyResponse: CaptchaVerifyResult){
@@ -1417,6 +1418,8 @@ task(
             console.log('Mining period.');
             return
         }
+
+        await connectToDatabase()
 
         const attackServer = new AttackServer(hre)
 

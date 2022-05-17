@@ -1,6 +1,7 @@
 import { HardhatRuntimeEnvironment } from "hardhat/types"
 import { delay } from "../tasks/crabada"
 import { currentServerTimeStamp } from "./crabada"
+import { collections, connectToDatabase } from "./srv/database"
 
 export interface IApiMine{
     game_id: number,
@@ -22,6 +23,7 @@ export interface IApiMine{
 export interface ITeamDefenseAnalisys{
     defended: number,
     notDefended: number,
+    notAttacked: number
 }
 
 export interface ITeamDefenseAnalisysByTeamId{
@@ -32,7 +34,19 @@ export interface ITeamsThatPlayToLooseByTeamId{
     [teamId: number]: boolean,
 }
 
-export const getTeamsThatPlayToLooseByTeamIdUsingApi = async (hre: HardhatRuntimeEnvironment,
+export const getClosedMinesBetweenPeriodFromDb = async (
+    fromTimestamp: number=currentServerTimeStamp()-2*24*60*60,
+    toTimestamp: number=currentServerTimeStamp()-30*60-1): Promise<IApiMine[]> => {
+
+    const result = (await collections.mines
+        .find({ 'start_time': { $gt: fromTimestamp, $lt: toTimestamp, } })
+        .toArray()) as unknown as IApiMine[]
+    
+    return result
+
+}
+
+export const getTeamsThatPlayToLooseByTeamIdUsingDb = async (hre: HardhatRuntimeEnvironment,
     fromTimestamp: number=currentServerTimeStamp()-2*24*60*60,
     toTimestamp: number=currentServerTimeStamp()-30*60-1): Promise<ITeamsThatPlayToLooseByTeamId> => {
 
@@ -41,90 +55,32 @@ export const getTeamsThatPlayToLooseByTeamIdUsingApi = async (hre: HardhatRuntim
 
     const teamsAnalisys: ITeamDefenseAnalisysByTeamId = {}
 
-    while (true){
+    const mines = await getClosedMinesBetweenPeriodFromDb(fromTimestamp, toTimestamp)
 
-        page++
+    mines.forEach( mine => {
 
-        // TODO https://idle-game-api.crabada.com/public/idle/mines?page=1&limit=100
-        const mines: IApiMine[] = await hre.crabada.api.getClosedMines(page, limit)
-
-        const minesFromTimestamp = mines
-            .filter( mine => mine.start_time >= fromTimestamp)
-
-        if (minesFromTimestamp.length == 0){
-            break
+        const teamAnalisys: ITeamDefenseAnalisys = teamsAnalisys[mine.team_id] || {
+            defended: 0,
+            notDefended: 0,
+            notAttacked: 0
         }
 
-        const minesBetweenPeriod = minesFromTimestamp
-            .filter( mine => mine.start_time <= toTimestamp)
+        const actions = mine.process.map(step => step.action)
 
-        minesBetweenPeriod.forEach( mine => {
+        if (actions.includes('attack')){
+            if (actions.includes('reinforce-defense'))
+                teamAnalisys.defended++
+            else
+                teamAnalisys.notDefended++
+        } else {
+            teamAnalisys.notAttacked++
+        }
 
-            const teamAnalisys: ITeamDefenseAnalisys = teamsAnalisys[mine.team_id] || {
-                defended: 0,
-                notDefended: 0
-            }
-
-            const actions = mine.process.map(step => step.action)
-
-            if (actions.includes('attack')){
-                if (actions.includes('reinforce-defense'))
-                    teamAnalisys.defended += 1
-                else
-                    teamAnalisys.notDefended += 1 
-            }
-
-            teamsAnalisys[mine.team_id] = teamAnalisys
-        
-        })
-
-        await delay(500)
-    }
-
-    // await new Promise((resolve) => {
-
-    //     const queryMinesInterval = setInterval( async () => {
-
-    //         page++
-
-    //         // TODO https://idle-game-api.crabada.com/public/idle/mines?page=1&limit=100
-    //         const mines: IApiMine[] = await hre.crabada.api.getMines(page, limit)
+        teamsAnalisys[mine.team_id] = teamAnalisys
     
-    //         const minesFromTimestamp = mines
-    //             .filter( mine => mine.start_time >= fromTimestamp)
-    
-    //         if (minesFromTimestamp.length == 0){
-    //             clearInterval(queryMinesInterval)
-    //             resolve(undefined)
-    //             return
-    //         }
-    
-    //         const minesBetweenPeriod = minesFromTimestamp
-    //             .filter( mine => mine.start_time <= toTimestamp)
-    
-    //         minesBetweenPeriod.forEach( mine => {
-    
-    //             const teamAnalisys: ITeamDefenseAnalisys = teamsAnalisys[mine.team_id] || {
-    //                 defended: 0,
-    //                 notDefended: 0
-    //             }
-    
-    //             const actions = mine.process.map(step => step.action)
+    })
 
-    //             if (actions.includes('attack')){
-    //                 if (actions.includes('reinforce-defense'))
-    //                     teamAnalisys.defended += 1
-    //                 else
-    //                     teamAnalisys.notDefended += 1 
-    //             }
-    
-    //             teamsAnalisys[mine.team_id] = teamAnalisys
-            
-    //         })
-                
-    //     }, 1_000)
-
-    // })
+    console.log('Teams that mine', Object.keys(teamsAnalisys).length);
 
     const result: ITeamsThatPlayToLooseByTeamId = {}
 
@@ -135,7 +91,7 @@ export const getTeamsThatPlayToLooseByTeamIdUsingApi = async (hre: HardhatRuntim
         }
     })
 
-    console.log('Teams that play to loose', Object.keys(result).length);
+    console.log('Teams that mine and play to loose', Object.keys(result).length);
 
     return result
 
