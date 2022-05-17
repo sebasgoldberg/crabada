@@ -441,7 +441,7 @@ export const listenCanLootGamesFromApi = async (
     hre: HardhatRuntimeEnvironment, 
     task: CanLootGamesFromApiTask, 
     hasToReadNextPage: HasToReadNextPageFunction,
-    interval: number = 2000): Promise<NodeJS.Timer> => {
+    interval: number = 500): Promise<NodeJS.Timer> => {
 
     // const gameAlreadyProcessed: {
     //     [game_id: number]: boolean
@@ -450,7 +450,7 @@ export const listenCanLootGamesFromApi = async (
     let processing: boolean = false
 
     let actualPage = 0
-    const minesPerPage = 50
+    const minesPerPage = 15
 
     return setInterval(async () => {
 
