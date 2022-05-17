@@ -7,7 +7,8 @@ import { IApiMine } from "../scripts/strategy";
 import { delay } from "./crabada";
 
 interface IDbStatus{
-    saveminesLasPage?: number
+    saveminesLasPage?: number,
+    saveminesSynched?: boolean
 }
 
 const dbGetStatus = async(): Promise<IDbStatus> => {
@@ -44,18 +45,18 @@ const dbSaveMines = async (mines: IApiMine[]): Promise<void> => {
 task(
     "savemines",
     "Read mines from API and save them to the database.",
-    async ({ from, continueprocess }: { from: number, continueprocess: boolean }, 
+    async ({ from, forcesynch }: { from: number, forcesynch: boolean }, 
         hre: HardhatRuntimeEnvironment) => {
 
         await connectToDatabase()
 
         const limit = 100
-        let page = 0
 
-        if (continueprocess){
-            const status = await dbGetStatus()
-            page = (status && status.saveminesLasPage) ? status.saveminesLasPage-1 : 0
-        }
+        const status = await dbGetStatus()
+
+        const synchprocess = forcesynch || !status.saveminesSynched
+
+        let page = (status && status.saveminesLasPage) ? status.saveminesLasPage-1 : 0
 
         const maxIterations = 50
         let iterations = 0
@@ -64,18 +65,18 @@ task(
 
         while (true){
 
-            await delay(500)
+            await delay(500, ()=>{})
 
             page++
             iterations++
 
-            continueprocess && dbUpdateStatus({saveminesLasPage: page})
+            await dbUpdateStatus({saveminesLasPage: page})
 
             console.log('Reading page', page);
             const mines: IApiMine[] = await hre.crabada.api.getClosedMines(page, limit)
 
             let mineAlreadyExists = false
-            if (!continueprocess){
+            if (!synchprocess){
                 mineAlreadyExists = await isMineAlreadyExists(
                     // To verify this, are excluded the mines of the previous page.
                     mines.filter( m => !gameIdsFromPreviousPage.includes(m.game_id))
@@ -86,7 +87,9 @@ task(
 
             await dbSaveMines(mines)
 
-            if (!continueprocess && mineAlreadyExists){
+            if (!synchprocess && mineAlreadyExists){
+                // If we arrive to a page where mines already exist, we begin again.
+                await dbUpdateStatus({ saveminesLasPage: 1 })
                 break
             }
 
@@ -95,8 +98,9 @@ task(
 
             // In case we arrive to the oldest possible mine...
             if (minesFromTimestamp.length == 0){
-                // ...we begin again to 
-                page = 0
+                // ...we begin again, but already synched
+                await dbUpdateStatus({ saveminesLasPage: 1, saveminesSynched: true })
+                break
             }
 
             if (iterations > maxIterations){
@@ -107,4 +111,4 @@ task(
 
     })
     .addOptionalParam('from', 'From block timestamp', currentServerTimeStamp()-2*24*60*60, types.int)
-    .addOptionalParam('continueprocess', 'Begin reading from last processed page.', false, types.boolean)
+    .addOptionalParam('forcesynch', 'Begin reading from last processed page.', false, types.boolean)

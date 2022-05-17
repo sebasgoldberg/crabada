@@ -6,4 +6,4 @@ then
     HARDHAT_NETWORK=swimmer
 fi
 
-npx hardhat savemines --network "$HARDHAT_NETWORK" --continueprocess true
+npx hardhat savemines --network "$HARDHAT_NETWORK"
