@@ -41,6 +41,7 @@ const forkingData = FORK_FUJI ? {
 import "./tasks/crabada"
 import "./tasks/telegram"
 import "./tasks/utils"
+import "./tasks/savemines"
 
 task("accounts", "Prints the list of accounts", async (args, hre): Promise<void> => {
   const accounts: SignerWithAddress[] = await hre.ethers.getSigners()

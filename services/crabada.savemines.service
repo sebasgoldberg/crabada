@@ -1,0 +1,17 @@
+[Unit]
+Description=Crabada service for saving mines reading from API.
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Environment="HARDHAT_NETWORK=<network>"
+Type=simple
+WatchdogSec=450
+Restart=always
+RestartSec=60
+User=cerebro
+ExecStart=/home/cerebro/crabada/services/crabada.savemines.sh
+WorkingDirectory=/home/cerebro/crabada
+
+[Install]
+WantedBy=multi-user.target

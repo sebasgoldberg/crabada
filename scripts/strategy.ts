@@ -3,8 +3,17 @@ import { delay } from "../tasks/crabada"
 import { currentServerTimeStamp } from "./crabada"
 
 export interface IApiMine{
+    game_id: number,
     start_time: number,
+    end_time: number,
     team_id: number,
+    round: number,
+    owner: string,
+    attack_team_id: number,
+    attack_team_owner: number,
+    winner_team_id: number,
+    created_at: number,
+    status: string,
     process: {
         action: string
     }[]
@@ -37,7 +46,7 @@ export const getTeamsThatPlayToLooseByTeamIdUsingApi = async (hre: HardhatRuntim
         page++
 
         // TODO https://idle-game-api.crabada.com/public/idle/mines?page=1&limit=100
-        const mines: IApiMine[] = await hre.crabada.api.getMines(page, limit)
+        const mines: IApiMine[] = await hre.crabada.api.getClosedMines(page, limit)
 
         const minesFromTimestamp = mines
             .filter( mine => mine.start_time >= fromTimestamp)
