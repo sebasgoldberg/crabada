@@ -14,7 +14,8 @@ import { MAINNET_AVAX_MAIN_ACCOUNTS_PKS } from "../hardhat.config";
 import { Player } from "../scripts/hre";
 import { CanLootGameFromApi, DEBUG, listenCanLootGamesFromApi } from "../scripts/api";
 import { getTeamsThatPlayToLooseByTeamIdUsingDb, ITeamsThatPlayToLooseByTeamId } from "../scripts/strategy";
-import { connectToDatabase } from "../scripts/srv/database";
+import { collections, connectToDatabase } from "../scripts/srv/database";
+import { dbGetStatus } from "./savemines";
 
 type LootFunction = (
     unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
@@ -938,8 +939,21 @@ class AttackServer {
         })
     }
 
-    async increaseUserAccount(user: string): Promise<void>{
-        // collections.captchaUsers.updateOne({ user }, { $inc: { balance: 1 } })
+    async increaseUserBalance(requester: string): Promise<void>{
+
+        try {
+
+            const user = requester.replace(/[0-9]/g, '')
+
+            const { captcha: { pricePerWinAttack } } = await dbGetStatus()
+            
+            await collections.captchaUsers.updateOne({ user }, { $set: { user }, $inc: { balance: pricePerWinAttack } })
+
+        } catch (error) {
+
+            console.error(`Error when trying to increase balance for user ${requester}`);
+
+        }
     }
 
     // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
@@ -1124,7 +1138,8 @@ class AttackServer {
                 const { signature, expire_time } = attackResponse.data.result
 
                 this.attackExecutor.addAttackTransactionData({user_address, game_id, team_id, expire_time, signature})
-                this.increaseUserAccount(requester)
+
+                await this.increaseUserBalance(requester)
 
             } catch (error) {
 
@@ -1216,6 +1231,8 @@ class AttackServer {
             this.attackExecutor.addAttackTransactionData({ user_address, game_id, team_id, expire_time, signature })
 
             pendingChallenge.status.successfulAttackRegistration = true
+
+            await this.increaseUserBalance(requester)
 
         } catch (error) {
 

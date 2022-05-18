@@ -8,10 +8,13 @@ import { delay } from "./crabada";
 
 interface IDbStatus{
     saveminesLasPage?: number,
-    saveminesSynched?: boolean
+    saveminesSynched?: boolean,
+    captcha?: {
+        pricePerWinAttack: number,
+    }
 }
 
-const dbGetStatus = async(): Promise<IDbStatus> => {
+export const dbGetStatus = async(): Promise<IDbStatus> => {
     if (!collections.status)
         return undefined
     const result = await collections.status.findOne()
