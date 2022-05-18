@@ -22,7 +22,7 @@ const dbUpdateStatus = async (data: IDbStatus) => {
     const query = { };
     const update = { $set: data};
     const options = { upsert: true };
-    collections.status.updateOne(query, update, options);
+    await collections.status.updateOne(query, update, options);
 }
 
 const isMineAlreadyExists = async (mines: IApiMine[]): Promise<boolean> => {
@@ -111,8 +111,6 @@ task(
             }
 
         }
-
-        await disconnectFromDatabase()
 
     })
     .addOptionalParam('from', 'From block timestamp', currentServerTimeStamp()-2*24*60*60, types.int)
