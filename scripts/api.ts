@@ -435,7 +435,7 @@ type CanLootGamesFromApiTask = (canLootGamesFromApi: CanLootGameFromApi[]) => vo
 
 export type HasToReadNextPageFunction = () => boolean
 
-const READ_ONLY_FIRST_PAGE = true
+const READ_ONLY_FIRST_PAGE = false
 
 export const listenCanLootGamesFromApi = async (
     hre: HardhatRuntimeEnvironment, 
@@ -451,6 +451,7 @@ export const listenCanLootGamesFromApi = async (
 
     let actualPage = 0
     const minesPerPage = 15
+    let readOnlyFirstPage = READ_ONLY_FIRST_PAGE
 
     return setInterval(async () => {
 
@@ -464,13 +465,14 @@ export const listenCanLootGamesFromApi = async (
 
         try {
 
-            actualPage = READ_ONLY_FIRST_PAGE ? 1 : actualPage+1
+            actualPage = readOnlyFirstPage ? 1 : actualPage+1
 
             const canLootGamesFromApi: CanLootGameFromApi[] = await hre.crabada.api.getCanLootGames(actualPage, minesPerPage)
 
             if (canLootGamesFromApi.length == 0){
 
                 actualPage = 0
+                readOnlyFirstPage = true
 
             } else {
 
@@ -494,6 +496,7 @@ export const listenCanLootGamesFromApi = async (
         } catch (error) {
             console.error('ERROR retrieving canLootGames', String(error));
             actualPage=0
+            readOnlyFirstPage = true
         }
 
         processing = false
