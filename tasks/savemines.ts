@@ -112,7 +112,7 @@ task(
 
         }
 
-        delay(5000)
+        await delay(5000)
 
     })
     .addOptionalParam('from', 'From block timestamp', currentServerTimeStamp()-2*24*60*60, types.int)
