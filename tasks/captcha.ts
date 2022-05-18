@@ -992,10 +992,6 @@ class AttackServer {
 
         this.app.get('/status/', async (req, res) => {
 
-            console.log('/status/');
-            console.log('req.body', req.body);
-            console.log('req.query', req.query);
-            
             const requester: string = req.query.requester as string
 
             const balance = await this.getBalance(requester)
