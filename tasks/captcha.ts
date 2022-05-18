@@ -938,6 +938,10 @@ class AttackServer {
         })
     }
 
+    async increaseUserAccount(user: string): Promise<void>{
+        // collections.captchaUsers.updateOne({ user }, { $inc: { balance: 1 } })
+    }
+
     // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
     constructor(hre: HardhatRuntimeEnvironment){
 
@@ -1120,6 +1124,7 @@ class AttackServer {
                 const { signature, expire_time } = attackResponse.data.result
 
                 this.attackExecutor.addAttackTransactionData({user_address, game_id, team_id, expire_time, signature})
+                this.increaseUserAccount(requester)
 
             } catch (error) {
 

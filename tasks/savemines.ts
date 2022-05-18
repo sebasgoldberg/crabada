@@ -112,6 +112,8 @@ task(
 
         }
 
+        delay(5000)
+
     })
     .addOptionalParam('from', 'From block timestamp', currentServerTimeStamp()-2*24*60*60, types.int)
     .addOptionalParam('forcesynch', 'Begin reading from last processed page.', false, types.boolean)
