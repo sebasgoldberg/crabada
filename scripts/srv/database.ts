@@ -14,10 +14,12 @@ export const collections: {
     captchaUsers?: mongoDB.Collection,
 } = {}
 
+let client: mongoDB.MongoClient
+
 // Initialize Connection
 export async function connectToDatabase() {
 
-    const client: mongoDB.MongoClient = new mongoDB.MongoClient(DB_CONN_STRING)
+    client = new mongoDB.MongoClient(DB_CONN_STRING)
 
     await client.connect()
 
@@ -38,3 +40,7 @@ export async function connectToDatabase() {
 }
 
 // TODO close connection or client
+
+export async function disconnectFromDatabase(){
+    await client.close();
+}

@@ -2,7 +2,7 @@ import { task, types } from "hardhat/config";
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { currentServerTimeStamp } from "../scripts/crabada";
-import { collections, connectToDatabase } from "../scripts/srv/database";
+import { collections, connectToDatabase, disconnectFromDatabase } from "../scripts/srv/database";
 import { IApiMine } from "../scripts/strategy";
 import { delay } from "./crabada";
 
@@ -112,7 +112,7 @@ task(
 
         }
 
-        await delay(5000)
+        await disconnectFromDatabase()
 
     })
     .addOptionalParam('from', 'From block timestamp', currentServerTimeStamp()-2*24*60*60, types.int)
