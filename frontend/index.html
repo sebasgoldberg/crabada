@@ -125,11 +125,11 @@
 
         function refreshStatus() {
             $.ajax({
-                url: '/status/?requester='+params.requester,
+                url: '/status/',
                 method: 'GET',
-                data: JSON.stringify({
+                data: {
                     requester: params.requester || 'no-identity',
-                }),
+                },
                 dataType: 'json',
                 contentType: "application/json; charset=utf-8",
                 success: function (data) {
