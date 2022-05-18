@@ -946,8 +946,8 @@ class AttackServer {
             const user = requester.replace(/[0-9]/g, '')
 
             const { captcha: { pricePerWinAttack } } = await dbGetStatus()
-            
-            await collections.captchaUsers.updateOne({ user }, { $set: { user }, $inc: { balance: pricePerWinAttack } })
+
+            await collections.captchaUsers.updateOne({ user }, { $set: { user }, $inc: { balance: pricePerWinAttack } }, { upsert: true })
 
         } catch (error) {
 
