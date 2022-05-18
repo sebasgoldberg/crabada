@@ -939,6 +939,19 @@ class AttackServer {
         })
     }
 
+    async getBalance(requester: string): Promise<number>{
+
+        const user = requester.replace(/[0-9]/g, '')
+        
+        const userInfo = await collections.captchaUsers.findOne({ user })
+
+        if (!userInfo)
+            return 0
+
+        return userInfo.balance
+
+    }
+
     async increaseUserBalance(requester: string): Promise<void>{
 
         try {
@@ -971,11 +984,16 @@ class AttackServer {
 
         this.app.get('/status/', async (req, res) => {
 
+            const requester: string = req.query.requester as string
+
+            const balance = await this.getBalance(requester)
+
             const secondsToUnlock: number[] = await this.teamsSecondsToUnlock()
 
             res.json({
                 unlocked: secondsToUnlock.filter( x => x < 0 ).length,
-                secondsToUnlock: secondsToUnlock.sort((a,b)=> a<b?-1:a>b?1:0)
+                secondsToUnlock: secondsToUnlock.sort((a,b)=> a<b?-1:a>b?1:0),
+                balance
             })
 
         })
