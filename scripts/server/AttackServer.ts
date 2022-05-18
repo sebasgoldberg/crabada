@@ -158,7 +158,7 @@ export class AttackServer {
 
         this.app.use(express.json());
 
-        this.app.use(express.static(`${ __dirname }/../frontend`));
+        this.app.use(express.static(`${ __dirname }/../../frontend`));
 
         this.app.get('/status/', async (req, res) => {
 
