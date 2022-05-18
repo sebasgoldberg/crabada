@@ -941,14 +941,22 @@ class AttackServer {
 
     async getBalance(requester: string): Promise<number>{
 
-        const user = requester.replace(/[0-9]/g, '')
+        try {
+
+            const user = requester.replace(/[0-9]/g, '')
         
-        const userInfo = await collections.captchaUsers.findOne({ user })
+            const userInfo = await collections.captchaUsers.findOne({ user })
+    
+            if (!userInfo)
+                return 0
+    
+            return userInfo.balance
+                
+        } catch (error) {
 
-        if (!userInfo)
             return 0
-
-        return userInfo.balance
+            
+        }
 
     }
 
