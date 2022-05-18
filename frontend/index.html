@@ -125,7 +125,7 @@
 
         function refreshStatus() {
             $.ajax({
-                url: '/status/',
+                url: '/status/?requester='+params.requester,
                 method: 'GET',
                 data: JSON.stringify({
                     requester: params.requester || 'no-identity',
