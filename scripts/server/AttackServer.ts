@@ -164,14 +164,17 @@ export class AttackServer {
 
             const requester: string = req.query.requester as string
 
+            const pendingCaptchas = this.pendingResponses.filter(pr => pr.requester == requester).length > 0
+
             const balance = await this.getBalance(requester)
 
             const secondsToUnlock: number[] = await this.teamsSecondsToUnlock()
 
             res.json({
+                pendingCaptchas,
                 unlocked: secondsToUnlock.filter( x => x < 0 ).length,
                 secondsToUnlock: secondsToUnlock.sort((a,b)=> a<b?-1:a>b?1:0),
-                balance
+                balance,
             })
 
         })
