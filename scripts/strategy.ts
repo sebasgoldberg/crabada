@@ -71,7 +71,7 @@ export const getTeamsThatPlayToLooseByTeamIdUsingDb = async (hre: HardhatRuntime
 
             const reinforceDefenseCount = actions.filter(action => action == 'reinforce-defense').length
 
-            if (reinforceDefenseCount>1)
+            if (reinforceDefenseCount>0)
                 teamAnalisys.defended++
             else
                 teamAnalisys.notDefended++
