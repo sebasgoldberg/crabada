@@ -48,56 +48,66 @@
 
             const apiServer = window.location.origin+'/proxy/captcha'
 
-            // To get the captcha: GET `${apiServer}/load/`
-            // After resolving captcha: GET `${apiServer}/verify/`
-            initGeetest4(
-            {
-                captchaId: CAPTCHA_ID,
-                product: "popup",
-                // TODO Verify if uuidv4() it is the same than window.uuid()
-                challenge: challenge,
-                // riskType
-                riskType: "icon",
-                token: token,
-                apiServers: [ apiServer ],
-            }, function (captcha) {
+            try {
+                
+                // To get the captcha: GET `${apiServer}/load/`
+                // After resolving captcha: GET `${apiServer}/verify/`
+                initGeetest4(
+                {
+                    captchaId: CAPTCHA_ID,
+                    product: "popup",
+                    // TODO Verify if uuidv4() it is the same than window.uuid()
+                    challenge: challenge,
+                    // riskType
+                    riskType: "icon",
+                    token: token,
+                    apiServers: [ apiServer ],
+                }, function (captcha) {
 
-                captcha.appendTo("#captcha");// call appendTo to insert the verification code into a certain element of the page, which can be customized by the user 
+                    captcha.appendTo("#captcha");// call appendTo to insert the verification code into a certain element of the page, which can be customized by the user 
 
-                captcha.onReady(function () {
+                    captcha.onReady(function () {
 
-                    var clickInterval = setInterval(() => {
-                        $('.geetest_btn_click').click()
-                    }, 500)
+                        var clickInterval = setInterval(() => {
+                            $('.geetest_btn_click').click()
+                        }, 500)
 
-                    setTimeout(() => {
-                        clearInterval(clickInterval)
-                    }, 3000)
-
-
-                }).onSuccess(function () {
-
-                    // result example: { 
-                    //     captcha_id: 'a9cd95e65fc75072dadea93e3d60b0e6', 
-                    //     lot_number: '3b6f610d3b67402eacbef12940fd619b', 
-                    //     pass_token: '70c3a7c2d0fe21e839d4d002c3ba3f4e096d438c4504ad7f6fdfd895d7e8258d', 
-                    //     gen_time: '1646770092', 
-                    //     captcha_output: 'zrZmJMfbTd-SNVauvuKQVK6UmwrNAghPXTqYynEOKtgTvJ65uM…ufocnxEM4K4WTf2j9RdcrzGGIW2YU9yCB6ccEzpSTyH13UA==' 
-                    // }
-                    var captchaResult = captcha.getValidate();
-
-                    console.log(captchaResult);
-
-                    getTransactionStatus(challenge)
-
-                }).onError(function () {
-
-                    alert('ERROR')
-
-                })
+                        setTimeout(() => {
+                            clearInterval(clickInterval)
+                        }, 3000)
 
 
-            });
+                    }).onSuccess(function () {
+
+                        // result example: { 
+                        //     captcha_id: 'a9cd95e65fc75072dadea93e3d60b0e6', 
+                        //     lot_number: '3b6f610d3b67402eacbef12940fd619b', 
+                        //     pass_token: '70c3a7c2d0fe21e839d4d002c3ba3f4e096d438c4504ad7f6fdfd895d7e8258d', 
+                        //     gen_time: '1646770092', 
+                        //     captcha_output: 'zrZmJMfbTd-SNVauvuKQVK6UmwrNAghPXTqYynEOKtgTvJ65uM…ufocnxEM4K4WTf2j9RdcrzGGIW2YU9yCB6ccEzpSTyH13UA==' 
+                        // }
+                        var captchaResult = captcha.getValidate();
+
+                        console.log(captchaResult);
+
+                        getTransactionStatus(challenge)
+
+                    }).onError(function () {
+
+                        (!params.no_refresh) && setTimeout(()=>{ location.reload(); }, 1500)
+
+                    })
+
+
+                });
+
+            } catch (error) {
+                
+                console.error(error);
+                (!params.no_refresh) && setTimeout(()=>{ location.reload(); }, 1500)
+
+            }
+
 
         }
 
