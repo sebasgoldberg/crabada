@@ -86,7 +86,7 @@ export const getTeamsThatPlayToLooseByTeamIdUsingDb = async (hre: HardhatRuntime
 
     Object.keys(teamsAnalisys).forEach( teamId => {
         const teamAnalisys = teamsAnalisys[teamId]
-        if ( teamAnalisys.defended == 0 && teamAnalisys.notDefended > 0 ){
+        if ( teamAnalisys.defended == 0 || teamAnalisys.notDefended/teamAnalisys.defended >= 1 ){
             result[teamId] = true
         }
     })
