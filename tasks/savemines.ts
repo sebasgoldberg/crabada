@@ -89,6 +89,7 @@ task(
 
             if (!synchprocess && mineAlreadyExists){
                 // If we arrive to a page where mines already exist, we begin again.
+                console.log('Arrived to a page where mines already exist, we begin again.');
                 await dbUpdateStatus({ saveminesLasPage: 1 })
                 break
             }
@@ -99,6 +100,8 @@ task(
             // In case we arrive to the oldest possible mine...
             if (minesFromTimestamp.length == 0){
                 // ...we begin again, but already synched
+                console.log('We begin again, but already synched.');
+                
                 await dbUpdateStatus({ saveminesLasPage: 1, saveminesSynched: true })
                 break
             }
