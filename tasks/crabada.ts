@@ -148,14 +148,17 @@ export const delay = async (ms: number, log: typeof console.log = ()=>{}): Promi
     })
 }
 
-export const isMiningPeriod = (): boolean => {
-    const d = new Date()
-    const hours = d.getUTCHours()
-    return (hours >= ((23+3) % 24) && hours <= ((23+6+3) % 24))
-}
+// export const isMiningPeriod = (): boolean => {
+//     const d = new Date()
+//     const hours = d.getUTCHours()
+//     return (hours >= ((23+3) % 24) && hours <= ((23+6+3) % 24))
+// }
 
 export const isLootingPeriod = ():boolean => {
-    return (!isMiningPeriod())
+    const d = new Date()
+    const hours = d.getUTCHours()
+    return (hours >= ((5+3) % 24) && hours <= ((17+3) % 24))
+    // return (!isMiningPeriod())
 }
 
 // npx hardhat minestep --network localhost --minerteamid 3286 --attackercontract 0x74185cE8C16392C19CDe0F132c4bA6aC91dFcA02 --attackerteamid 3785 --wait 1 --testaccount 0xB2f4C513164cD12a1e121Dc4141920B805d024B8
