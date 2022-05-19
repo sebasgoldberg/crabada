@@ -17,7 +17,9 @@ export interface IApiMine{
     status: string,
     process: {
         action: string
-    }[]
+    }[],
+    attack_point: number,
+    defense_point: number,
 }
 
 export interface ITeamDefenseAnalisys{
