@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from "axios";
 import { BigNumber } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { delay } from "../tasks/crabada";
 import { CrabadaNetwork } from "./hre";
 import { IApiMine } from "./strategy";
 import { ClassNameByCrabada, CrabadaClassName, TeamFaction } from "./teambp";
@@ -437,6 +438,75 @@ export type HasToReadNextPageFunction = () => boolean
 
 const READ_ONLY_FIRST_PAGE = false
 
+export const getCanLootGamesFromApiGenerator = async function* (
+    hre: HardhatRuntimeEnvironment): AsyncGenerator<CanLootGameFromApi, void, void>{
+
+    let actualPage = 0
+    const minesPerPage = 15
+
+    interface IMineExistsByGameId {
+        [game_id: number]: boolean 
+    }
+    let mineExistsInLastIterationByGameId: IMineExistsByGameId = {}
+    let mineExistsInCurrentIterationByGameId: IMineExistsByGameId = {}
+
+    try {
+
+        while(true){
+
+            actualPage++
+    
+            const beginTimestamp = +new Date()
+
+            const mines: CanLootGameFromApi[] = await hre.crabada.api.getCanLootGames(actualPage, minesPerPage)
+            
+            let minesFromLastIterationIncludesAnyCurrentMine = false
+    
+            for (const mine of mines){
+                
+                mineExistsInCurrentIterationByGameId[mine.game_id] = true
+                
+                if (mineExistsInLastIterationByGameId[mine.game_id]){
+
+                    minesFromLastIterationIncludesAnyCurrentMine = true
+                    continue
+
+                }
+
+                yield mine
+
+            }
+    
+            if (mines.length == 0 || minesFromLastIterationIncludesAnyCurrentMine){
+    
+                actualPage = 0
+                mineExistsInLastIterationByGameId = mineExistsInCurrentIterationByGameId
+                mineExistsInCurrentIterationByGameId = {}
+    
+            }
+
+            // Try to send requests to API no more faster than 1 second.
+            const endTimestamp = +new Date()
+            const wait = 1000 - (endTimestamp-beginTimestamp)
+            wait > 0 && (await delay(wait))
+
+        }
+            
+    } catch (error) {
+        console.error('ERROR retrieving canLootGames', String(error));
+        throw(error)
+    }
+
+}
+
+/**
+ * @deprecated
+ * @param hre 
+ * @param task 
+ * @param hasToReadNextPage 
+ * @param interval 
+ * @returns 
+ */
 export const listenCanLootGamesFromApi = async (
     hre: HardhatRuntimeEnvironment, 
     task: CanLootGamesFromApiTask, 

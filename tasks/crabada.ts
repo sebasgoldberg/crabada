@@ -141,7 +141,7 @@ task("addcrabadastoteam", "Add crabadas to team for the specified signer.", asyn
     .addOptionalParam("teamid", "The Team ID. If not supplied, then the team will be created.", undefined, types.string)
     .addParam("crabadas", "Crabadas to transfer.", undefined, types.string)
 
-export const delay = async (ms: number, log = console.log): Promise<void> => {
+export const delay = async (ms: number, log: typeof console.log = ()=>{}): Promise<void> => {
     log('WAIT', ms, 'miliseconds')
     return new Promise((resolve) => {
         setTimeout(()=> resolve(undefined), ms)

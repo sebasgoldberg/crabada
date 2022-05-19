@@ -568,16 +568,16 @@ export class AttackServer {
 
     }
 
-    recentTeams = []
+    recentAdresses = []
 
     returnCaptchaData(unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[], targets: Target[]){
 
         const targetsOrderByGameIdAscending = targets.sort((a, b) => b.gameId < a.gameId ? 1 : b.gameId > a.gameId ? -1 : 0 )
 
-        const playerTeamPairsOrderByNotInRecentTeams = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.sort((a, b) => {
-            const aInRecentTeams = this.recentTeams.includes(a.teamId.toString())
-            const bInRecentTeams = this.recentTeams.includes(b.teamId.toString())
-            return aInRecentTeams == bInRecentTeams ? 0 : aInRecentTeams ? 1 : -1
+        const playerTeamPairsOrderByNotInRecentAdresses = unlockedPlayerTeamPairsWithEnoughBattlePointSorted.sort((a, b) => {
+            const aInRecentAdresses = this.recentAdresses.includes(a.playerAddress)
+            const bInRecentAdresses = this.recentAdresses.includes(b.playerAddress)
+            return aInRecentAdresses == bInRecentAdresses ? 0 : aInRecentAdresses ? 1 : -1
         })
 
         const teamIdsAlreadyUsed: number[] = []
@@ -590,10 +590,7 @@ export class AttackServer {
             if (this.gameIdAlreadyProcessed[String(t.gameId)])
                 continue
 
-            for (const p of playerTeamPairsOrderByNotInRecentTeams){
-
-                if (this.attackExecutor.hasTeamPendingAttack(p.teamId))
-                    continue
+            for (const p of playerTeamPairsOrderByNotInRecentAdresses){
 
                 if (this.attackExecutor.hasAddressRecentlyAttacked(p.playerAddress))
                     continue
@@ -608,10 +605,10 @@ export class AttackServer {
                 if (p.battlePoint.gt(t.battlePoint)){
 
                     this.sendCaptchaDataResponse(p, t);
-                    this.recentTeams.push(p.teamId.toString())
+                    this.recentAdresses.push(p.playerAddress)
 
-                    if (this.recentTeams.length>2)
-                        this.recentTeams.shift()
+                    if (this.recentAdresses.length>1)
+                        this.recentAdresses.shift()
 
                     if (this.pendingResponses.length == 0)
                         return

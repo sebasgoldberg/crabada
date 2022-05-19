@@ -31,14 +31,8 @@ export class AttackExecutor{
         if (this.teamsThatPerformedAttack.includes(teamId))
             return true
 
-        const teamsAlreadyAttacking = []
+        return this.hasTeamPendingAttack(teamId)
 
-        for (const gameId in this.attackTransactionsDataByGameId){
-            const data = this.attackTransactionsDataByGameId[gameId]
-            teamsAlreadyAttacking.push(Number(data.team_id))
-        }
-
-        return teamsAlreadyAttacking.includes(teamId)
     }
 
     addAttackTransactionData(attackTransactionData: AttackTransactionData){

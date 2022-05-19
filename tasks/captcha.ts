@@ -9,7 +9,7 @@ import { getClassNameByCrabada, getSigner, isLootingPeriod } from "./crabada";
 
 
 import { Player } from "../scripts/hre";
-import { CanLootGameFromApi, DEBUG, listenCanLootGamesFromApi } from "../scripts/api";
+import { getCanLootGamesFromApiGenerator } from "../scripts/api";
 import { connectToDatabase } from "../scripts/srv/database";
 import { AttackServer } from "../scripts/server/AttackServer";
 
@@ -106,7 +106,7 @@ const updateLockStatus = async (hre: HardhatRuntimeEnvironment, idleGame: Contra
     // ))
 }
 
-const settleGamesAndSetInterval = async (hre: HardhatRuntimeEnvironment, playerTeamPairs: PlayerTeamPair[], signer: SignerWithAddress, testmode: boolean): Promise<NodeJS.Timer|false> => {
+const settleGamesAndSetInterval = (hre: HardhatRuntimeEnvironment, playerTeamPairs: PlayerTeamPair[], signer: SignerWithAddress, testmode: boolean): NodeJS.Timer|false => {
 
     const { idleGame } = getCrabadaContracts(hre)
 
@@ -137,9 +137,9 @@ const settleGamesAndSetInterval = async (hre: HardhatRuntimeEnvironment, playerT
 
     }
 
-    !testmode && (await settleGames(console.log))
+    !testmode && settleGames(console.log)
 
-    const settleGameInterval = !testmode && setInterval(() => settleGames(()=>{}), 20_000)
+    const settleGameInterval = !testmode && setInterval(() => settleGames(()=>{}), 10_000)
 
     return settleGameInterval
 }
@@ -391,6 +391,21 @@ const attackTeams = async (
 
 type HasToReadNextPageFunction = (playerTeamPairs: PlayerTeamPair[]) => boolean
 
+type ConditionToStopWaitingFunction = () => boolean
+
+export const waitUntil = async (hasToStopWaiting: ConditionToStopWaitingFunction) => {
+    if (hasToStopWaiting())
+        return 
+    return new Promise( resolve => {
+        const interval = setInterval(() => {
+            if (hasToStopWaiting()){
+                clearInterval(interval)
+                resolve(undefined)
+            }
+        }, 100)
+    })
+}
+
 const lootLoop = async (
     hre: HardhatRuntimeEnvironment, looters: Player[], 
     blockstoanalyze: number, firstdefendwindow: number, testmode: boolean,
@@ -421,7 +436,7 @@ const lootLoop = async (
 
     // Sets interval to settleGame for unlocked teams.
     
-    const settleGameInterval = await settleGamesAndSetInterval(hre, playerTeamPairs, settleSigner, testmode)
+    const settleGameInterval = settleGamesAndSetInterval(hre, playerTeamPairs, settleSigner, testmode)
 
 
     // TODO Verify if applies.
@@ -504,11 +519,73 @@ const lootLoop = async (
 
     // }, 50)
 
-    const listenCanLootGamesFromApiInterval = await listenCanLootGamesFromApi(hre, (canLootGamesFromApi: CanLootGameFromApi[]) => {
 
-        const teamsAndTheirTransaction: TeamAndItsTransaction[] = canLootGamesFromApi
+
+    // const listenCanLootGamesFromApiInterval = await listenCanLootGamesFromApi(hre, (canLootGamesFromApi: CanLootGameFromApi[]) => {
+
+    //     const teamsAndTheirTransaction: TeamAndItsTransaction[] = canLootGamesFromApi
+    //         // Latest have the priority
+    //         .sort(({start_time: a}, { start_time: b}) => a < b ? 1 : a > b ? -1 : 0)
+    //         .map(({game_id, team_id, created_at})=>({
+    //             gameId: BigNumber.from(game_id), 
+    //             teamId: BigNumber.from(team_id),
+    //             created_at
+    //         }))
+
+    //     if (!hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackOnlyTeamsThatPlayToLoose){
+    //         canLootGamesFromApi.forEach( ({faction, team_id, defense_point}) => {
+    //             teamsThatPlayToLooseByTeamId[String(team_id)] = {
+    //                 battlePoint: new TeamBattlePoints(faction, defense_point)
+    //             }
+    //         })    
+    //     }
+            
+    //     attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
+
+    // }, () => {
+
+    //     const unlockedPlayerTeamPairs = playerTeamPairs
+    //         .filter( p => (!p.locked && p.settled) || testmode )
+
+    //     return hasToReadNextMineToLootPage(playerTeamPairs) && unlockedPlayerTeamPairs.length > 0
+
+    // }, 500)
+
+
+    let continueRunning = true
+
+    const checkContinueRunningInterval = setInterval(async () => {
+        try {
+            if (await needsToContinueRunning())
+                return
+            continueRunning = false
+            console.log('No need to continue running.');
+            clearInterval(checkContinueRunningInterval)
+        } catch (error) {
+            console.error('Error when trying to verify if needed to continue running:', String(error))
+        }
+    }, 60_000)
+
+    const hasToProcessNextMine = (): boolean => {
+
+        const unlockedPlayerTeamPairs = playerTeamPairs
+            .filter( p => (!p.locked && p.settled) || testmode )
+
+        return hasToReadNextMineToLootPage(playerTeamPairs) && unlockedPlayerTeamPairs.length > 0
+
+    }
+
+    const canLootGamesFromApiGenerator = getCanLootGamesFromApiGenerator(hre)
+
+    for await (const mine of canLootGamesFromApiGenerator){
+
+        if (!continueRunning)
+            break
+        
+        await waitUntil(hasToProcessNextMine)
+
+        const teamsAndTheirTransaction: TeamAndItsTransaction[] = [mine]
             // Latest have the priority
-            .sort(({start_time: a}, { start_time: b}) => a < b ? 1 : a > b ? -1 : 0)
             .map(({game_id, team_id, created_at})=>({
                 gameId: BigNumber.from(game_id), 
                 teamId: BigNumber.from(team_id),
@@ -516,7 +593,7 @@ const lootLoop = async (
             }))
 
         if (!hre.crabada.network.LOOT_CAPTCHA_CONFIG.attackOnlyTeamsThatPlayToLoose){
-            canLootGamesFromApi.forEach( ({faction, team_id, defense_point}) => {
+            [mine].forEach( ({faction, team_id, defense_point}) => {
                 teamsThatPlayToLooseByTeamId[String(team_id)] = {
                     battlePoint: new TeamBattlePoints(faction, defense_point)
                 }
@@ -524,51 +601,13 @@ const lootLoop = async (
         }
             
         attackTeamsThatStartedAGame(playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
-
-    }, () => {
-
-        const unlockedPlayerTeamPairs = playerTeamPairs
-            .filter( p => (!p.locked && p.settled) || testmode )
-
-        return hasToReadNextMineToLootPage(playerTeamPairs) && unlockedPlayerTeamPairs.length > 0
-
-    }, 500)
-
-    // Never finish
-    await new Promise((resolve) => {
-
-        const checkContinueRunningInterval = setInterval(async () => {
-            try {
-                if (await needsToContinueRunning())
-                    return
-                console.log('No need to continue running.');
-                clearInterval(checkContinueRunningInterval)
-                resolve(undefined)
-            } catch (error) {
-                console.error('Error when trying to verify if needed to continue running:', String(error))
-            }
-        }, 60_000)
-
-        // TODO Verify if applies.
-        // const endProcessInterval = setInterval(()=>{
-
-        //     const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => !p.locked || testmode )
-
-        //     if (unlockedPlayerTeamPairs.length == 0){
-        //         console.log('Ending process', 'No unlocked looter teams');
-        //         clearInterval(endProcessInterval)
-        //         resolve(undefined)
-        //     }
-
-        // }, 1000)
-
-    })
+    }
 
     // clearInterval(gasPriceUpdateInterval)
     //clearInterval(attackTeamsInterval)
     // clearInterval(pendingStartGameTransactionInterval)
     // clearInterval(startGameEventsInterval)
-    clearInterval(listenCanLootGamesFromApiInterval)
+    // clearInterval(listenCanLootGamesFromApiInterval)
     updateTeamBattlePointListener && idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
     clearInterval(updateLockStatusInterval)
     settleGameInterval && clearInterval(settleGameInterval)
@@ -622,20 +661,20 @@ task(
 
         const hasToReadNextMineToLootPage = (playerTeamPairs: PlayerTeamPair[]): boolean => {
 
-            if (playerTeamPairs
-                .filter( ({ teamId }) => !attackServer.attackExecutor.hasTeamPendingAttack(teamId) )
-                .length == 0)
-                return false
-
             const playerTeamPairsSettled = playerTeamPairs
                 .filter( p => p.settled)
 
-            const playerTeamPairsThatRecentlyAttacked = playerTeamPairsSettled
+            if (playerTeamPairsSettled
+                .filter( ({ teamId }) => !attackServer.attackExecutor.isTeamBusy(teamId) )
+                .length == 0)
+                return false
+
+            const playerTeamPairsThatAddressRecentlyAttacked = playerTeamPairsSettled
                 .filter( p => attackServer.attackExecutor.hasAddressRecentlyAttacked(p.playerAddress))
 
-            const allTeamsRecentlyAttacked = playerTeamPairsSettled.length == playerTeamPairsThatRecentlyAttacked.length
+            const hasAllTeamsAdressesRecentlyAttacked = playerTeamPairsSettled.length == playerTeamPairsThatAddressRecentlyAttacked.length
 
-            return attackServer.hasPendingCaptchaResponses() && !allTeamsRecentlyAttacked
+            return attackServer.hasPendingCaptchaResponses() && !hasAllTeamsAdressesRecentlyAttacked
         }
 
         await lootLoop(
