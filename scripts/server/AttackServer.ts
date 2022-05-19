@@ -396,7 +396,7 @@ export class AttackServer {
     }
 
     teamsThatPlayToLooseByTeamId: ITeamsThatPlayToLooseByTeamId = {}
-    static ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
+    static ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
 
     async initialize(){
         if (AttackServer.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE)
