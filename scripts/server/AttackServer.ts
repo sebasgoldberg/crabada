@@ -424,14 +424,26 @@ export class AttackServer {
 
     hasToSendCaptcha = false
     notSentCaptchaSinceTimestamp: number = undefined
+    intervalToUpdateAttackStrategy: NodeJS.Timer
 
     setIntervalToUpdateAttackStrategy(){
+
+        if (!this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE)
+            return
         
         const interval = 5_000
         const tollerance = 60_000
         
         // TODO Should exists a mechanism to clear the interval.
-        setInterval(async () => {
+        this.intervalToUpdateAttackStrategy =  setInterval(async () => {
+
+            if (!this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE){
+                if (this.intervalToUpdateAttackStrategy){
+                    clearInterval(this.intervalToUpdateAttackStrategy)
+                    this.intervalToUpdateAttackStrategy = undefined    
+                }
+                return
+            }
             
             const newHasToSendCaptcha = this.hasToContinueReadingNextMineToLoot()
 
@@ -457,14 +469,6 @@ export class AttackServer {
                         this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
                         console.log('ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE changed to', this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE);
                     }
-                }
-
-            }else{
-
-                if (!this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE){
-                    this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
-                    console.log('ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE changed to', this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE);
-    
                 }
 
             }
