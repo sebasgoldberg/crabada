@@ -9,6 +9,7 @@ import { collections } from "../srv/database"
 import { getTeamsThatPlayToLooseByTeamIdUsingDb, ITeamsThatPlayToLooseByTeamId } from "../strategy"
 import { AttackExecutor } from "./AttackExecutor"
 import { AuthServer } from "./AuthServer"
+import { PlayersManager } from "./PlayersManager"
 
 interface PendingResponse {
     resolveResponse: (value: unknown) => void,
@@ -85,6 +86,27 @@ export class AttackServer {
         return this.pendingResponses.length > 0
     }
 
+    hasToContinueReadingNextMineToLoot(): boolean{
+
+        const playerTeamPairsSettled = this.playersManager.getSettledPlayers()
+
+        if (playerTeamPairsSettled.length == 0)
+            return false
+
+        if (playerTeamPairsSettled
+            .filter( ({ teamId }) => !this.attackExecutor.isTeamBusy(teamId) )
+            .length == 0)
+            return false
+
+        const playerTeamPairsThatAddressRecentlyAttacked = playerTeamPairsSettled
+            .filter( p => this.attackExecutor.hasAddressRecentlyAttacked(p.playerAddress))
+
+        const hasAllTeamsAdressesRecentlyAttacked = playerTeamPairsSettled.length == playerTeamPairsThatAddressRecentlyAttacked.length
+
+        return this.hasPendingCaptchaResponses() && !hasAllTeamsAdressesRecentlyAttacked
+
+    }
+
     async needsToContinueRunning(): Promise<boolean>{
 
         return (await this.teamsSecondsToUnlock()).some(x => x < 900)
@@ -148,7 +170,9 @@ export class AttackServer {
     }
 
     // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
-    constructor(hre: HardhatRuntimeEnvironment){
+    constructor(hre: HardhatRuntimeEnvironment, 
+        testmode: boolean, 
+        public playersManager = new PlayersManager(hre, testmode)){
 
         this.hre = hre
 
@@ -396,11 +420,57 @@ export class AttackServer {
     }
 
     teamsThatPlayToLooseByTeamId: ITeamsThatPlayToLooseByTeamId = {}
-    static ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
+    ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
+
+    hasToSendCaptcha = false
+    notSentCaptchaSinceTimestamp: number = undefined
+
+    setIntervalToUpdateAttackStrategy(){
+        
+        const interval = 5_000
+        const tollerance = 60_000
+        
+        // TODO Should exists a mechanism to clear the interval.
+        setInterval(async () => {
+            
+            const newHasToSendCaptcha = this.hasToContinueReadingNextMineToLoot()
+
+            let changed = false
+
+            if (this.hasToSendCaptcha != newHasToSendCaptcha){
+                this.hasToSendCaptcha = newHasToSendCaptcha
+                changed = true
+            }
+
+            if (changed){
+                if (this.hasToSendCaptcha){
+                    this.notSentCaptchaSinceTimestamp = +new Date()
+                } else {
+                    this.notSentCaptchaSinceTimestamp = undefined
+                }    
+            }
+
+            if (this.notSentCaptchaSinceTimestamp){
+                if (((+new Date())-this.notSentCaptchaSinceTimestamp) > tollerance){
+                    this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
+                    console.log('ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE changed to', this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE);
+                }
+            }else{
+                this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
+                console.log('ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE changed to', this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE);
+            }
+
+
+        }, interval)
+
+    }
 
     async initialize(){
-        if (AttackServer.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE)
+        if (this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE){
             this.teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamIdUsingDb(this.hre)
+            this.setIntervalToUpdateAttackStrategy()
+        }
+        await this.playersManager.initialize()
     }
 
     async registerOrRetryAttack(challenge: string, captchaVerifyResponse: CaptchaVerifyResult){
@@ -537,6 +607,8 @@ export class AttackServer {
 
     sendCaptchaDataResponse(p: PlayerTeamPair, t: Target){
 
+        this.notSentCaptchaSinceTimestamp = +new Date()
+
         const pendingResponse = this.pendingResponses.shift()
         if (!pendingResponse)
             return
@@ -584,7 +656,7 @@ export class AttackServer {
 
         for (const t of targetsOrderByGameIdAscending){
 
-            if (AttackServer.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE && !this.teamsThatPlayToLooseByTeamId[Number(t.teamId)])
+            if (this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE && !this.teamsThatPlayToLooseByTeamId[Number(t.teamId)])
                 continue
 
             if (this.gameIdAlreadyProcessed[String(t.gameId)])
