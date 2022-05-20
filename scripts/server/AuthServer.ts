@@ -23,8 +23,6 @@ export class AuthServer {
             .map(({signerIndex})=>signerIndex)
             .map( index => new Wallet(MAINNET_AVAX_MAIN_ACCOUNTS_PKS[index]))
 
-        this.start()
-
     }
 
     async start(retryMs=20_000){
