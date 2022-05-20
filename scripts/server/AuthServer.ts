@@ -27,10 +27,11 @@ export class AuthServer {
 
     }
 
-    start(retryMs=20_000){
+    async start(retryMs=20_000){
         if (this.authenticateInterval)
             return
-        this.authenticateInterval = setInterval(()=>{
+        await this.authenticateIfNotAuthenticated()
+        this.authenticateInterval = setInterval(async ()=>{
             this.authenticateIfNotAuthenticated()
         }, retryMs)
     }

@@ -8,8 +8,11 @@ import { currentBlockTimeStamp, getCrabadaContracts } from "../crabada"
 import { collections } from "../srv/database"
 import { getTeamsThatPlayToLooseByTeamIdUsingDb, ITeamsThatPlayToLooseByTeamId } from "../strategy"
 import { AttackExecutor } from "./AttackExecutor"
-import { AuthServer } from "./AuthServer"
 import { PlayersManager } from "./PlayersManager"
+
+interface IAuthServer{
+    getToken(user_address: string): string
+}
 
 interface PendingResponse {
     resolveResponse: (value: unknown) => void,
@@ -61,8 +64,6 @@ export class AttackServer {
     pendingResponses: PendingResponse[] = []
     pendingAttacks: PendingAttacks = {}
     attackExecutor: AttackExecutor
-
-    authServer: AuthServer
 
     hre: HardhatRuntimeEnvironment
 
@@ -171,12 +172,11 @@ export class AttackServer {
 
     // constructor(playerTeamPairs: PlayerTeamPair[], testmode: boolean){
     constructor(hre: HardhatRuntimeEnvironment, 
-        testmode: boolean, 
+        testmode: boolean,
+        private authServer: IAuthServer,
         public playersManager = new PlayersManager(hre, testmode)){
 
         this.hre = hre
-
-        this.authServer = new AuthServer(hre)
 
         const { idleGame } = getCrabadaContracts(hre)
 

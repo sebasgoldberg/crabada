@@ -13,6 +13,7 @@ import { getCanLootGamesFromApiGenerator } from "../scripts/api";
 import { connectToDatabase } from "../scripts/srv/database";
 import { AttackServer } from "../scripts/server/AttackServer";
 import { PlayersManager } from "../scripts/server/PlayersManager";
+import { AuthServer } from "../scripts/server/AuthServer";
 
 type LootFunction = (
     unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
@@ -516,8 +517,10 @@ task(
 
         await connectToDatabase()
 
-        const attackServer = new AttackServer(hre, testmode)
+        const authServer = new AuthServer(hre)
+        await authServer.start()
 
+        const attackServer = new AttackServer(hre, testmode, authServer)
         await attackServer.initialize()
 
         if (!attackServer.playersManager.hasLooters())
