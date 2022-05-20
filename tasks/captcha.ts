@@ -449,7 +449,7 @@ const lootLoop = async (
 
     const hasToProcessNextMine = (): boolean => {
 
-        return hasToReadNextMineToLootPage(playersManager.playerTeamPairs)
+        return hasToReadNextMineToLootPage(playersManager.playerTeamPairs) || (!continueRunning)
 
     }
 
@@ -457,11 +457,11 @@ const lootLoop = async (
 
     for await (const mine of canLootGamesFromApiGenerator){
 
+        await waitUntil(hasToProcessNextMine)
+
         if (!continueRunning)
             break
         
-        await waitUntil(hasToProcessNextMine)
-
         const teamsAndTheirTransaction: TeamAndItsTransaction[] = [mine]
             // Latest have the priority
             .map(({game_id, team_id, created_at})=>({
