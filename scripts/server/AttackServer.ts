@@ -466,11 +466,11 @@ export class AttackServer {
     }
 
     async initialize(){
+        await this.playersManager.initialize()
         if (this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE){
             this.teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamIdUsingDb(this.hre)
             this.setIntervalToUpdateAttackStrategy()
         }
-        await this.playersManager.initialize()
     }
 
     async registerOrRetryAttack(challenge: string, captchaVerifyResponse: CaptchaVerifyResult){
