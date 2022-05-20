@@ -520,7 +520,7 @@ task(
 
         await attackServer.initialize()
 
-        if (attackServer.playersManager.hasLooters())
+        if (!attackServer.playersManager.hasLooters())
             return
 
         if (!(await attackServer.needsToContinueRunning())){
