@@ -88,7 +88,7 @@ export class AttackExecutor{
     hasTeamPendingAttack(teamId: any){
         for (const gameId in this.attackTransactionsDataByGameId){
             const { team_id } = this.attackTransactionsDataByGameId[gameId]
-            if (String(teamId) == String(teamId)){
+            if (String(team_id) == String(teamId)){
                 return true
             }
         }
