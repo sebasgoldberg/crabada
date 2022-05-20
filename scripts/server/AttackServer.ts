@@ -451,15 +451,23 @@ export class AttackServer {
             }
 
             if (this.notSentCaptchaSinceTimestamp){
-                if (((+new Date())-this.notSentCaptchaSinceTimestamp) > tollerance){
-                    this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
-                    console.log('ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE changed to', this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE);
-                }
-            }else{
-                this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
-                console.log('ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE changed to', this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE);
-            }
 
+                if (((+new Date())-this.notSentCaptchaSinceTimestamp) > tollerance){
+                    if (this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE){
+                        this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
+                        console.log('ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE changed to', this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE);
+                    }
+                }
+
+            }else{
+
+                if (!this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE){
+                    this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
+                    console.log('ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE changed to', this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE);
+    
+                }
+
+            }
 
         }, interval)
 
