@@ -7,7 +7,7 @@ import { DEBUG } from "../api"
 import { currentBlockTimeStamp, getCrabadaContracts } from "../crabada"
 import { collections } from "../srv/database"
 import { getTeamsThatPlayToLooseByTeamIdUsingDb, ITeamsThatPlayToLooseByTeamId } from "../strategy"
-import { AttackExecutor } from "./AttackExecutor"
+import { AttackManager } from "./AttackExecutor"
 import { PlayersManager } from "./PlayersManager"
 
 interface IAuthServer{
@@ -63,7 +63,7 @@ export class AttackServer {
     app = express();
     pendingResponses: PendingResponse[] = []
     pendingAttacks: PendingAttacks = {}
-    attackExecutor: AttackExecutor
+    attackManager: AttackManager
 
     hre: HardhatRuntimeEnvironment
 
@@ -95,12 +95,12 @@ export class AttackServer {
             return false
 
         if (playerTeamPairsSettled
-            .filter( ({ teamId }) => !this.attackExecutor.isTeamBusy(teamId) )
+            .filter( ({ teamId }) => !this.attackManager.isTeamBusy(teamId) )
             .length == 0)
             return false
 
         const playerTeamPairsThatAddressRecentlyAttacked = playerTeamPairsSettled
-            .filter( p => this.attackExecutor.hasAddressRecentlyAttacked(p.playerAddress))
+            .filter( p => this.attackManager.hasAddressRecentlyAttacked(p.playerAddress))
 
         const hasAllTeamsAdressesRecentlyAttacked = playerTeamPairsSettled.length == playerTeamPairsThatAddressRecentlyAttacked.length
 
@@ -360,7 +360,7 @@ export class AttackServer {
 
                 const { signature, expire_time } = attackResponse.data.result
 
-                this.attackExecutor.addAttackTransactionData({user_address, game_id, team_id, expire_time, signature})
+                this.attackManager.addAttackTransactionData({user_address, game_id, team_id, expire_time, signature})
 
                 await this.increaseUserBalance(requester)
 
@@ -413,8 +413,7 @@ export class AttackServer {
             })
         })
 
-        this.attackExecutor = new AttackExecutor(hre)
-        this.attackExecutor.beginAttackInterval()
+        this.attackManager = new AttackManager(hre)
         this.app.listen(3000)
 
     }
@@ -479,6 +478,7 @@ export class AttackServer {
 
     async initialize(){
         await this.playersManager.initialize()
+        await this.attackManager.beginUpdateInterval()
         if (this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE){
             this.teamsThatPlayToLooseByTeamId = await getTeamsThatPlayToLooseByTeamIdUsingDb(this.hre)
             this.setIntervalToUpdateAttackStrategy()
@@ -509,7 +509,7 @@ export class AttackServer {
 
             const { signature, expire_time } = attackResponse.data.result
 
-            this.attackExecutor.addAttackTransactionData({ user_address, game_id, team_id, expire_time, signature })
+            this.attackManager.addAttackTransactionData({ user_address, game_id, team_id, expire_time, signature })
 
             pendingChallenge.status.successfulAttackRegistration = true
 
@@ -676,10 +676,10 @@ export class AttackServer {
 
             for (const p of playerTeamPairsOrderByNotInRecentAdresses){
 
-                if (this.attackExecutor.hasAddressRecentlyAttacked(p.playerAddress))
+                if (this.attackManager.hasAddressRecentlyAttacked(p.playerAddress))
                     continue
 
-                if (this.attackExecutor.isTeamBusy(p.teamId))
+                if (this.attackManager.isTeamBusy(p.teamId))
                     continue
 
                 // Do not use same team for different targets.

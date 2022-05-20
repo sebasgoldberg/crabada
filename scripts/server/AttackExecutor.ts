@@ -2,6 +2,7 @@ import { BigNumber, Contract, ethers } from "ethers"
 import { HardhatRuntimeEnvironment } from "hardhat/types"
 import { getSignerForAddress } from "../../tasks/captcha"
 import { getCrabadaContracts } from "../crabada"
+import { collections } from "../srv/database"
 
 interface AttackTransactionData{
     game_id: any,
@@ -15,7 +16,56 @@ interface AttackTransactionDataByGameId{
     [game_id: string]: AttackTransactionData
 }
 
-export class AttackExecutor{
+interface DbAttackTransactionDataStatus{
+    executed?: boolean,
+    timeout?: boolean,
+}
+interface DbAttackTransactionData extends AttackTransactionData, DbAttackTransactionDataStatus{
+}
+
+export const dbGetPendingAttackTransactionData = async (): Promise<DbAttackTransactionData[]> => {
+
+    const result = (await collections.attackTransactionsData
+        .find({ executed: false, timeout: false })
+        .toArray()) as unknown as DbAttackTransactionData[]
+    
+    return result
+
+}
+
+export const dbGetAttackTransactionDataForGameIds = async (gameIds: number[]): Promise<DbAttackTransactionData[]> => {
+
+    const result = (await collections.attackTransactionsData
+        .find({ game_id: { $in: gameIds } })
+        .toArray()) as unknown as DbAttackTransactionData[]
+    
+    return result
+
+}
+
+export const dbAddAttackTransactionData = async (attackTransactionData: AttackTransactionData): Promise<void> => {
+    await collections.attackTransactionsData.updateOne(
+        { game_id: attackTransactionData.game_id },
+        {
+            $set: {
+                ...attackTransactionData,
+                executed: false, 
+                timeout: false,    
+            }
+        },
+        {
+            upsert: true
+        })
+}
+
+export const dbUpdateAttackTransactionData = async (game_id: number, data: DbAttackTransactionDataStatus) => {
+    await collections.attackTransactionsData.updateOne(
+        { game_id },
+        { $set: data }
+    )
+}
+
+export class AttackManager{
 
     hre: HardhatRuntimeEnvironment
     attackTransactionsDataByGameId: AttackTransactionDataByGameId = {}
@@ -36,6 +86,7 @@ export class AttackExecutor{
     }
 
     addAttackTransactionData(attackTransactionData: AttackTransactionData){
+        dbAddAttackTransactionData(attackTransactionData)
         this.attackTransactionsDataByGameId[attackTransactionData.game_id] = attackTransactionData
         this.setAddressRecentlyAttacked(attackTransactionData.user_address)
     }
@@ -55,36 +106,6 @@ export class AttackExecutor{
         }, 60_000)
     }
 
-    async attackTransaction({user_address, game_id, team_id, expire_time, signature}: AttackTransactionData){
-
-        const { idleGame } = getCrabadaContracts(this.hre)
-
-        const signers = await this.hre.ethers.getSigners()
-
-        const looterSigner = getSignerForAddress(signers, user_address)
-
-        try {
-            console.log('looterSigner', looterSigner.address)
-            console.log('idleGame.attack(game_id, team_id, expire_time, signature)', game_id, team_id, expire_time, signature);
-            await idleGame.connect(looterSigner).callStatic["attack(uint256,uint256,uint256,bytes)"](
-                BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature, 
-                this.hre.crabada.network.getAttackOverride()
-            )
-            const txr: ethers.providers.TransactionResponse = await idleGame.connect(looterSigner)["attack(uint256,uint256,uint256,bytes)"](
-                BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature,
-                this.hre.crabada.network.getAttackOverride()
-            )
-            console.log('txr.hash', txr.hash);
-            this.teamsThatPerformedAttack.push(Number(team_id))
-            delete this.attackTransactionsDataByGameId[game_id]
-        } catch (error) {
-            console.error('Error trying to attack', String(error));
-            if ((+new Date()/1000)>Number(expire_time))
-                delete this.attackTransactionsDataByGameId[game_id]
-        }
-
-    }
-
     hasTeamPendingAttack(teamId: any){
         for (const gameId in this.attackTransactionsDataByGameId){
             const { team_id } = this.attackTransactionsDataByGameId[gameId]
@@ -95,28 +116,116 @@ export class AttackExecutor{
         return false
     }
 
-    beginAttackInterval(): NodeJS.Timer {
+    async updateTransactionData(){
 
-        let attackInExecution = false
+        const currentGameIds = Object.keys(this.attackTransactionsDataByGameId)
+
+        if (currentGameIds.length > 0){
+
+            const currentTransactionData = await dbGetAttackTransactionDataForGameIds(
+                currentGameIds.map(x => Number(x))
+            )
+
+            for (const current of currentTransactionData){
+                
+                if (current.executed){
+                    this.teamsThatPerformedAttack.push(Number(current.team_id))
+                }
+                
+                if (current.executed || current.timeout){
+                    delete this.attackTransactionsDataByGameId[current.game_id]
+                }
+
+            }
+        
+        }
+
+        const pendingAttackTransactionData = await dbGetPendingAttackTransactionData()
+
+        for (const pending of pendingAttackTransactionData){
+            if (this.attackTransactionsDataByGameId[pending.game_id])
+                continue
+            this.attackTransactionsDataByGameId[pending.game_id] = pending
+        }
+
+    }
+
+    async beginUpdateInterval(): Promise<NodeJS.Timer> {
+
+        await this.updateTransactionData()
+
+        let updateInExecution = false
 
         return setInterval(async ()=>{
 
-            if (attackInExecution)
+            if (updateInExecution)
                 return
 
-            attackInExecution = true
+            updateInExecution = true
 
-            const gameIdsToAttack = Object.keys(this.attackTransactionsDataByGameId)
+            await this.updateTransactionData()
 
-            for (const gameId of gameIdsToAttack){
-                const attackTransactionData: AttackTransactionData = this.attackTransactionsDataByGameId[gameId]
-                await this.attackTransaction(attackTransactionData)
-            }
+            updateInExecution = false
 
-            attackInExecution = false
+        }, 5_000)
 
-        },5_000)
+    }
 
+}
+
+export class AttackExecutor{
+
+    hre: HardhatRuntimeEnvironment
+
+    constructor(hre: HardhatRuntimeEnvironment){
+        this.hre = hre
+    }
+
+    async attackTransaction({user_address, game_id, team_id, expire_time, signature}: AttackTransactionData){
+
+        const { idleGame } = getCrabadaContracts(this.hre)
+
+        const signers = await this.hre.ethers.getSigners()
+
+        const looterSigner = getSignerForAddress(signers, user_address)
+
+        try {
+
+            console.log('looterSigner', looterSigner.address)
+            console.log('idleGame.attack(game_id, team_id, expire_time, signature)', game_id, team_id, expire_time, signature);
+
+            await idleGame.connect(looterSigner).callStatic["attack(uint256,uint256,uint256,bytes)"](
+                BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature, 
+                this.hre.crabada.network.getAttackOverride()
+            )
+
+            const txr: ethers.providers.TransactionResponse = await idleGame.connect(looterSigner)["attack(uint256,uint256,uint256,bytes)"](
+                BigNumber.from(game_id), BigNumber.from(team_id), BigNumber.from(expire_time), signature,
+                this.hre.crabada.network.getAttackOverride()
+            )
+
+            console.log('txr.hash', txr.hash);
+
+            await txr.wait(3)
+
+            await dbUpdateAttackTransactionData(game_id, { executed: true })
+
+        } catch (error) {
+
+            console.error('Error trying to attack', String(error));
+
+            if ((+new Date()/1000)>Number(expire_time))
+                await dbUpdateAttackTransactionData(game_id, { timeout: true })
+
+        }
+
+    }
+
+    async attackPendingTransactions(){
+        const pendingTransactions = await dbGetPendingAttackTransactionData()
+        for (const pending of pendingTransactions){
+            await this.attackTransaction(pending)
+        }
     }
 
 }

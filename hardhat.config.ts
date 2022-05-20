@@ -43,6 +43,7 @@ import "./tasks/telegram"
 import "./tasks/utils"
 import "./tasks/savemines"
 import "./tasks/attackdifference"
+import "./tasks/attackpending"
 
 task("accounts", "Prints the list of accounts", async (args, hre): Promise<void> => {
   const accounts: SignerWithAddress[] = await hre.ethers.getSigners()
