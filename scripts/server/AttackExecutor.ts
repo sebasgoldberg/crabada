@@ -5,11 +5,11 @@ import { getCrabadaContracts } from "../crabada"
 import { collections } from "../srv/database"
 
 interface AttackTransactionData{
-    game_id: any,
-    user_address: any,
-    team_id: any,
-    expire_time: any, 
-    signature: any,
+    game_id: string,
+    user_address: string,
+    team_id: string,
+    expire_time: number, 
+    signature: string,
 }
 
 interface AttackTransactionDataByGameId{
@@ -36,12 +36,12 @@ export const dbGetPendingAttackTransactionData = async (): Promise<DbAttackTrans
 
 }
 
-export const dbGetAttackTransactionDataForGameIds = async (gameIds: number[]): Promise<DbAttackTransactionData[]> => {
+export const dbGetAttackTransactionDataForGameIds = async (gameIds: string[]): Promise<DbAttackTransactionData[]> => {
 
-    console.log('dbGetAttackTransactionDataForGameIds', 'gameIds', gameIds.map(x=>String(x)));
+    console.log('dbGetAttackTransactionDataForGameIds', 'gameIds', gameIds);
 
     const result = (await collections.attackTransactionsData
-        .find({ game_id: { $in: gameIds.map(x=>String(x)) } })
+        .find({ game_id: { $in: gameIds } })
         .toArray()) as unknown as DbAttackTransactionData[]
     
     return result
@@ -66,7 +66,7 @@ export const dbAddAttackTransactionData = async (attackTransactionData: AttackTr
         })
 }
 
-export const dbUpdateAttackTransactionData = async (game_id: number, data: DbAttackTransactionDataStatus) => {
+export const dbUpdateAttackTransactionData = async (game_id: string, data: DbAttackTransactionDataStatus) => {
     console.log('dbUpdateAttackTransactionData', 'game_id', game_id)
     console.log('dbUpdateAttackTransactionData', 'data', data);
 
@@ -134,7 +134,7 @@ export class AttackManager{
         if (currentGameIds.length > 0){
 
             const currentTransactionData = await dbGetAttackTransactionDataForGameIds(
-                currentGameIds.map(x => Number(x))
+                currentGameIds
             )
 
             for (const current of currentTransactionData){
