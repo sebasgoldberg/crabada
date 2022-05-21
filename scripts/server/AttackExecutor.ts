@@ -38,10 +38,10 @@ export const dbGetPendingAttackTransactionData = async (): Promise<DbAttackTrans
 
 export const dbGetAttackTransactionDataForGameIds = async (gameIds: number[]): Promise<DbAttackTransactionData[]> => {
 
-    console.log('dbGetAttackTransactionDataForGameIds', 'gameIds', gameIds);
+    console.log('dbGetAttackTransactionDataForGameIds', 'gameIds', gameIds.map(x=>String(x)));
 
     const result = (await collections.attackTransactionsData
-        .find({ game_id: { $in: gameIds } })
+        .find({ game_id: { $in: gameIds.map(x=>String(x)) } })
         .toArray()) as unknown as DbAttackTransactionData[]
     
     return result
