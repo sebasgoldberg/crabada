@@ -6,9 +6,10 @@ StartLimitIntervalSec=0
 [Service]
 Environment="HARDHAT_NETWORK=<network>"
 Type=simple
-WatchdogSec=450
+WatchdogSec=180
+NotifyAccess=all
 Restart=always
-RestartSec=60
+RestartSec=1
 User=cerebro
 ExecStart=/home/cerebro/crabada/services/crabada.savemines.sh
 WorkingDirectory=/home/cerebro/crabada

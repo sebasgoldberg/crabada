@@ -16,6 +16,8 @@ import { assert } from "console";
 import { PLAYER_TUS_RESERVE } from "./player";
 import { getSignerForAddress } from "./captcha";
 
+import * as notify from 'sd-notify';
+
 task("basefee", "Get the base fee", async (args, hre): Promise<void> => {
     console.log(formatUnits(await baseFee(hre), 9))
 })
@@ -173,7 +175,7 @@ task(
             return
         }
 
-        // while (true){
+        while (true){
 
             for (const mineGroup of hre.crabada.network.MINE_GROUPS){
 
@@ -205,8 +207,11 @@ task(
     
             }
 
-        //     await delay(1000)
-        // }
+            await delay(1000)
+
+            notify.watchdog()
+
+        }
 
     })
     .addOptionalParam("minerteamid", "The teams IDs to use for mining. Separated by ','", undefined, types.string)
