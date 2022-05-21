@@ -28,12 +28,17 @@ export const dbGetPendingAttackTransactionData = async (): Promise<DbAttackTrans
     const result = (await collections.attackTransactionsData
         .find({ executed: false, timeout: false })
         .toArray()) as unknown as DbAttackTransactionData[]
+
+    if (result.length>0)
+        console.log('dbGetPendingAttackTransactionData', 'result[0]', result[0]);
     
     return result
 
 }
 
 export const dbGetAttackTransactionDataForGameIds = async (gameIds: number[]): Promise<DbAttackTransactionData[]> => {
+
+    console.log('dbGetAttackTransactionDataForGameIds', 'gameIds', gameIds);
 
     const result = (await collections.attackTransactionsData
         .find({ game_id: { $in: gameIds } })
@@ -44,6 +49,9 @@ export const dbGetAttackTransactionDataForGameIds = async (gameIds: number[]): P
 }
 
 export const dbAddAttackTransactionData = async (attackTransactionData: AttackTransactionData): Promise<void> => {
+
+    console.log('dbAddAttackTransactionData', 'attackTransactionData', attackTransactionData);
+
     await collections.attackTransactionsData.updateOne(
         { game_id: attackTransactionData.game_id },
         {
@@ -59,6 +67,9 @@ export const dbAddAttackTransactionData = async (attackTransactionData: AttackTr
 }
 
 export const dbUpdateAttackTransactionData = async (game_id: number, data: DbAttackTransactionDataStatus) => {
+    console.log('dbUpdateAttackTransactionData', 'game_id', game_id)
+    console.log('dbUpdateAttackTransactionData', 'data', data);
+
     await collections.attackTransactionsData.updateOne(
         { game_id },
         { $set: data }
