@@ -214,7 +214,7 @@ export const locked = async (teamId: number, lockTo: BigNumber, timestamp: numbe
 export const mineStep = async (
     hre: HardhatRuntimeEnvironment, minerTeamId: number, attackerContractAddress: string|undefined, 
     attackerTeamId: number, wait: number, minerSigner: SignerWithAddress, previousTeamId: number,
-    attackerSigners: SignerWithAddress[]) => {
+    teamsGroupOrder: number[], attackerSigners: SignerWithAddress[]) => {
 
     const override = hre.crabada.network.getPriorityOverride()
 
@@ -251,9 +251,12 @@ export const mineStep = async (
         const difference = (previousLockTo as BigNumber).sub(timestamp)
         // The lock of the previous team should be between 2 hours and 3 hours and a half in the future.
         // It is used 2 hours to avoid some issues regarding group mine initialization.
-        if (!(difference.gte(2.5*3600) && difference.lte(3.5*3600))){
+        const differenceLowLimit = 4*(1-3/teamsGroupOrder.length)
+        const differenceHighLimit = 4*(1-1/teamsGroupOrder.length)
+        
+        if (!(difference.gte(differenceLowLimit*3_600) && difference.lte(differenceHighLimit*3_600))){
             console.log('Previous team', previousTeamId, 'has lock', previousLockTo.toString(), 'with distance to timestamp', timestamp, 
-            'lower than 2 hours and half, or higher than 3 hours and half');
+            `lower than ${differenceLowLimit} hours, or higher than ${differenceHighLimit} hours.`);
             return
         }
     }
@@ -1079,7 +1082,7 @@ export interface CrabadaToBorrow {
     price: BigNumber
 }
 
-const MAX_REINFORCE_DEFENSE_PRICE = parseEther('20')
+const MAX_REINFORCE_DEFENSE_PRICE = parseEther('30')
 const BORROW_STEP_PRICE_IN_TUS = 2
 const BORROW_MAX_PRICE_IN_TUS = 36
 const BORROW_PRICE_STEPS = Math.floor((BORROW_MAX_PRICE_IN_TUS/BORROW_STEP_PRICE_IN_TUS)+0.5)
@@ -1163,11 +1166,12 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 
 export const MAX_FEE_REINFORCE_DEFENSE = BigNumber.from(ONE_GWEI*150)
 
-const REINFORCE_WITH_OWN_CRABADA = false
+const REINFORCE_WITH_OWN_CRABADA = true
 
 export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     currentGameId: BigNumber, teamId: number, minRealBattlePointNeeded: number,
-    signer: SignerWithAddress, player: string|undefined, testMode=true, reinforceAttack: boolean): Promise<TransactionResponse|undefined> => {
+    signer: SignerWithAddress, player: string|undefined, testMode=true, reinforceAttack: boolean,
+    remainingToReinforce: number): Promise<TransactionResponse|undefined> => {
 
     const override = hre.crabada.network.getPriorityOverride()
     
@@ -1197,9 +1201,9 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
                 const timestamp = await currentBlockTimeStamp(hre)
                 const difference = lockTo.sub(timestamp)
 
-                if (difference.lt(3.5*3600) || difference.gt(4*3600)){
-                    console.log('Reinforce from inventory should not happen. Difference', difference, 
-                        'should be between', 3.5*3600, 'and', 4*3600);
+                if ((remainingToReinforce-90) < 0 ){
+                    console.log('Reinforce from inventory should not happen.',
+                        `There is only ${remainingToReinforce} seconds remaining to reinforce.`);
                     shouldReinforceFromInventory = false
                     return
                 }
@@ -1235,6 +1239,8 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
                     for (const otherTeamsSigner of otherTeamsSigners){
                         try {
                             await withdraw(hre, otherTeamsSigner, signer.address, [crabadaId], override)
+                            // In case withdraw successful, we withdraw only one crabada.
+                            break
                         } catch (error) {
                             console.error('ERROR trying to withdraw:', String(error));
                         }
@@ -1242,6 +1248,8 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
                     
                     try {
                         await deposit(hre, signer, [crabadaId], override)
+                        // In case deposit successful, we deposit only one crabada.
+                        break
                     } catch (error) {
                         console.error('ERROR trying to deposit:', String(error));
                     }
@@ -1333,10 +1341,10 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
 
 }
 
-const isPossibleToReinforce = async (
+const timeElapsedSinceLastReinforce = async (
     hre: HardhatRuntimeEnvironment, 
     lastAttackTime: number, lastDefTime: number, 
-    reinforceAttack: boolean): Promise<boolean> => {
+    reinforceAttack: boolean): Promise<number> => {
 
     const timestamp = await currentBlockTimeStamp(hre)
 
@@ -1344,9 +1352,33 @@ const isPossibleToReinforce = async (
 
     const difference = timestamp-lastOperation
 
-    console.log('isPossibleToReinforce difference', difference);
+    return difference
+   
+}
+
+const secondsRemainingToReinforce = async (
+    hre: HardhatRuntimeEnvironment, 
+    lastAttackTime: number, lastDefTime: number, 
+    reinforceAttack: boolean): Promise<number> => {
+
+    const elapsed = await timeElapsedSinceLastReinforce(hre, lastAttackTime, lastDefTime, reinforceAttack)
+
+    const result = 1800-elapsed
+
+    console.log('secondsRemainingToReinforce', result);
+
+    return result
     
-    return difference < 1800
+}
+
+const isPossibleToReinforce = async (
+    hre: HardhatRuntimeEnvironment, 
+    lastAttackTime: number, lastDefTime: number, 
+    reinforceAttack: boolean): Promise<boolean> => {
+
+    const remaining = await secondsRemainingToReinforce(hre, lastAttackTime, lastDefTime, reinforceAttack)
+    
+    return remaining > 0
 
 }
 
@@ -1380,16 +1412,14 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
 
     const reinforceAttack = (attackTeamId as BigNumber).eq(teamId)
 
-    // TODO Remove when mining with reforces.
-    if (!reinforceAttack)
-        return
-
     log('attackId1, attackId2, defId1, defId2', [ attackId1, attackId2, defId1, defId2 ].map(x => x.toString()))
 
     if (!_shoudReinforce(attackId1, attackId2, defId1, defId2, reinforceAttack))
         return
 
-    if (!(await isPossibleToReinforce(hre, lastAttackTime, lastDefTime, reinforceAttack)))
+    const remainingToReinforce = await secondsRemainingToReinforce(hre, lastAttackTime, lastDefTime, reinforceAttack)
+
+    if (remainingToReinforce <= 0)
         return
 
     const reinforcementMinBattlePoints: number = await getReinforcementMinBattlePoints(
@@ -1398,7 +1428,7 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
 
     log('reinforcementMinBattlePoints', reinforcementMinBattlePoints)
 
-    return await doReinforce(hre, currentGameId, teamId, reinforcementMinBattlePoints, signer, player, testMode, reinforceAttack)
+    return await doReinforce(hre, currentGameId, teamId, reinforcementMinBattlePoints, signer, player, testMode, reinforceAttack, remainingToReinforce)
 
 }
 

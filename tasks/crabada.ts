@@ -155,6 +155,7 @@ export const delay = async (ms: number, log: typeof console.log = ()=>{}): Promi
 // }
 
 export const isLootingPeriod = ():boolean => {
+    return false
     const d = new Date()
     const hours = d.getUTCHours()
     return (hours >= ((7+3) % 24) && hours <= ((19+3) % 24))
@@ -183,19 +184,16 @@ task(
     
                     let previousTeam = undefined
     
-                    if (mineGroup.teamsOrder.length == 8){
-                        
+                    if (mineGroup.teamsOrder.length > 1){
                         const areAllGroupTeamsUnlocked = await areAllTeamsUnlocked(hre, mineGroup.teamsOrder)
-    
                         if (!areAllGroupTeamsUnlocked)
-                            previousTeam = mineGroup.teamsOrder[7]
+                            previousTeam = mineGroup.teamsOrder[mineGroup.teamsOrder.length-1]
                     }
     
                     for (const teamId of mineGroup.teamsOrder){
                         const { signerIndex } = hre.crabada.network.MINE_CONFIG_BY_TEAM_ID[teamId]
                         const minerSigner = await getSigner(hre, undefined, signerIndex);
-                        previousTeam = undefined // TODO Remove in case do only mining.
-                        await mineStep(hre, teamId, undefined, undefined, wait, minerSigner, previousTeam, [])
+                        await mineStep(hre, teamId, undefined, undefined, wait, minerSigner, previousTeam, mineGroup.teamsOrder, [])
                         previousTeam = teamId
                     }
     
