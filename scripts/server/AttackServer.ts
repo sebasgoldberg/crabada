@@ -461,7 +461,7 @@ export class AttackServer {
                 }    
             }
 
-            if (this.notSentCaptchaSinceTimestamp){
+            if (this.hasToSendCaptcha && this.notSentCaptchaSinceTimestamp){
 
                 if (((+new Date())-this.notSentCaptchaSinceTimestamp) > tollerance){
                     if (this.ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE){
