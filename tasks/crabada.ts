@@ -157,7 +157,7 @@ export const delay = async (ms: number, log: typeof console.log = ()=>{}): Promi
 export const isLootingPeriod = ():boolean => {
     const d = new Date()
     const hours = d.getUTCHours()
-    return (hours >= ((5+3) % 24) && hours <= ((17+3) % 24))
+    return (hours >= ((6+3) % 24) && hours <= ((18+3) % 24))
     // return (!isMiningPeriod())
 }
 

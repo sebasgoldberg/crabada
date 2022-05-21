@@ -419,7 +419,7 @@ export class AttackServer {
     }
 
     teamsThatPlayToLooseByTeamId: ITeamsThatPlayToLooseByTeamId = {}
-    ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
+    ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
 
     hasToSendCaptcha = false
     notSentCaptchaSinceTimestamp: number = undefined
