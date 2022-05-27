@@ -251,8 +251,8 @@ export const mineStep = async (
         const difference = (previousLockTo as BigNumber).sub(timestamp)
         // The lock of the previous team should be between 2 hours and 3 hours and a half in the future.
         // It is used 2 hours to avoid some issues regarding group mine initialization.
-        const differenceLowLimit = 4*(1-3/teamsGroupOrder.length)
-        const differenceHighLimit = 4*(1-1/teamsGroupOrder.length)
+        const differenceLowLimit = Math.floor(4000*(1-3/teamsGroupOrder.length))/1000
+        const differenceHighLimit = Math.floor(4000*(1-1/teamsGroupOrder.length))/1000
         
         if (!(difference.gte(differenceLowLimit*3_600) && difference.lte(differenceHighLimit*3_600))){
             console.log('Previous team', previousTeamId, 'has lock', previousLockTo.toString(), 'with distance to timestamp', timestamp, 
