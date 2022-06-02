@@ -1,0 +1,17 @@
+[Unit]
+Description=Crabada service for mine in battle game.
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+WatchdogSec=180
+Restart=always
+RestartSec=60
+User=cerebro
+ExecStart=/home/cerebro/crabada/services/battle-game/crabada.bgmine.sh
+WorkingDirectory=/home/cerebro/crabada
+
+
+[Install]
+WantedBy=multi-user.target

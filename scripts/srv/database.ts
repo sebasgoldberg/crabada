@@ -23,7 +23,7 @@ export const collections: {
 let client: mongoDB.MongoClient
 
 // Initialize Connection
-export async function connectToDatabase() {
+export async function connectToDatabase(): Promise<void>{
 
     client = new mongoDB.MongoClient(DB_CONN_STRING)
 
@@ -53,6 +53,6 @@ export async function connectToDatabase() {
 
 // TODO close connection or client
 
-export async function disconnectFromDatabase(){
+export async function disconnectFromDatabase(): Promise<void>{
     await client.close();
 }
