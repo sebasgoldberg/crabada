@@ -33,7 +33,7 @@ const FACTIONS: TeamFaction[] = [ 'ABYSS' , 'TRENCH' , 'ORE' , 'LUX' , 'MACHINE'
 type FactionByClassName = {
     [className in CrabadaClassName]: TeamFaction;
 };
-const FACTION_BY_CLASS_NAME: FactionByClassName = {
+export const FACTION_BY_CLASS_NAME: FactionByClassName = {
     'RUINED': 'ABYSS',
     'SUNKEN': 'TRENCH',
     'SURGE': 'ORE',
@@ -84,7 +84,7 @@ export const LOOTERS_FACTION: TeamFaction = "LUX"
 // Asumes looters teams have a faction defined!!!
 const USE_LOOTERS_ADVANTAGE = true
 
-const ADVANTAGE_MATRIX: AdvantagesByFaction = {
+export const ADVANTAGE_MATRIX: AdvantagesByFaction = {
     LUX: USE_LOOTERS_ADVANTAGE ? [ "ORE", "FAERIE" ] : [],
     FAERIE: [ "ORE", "ABYSS" ],
     ORE: [ "ABYSS", "TRENCH" ],

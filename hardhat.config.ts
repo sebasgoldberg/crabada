@@ -45,6 +45,12 @@ import "./tasks/savemines"
 import "./tasks/attackdifference"
 import "./tasks/attackpending"
 
+import "./tasks/battle-game/sendotp"
+import "./tasks/battle-game/login"
+import "./tasks/battle-game/claim"
+import "./tasks/battle-game/loot"
+import "./tasks/battle-game/mine"
+
 task("accounts", "Prints the list of accounts", async (args, hre): Promise<void> => {
   const accounts: SignerWithAddress[] = await hre.ethers.getSigners()
   accounts.forEach((account: SignerWithAddress): void => {
