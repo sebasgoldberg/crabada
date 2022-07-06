@@ -2,7 +2,7 @@
 import * as mongoDB from "mongodb";
 
 // Global Variables
-const DB_CONN_STRING = process.env.DB_CONN_STRING || 'mongodb://127.0.0.1:27017'
+const DB_CONN_STRING = process.env.DB_CONN_STRING || 'mongodb://mongodb:27017'
 const DB_NAME = process.env.DB_NAME || "crabada"
 const MINES_COLLECTION_NAME = process.env.MINES_COLLECTION_NAME || "mines"
 const STATUS_COLLECTION_NAME = process.env.STATUS_COLLECTION_NAME || "status"
