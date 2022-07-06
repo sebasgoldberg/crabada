@@ -57,7 +57,7 @@ task(
 
         const status = await dbGetStatus()
 
-        const synchprocess = forcesynch || !status.saveminesSynched
+        const synchprocess = forcesynch || status ? !status.saveminesSynched : true
 
         let page = (status && status.saveminesLasPage) ? status.saveminesLasPage-1 : 0
 
