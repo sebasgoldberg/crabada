@@ -52,9 +52,6 @@ export const getTeamsThatPlayToLooseByTeamIdUsingDb = async (hre: HardhatRuntime
     fromTimestamp: number=currentServerTimeStamp()-2*24*60*60,
     toTimestamp: number=currentServerTimeStamp()-30*60-1): Promise<ITeamsThatPlayToLooseByTeamId> => {
 
-    const limit = 100
-    let page = 0
-
     const teamsAnalisys: ITeamDefenseAnalisysByTeamId = {}
 
     const mines = await getClosedMinesBetweenPeriodFromDb(fromTimestamp, toTimestamp)

@@ -19,6 +19,9 @@ export class AuthServer {
 
         this.hre = hre
 
+        console.log('MAINNET_AVAX_MAIN_ACCOUNTS_PKS', MAINNET_AVAX_MAIN_ACCOUNTS_PKS.length);
+        
+
         this.wallets = this.hre.crabada.network.LOOT_CAPTCHA_CONFIG.players
             .map(({signerIndex})=>signerIndex)
             .map( index => new Wallet(MAINNET_AVAX_MAIN_ACCOUNTS_PKS[index]))

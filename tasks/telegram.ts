@@ -45,7 +45,7 @@ task(
         
             const {
                 avax,
-                rewards,
+                // rewards,
                 players
             } = await getDashboard(hre, true)
 
@@ -69,11 +69,6 @@ ${ avax.miners.map( l => l.balance ).join('\n') }
             `)
 
             ctx.reply(`
-TUS Rewards
-${ rewards.TUS }
-
-CRA Rewards
-${ rewards.CRA }
             `)
 
             const secondsToUnlock: number[] = players

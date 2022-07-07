@@ -15,13 +15,13 @@ import { AttackServer } from "../scripts/server/AttackServer";
 import { PlayersManager } from "../scripts/server/PlayersManager";
 import { AuthServer } from "../scripts/server/AuthServer";
 
-type LootFunction = (
+export type LootFunction = (
     unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
     targets: Target[],
     targetsHaveAdvantage: boolean,
     lootersFaction: TeamFaction, 
     testmode: boolean
-    ) => void
+    ) => Promise<void>
 
 export interface PlayerTeamPair {
     playerAddress: string,
@@ -75,7 +75,7 @@ interface TeamAndItsTransaction {
 }
 
 
-const attackTeamsThatStartedAGame = (
+const attackTeamsThatStartedAGame = async (
     playerTeamPairs: PlayerTeamPair[], teamsThatPlayToLooseByTeamId: TeamInfoByTeam, 
     teamsAndTheirTransactions: TeamAndItsTransaction[], testmode: boolean, lootFunction: LootFunction) => {
 
@@ -168,8 +168,8 @@ const attackTeamsThatStartedAGame = (
         startedGameTargetsByTeamId, LOOTERS_FACTION
     )
     
-    attackTeams(playerTeamPairs, targetsWithAdvantageByTeamId, teamsThatPlayToLooseByTeamId, true, LOOTERS_FACTION, testmode, lootFunction)
-    attackTeams(playerTeamPairs, targetsWithNoAdvantageByTeamId, teamsThatPlayToLooseByTeamId, true, LOOTERS_FACTION, testmode, lootFunction)
+    await attackTeams(playerTeamPairs, targetsWithAdvantageByTeamId, teamsThatPlayToLooseByTeamId, true, LOOTERS_FACTION, testmode, lootFunction)
+    await attackTeams(playerTeamPairs, targetsWithNoAdvantageByTeamId, teamsThatPlayToLooseByTeamId, true, LOOTERS_FACTION, testmode, lootFunction)
 
 }
 
@@ -260,7 +260,7 @@ const attackTeams = async (
 
     try {
 
-        lootFunction(
+        await lootFunction(
             unlockedPlayerTeamPairsWithEnoughBattlePointSorted,
             targets,
             targetsHaveAdvantage,
@@ -276,7 +276,7 @@ const attackTeams = async (
 
 }
 
-type HasToReadNextPageFunction = (playerTeamPairs: PlayerTeamPair[]) => boolean
+type HasToReadNextPageFunction = () => boolean
 
 type ConditionToStopWaitingFunction = () => boolean
 
@@ -293,7 +293,7 @@ export const waitUntil = async (hasToStopWaiting: ConditionToStopWaitingFunction
     })
 }
 
-const lootLoop = async (
+export const lootLoop = async (
     hre: HardhatRuntimeEnvironment, looters: Player[], 
     blockstoanalyze: number, firstdefendwindow: number, testmode: boolean,
     lootFunction: LootFunction, needsToContinueRunning: () => Promise<boolean>,
@@ -449,7 +449,7 @@ const lootLoop = async (
 
     const hasToProcessNextMine = (): boolean => {
 
-        return hasToReadNextMineToLootPage(playersManager.playerTeamPairs) || (!continueRunning)
+        return hasToReadNextMineToLootPage() || (!continueRunning)
 
     }
 
@@ -478,7 +478,7 @@ const lootLoop = async (
             })    
         }
             
-        attackTeamsThatStartedAGame(playersManager.playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
+        await attackTeamsThatStartedAGame(playersManager.playerTeamPairs, teamsThatPlayToLooseByTeamId, teamsAndTheirTransaction, testmode, lootFunction)
     }
 
     // clearInterval(gasPriceUpdateInterval)
@@ -508,7 +508,7 @@ export const getSignerForAddress = (signers: SignerWithAddress[], user_address: 
 task(
     "captchaloot",
     "Loot using captcha.",
-    async ({ blockstoanalyze, firstdefendwindow, testmode }, hre: HardhatRuntimeEnvironment) => {
+    async ({ blockstoanalyze, firstdefendwindow, testmode }: any, hre: HardhatRuntimeEnvironment) => {
 
         if (!isLootingPeriod()){
             console.log('Mining period.');
@@ -530,7 +530,7 @@ task(
             await attackServer.waitUntilNeedsToContinueRunning()
         }
 
-        const returnCaptchaData: LootFunction = (
+        const returnCaptchaData: LootFunction = async (
             unlockedPlayerTeamPairsWithEnoughBattlePointSorted: PlayerTeamPair[],
             targets: Target[],
             targetsHaveAdvantage: boolean,
@@ -542,7 +542,7 @@ task(
 
         }
 
-        const hasToReadNextMineToLootPage = (playerTeamPairs: PlayerTeamPair[]): boolean => {
+        const hasToReadNextMineToLootPage = (): boolean => {
 
             return attackServer.hasToContinueReadingNextMineToLoot()
 

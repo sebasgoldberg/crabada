@@ -1,0 +1,18 @@
+[Unit]
+Description=Crabada service for looting without captcha.
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<private key settler>,<private key player1>,<private key player2>,..,<private playern>"
+Environment="HARDHAT_NETWORK=<network>"
+Type=simple
+WatchdogSec=3600
+Restart=always
+RestartSec=15
+User=cerebro
+ExecStart=/home/cerebro/crabada/services/crabada.nocaptchaloot.sh
+WorkingDirectory=/home/cerebro/crabada
+
+[Install]
+WantedBy=multi-user.target

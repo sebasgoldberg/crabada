@@ -2,6 +2,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import * as IdleGameAbi from "../abis/IdleGame.json"
 import * as ERC20Abi from "../abis/ERC20.json"
 import * as CrabadaAbi from "../abis/Crabada.json"
+import * as AntiBotAbi from "../abis/AntiBot.json"
 import { BigNumber, Contract, ethers } from "ethers";
 import { TransactionResponse } from "@ethersproject/abstract-provider";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -108,12 +109,14 @@ export const abi = {
     IdleGame: IdleGameAbi,
     ERC20: ERC20Abi,
     Crabada: CrabadaAbi,
+    AntiBot: AntiBotAbi,
 }
 
 let idleGame: Contract = undefined
 let tusToken: Contract = undefined
 let craToken: Contract = undefined
 let crabada: Contract = undefined
+let antiBot: Contract = undefined
 
 export const getCrabadaContracts = (hre: HardhatRuntimeEnvironment) => {
 
@@ -143,7 +146,13 @@ export const getCrabadaContracts = (hre: HardhatRuntimeEnvironment) => {
         hre.ethers.provider
     ))
 
-    return {idleGame, tusToken, craToken, crabada}
+    !antiBot && (antiBot = new Contract(
+        addresses.antiBot,
+        abi.AntiBot,
+        hre.ethers.provider
+    ))
+
+    return {idleGame, tusToken, craToken, crabada, antiBot}
   
 }
 
@@ -210,6 +219,20 @@ export const locked = async (teamId: number, lockTo: BigNumber, timestamp: numbe
     }
 }
 
+const MINE_ONLY_TO_LOOT = true
+
+const hasEnoughLootingPoints = async (hre: HardhatRuntimeEnvironment, teamId: number|BigNumber): Promise<boolean> => {
+
+    if (MINE_ONLY_TO_LOOT)
+        return false
+
+    const { antiBot } = getCrabadaContracts(hre)
+
+    const [minerLootingPoints]: BigNumber[] = await antiBot.getLootingPointOfTeams([teamId])
+
+    return minerLootingPoints.gt(0)
+
+}
   
 export const mineStep = async (
     hre: HardhatRuntimeEnvironment, minerTeamId: number, attackerContractAddress: string|undefined, 
@@ -229,6 +252,8 @@ export const mineStep = async (
     console.log('Team ID', minerTeamId, ', previous', previousTeamId);
     attackerSigners.forEach( (signer, index) => console.log('Attacker address', index, signer.address) )
     
+    const hasEnoughLootingPointsPromise = hasEnoughLootingPoints(hre, minerTeamId)
+
     const { lockTo: minerLockTo, currentGameId: minerCurrentGameId } = await idleGame.getTeamInfo(minerTeamId)
 
     const timestamp = await currentBlockTimeStamp(hre)
@@ -241,6 +266,11 @@ export const mineStep = async (
     
     if (await locked(minerTeamId, minerLockTo, timestamp))
         return
+
+    if (await hasEnoughLootingPointsPromise){
+        console.log('Team', minerTeamId, 'has enough looting points to perform attacks.');
+        return
+    }
 
     if (previousTeamId){
         const { lockTo: previousLockTo }: { lockTo: BigNumber } = await idleGame.getTeamInfo(previousTeamId)
@@ -1082,7 +1112,8 @@ export interface CrabadaToBorrow {
     price: BigNumber
 }
 
-const MAX_REINFORCE_DEFENSE_PRICE = parseEther('30')
+const MAX_REINFORCE_DEFENSE_PRICE = parseEther('10')
+const MAX_REINFORCE_ATTACK_PRICE = parseEther('10')
 const BORROW_STEP_PRICE_IN_TUS = 2
 const BORROW_MAX_PRICE_IN_TUS = 36
 const BORROW_PRICE_STEPS = Math.floor((BORROW_MAX_PRICE_IN_TUS/BORROW_STEP_PRICE_IN_TUS)+0.5)
@@ -1093,9 +1124,7 @@ const PRICE_RANGES = Array.from(Array(BORROW_PRICE_STEPS).keys())
         maxPrice: parseEther(String(maxPriceInTus)),
     }))
 
-export const getCrabadasToBorrow = async (hre: HardhatRuntimeEnvironment, minBattlePointNeeded: number, reinforceAttack: boolean): Promise<CrabadaToBorrow[]> => {
-
-    const crabadasInTabernOrderByPrice: CrabadaInTabern[] = await hre.crabada.api.getCrabadasInTabernOrderByPrice()
+export const getCrabadasToBorrow = async (crabadasInTabernOrderByPrice: CrabadaInTabern[], minBattlePointNeeded: number, reinforceAttack: boolean): Promise<CrabadaToBorrow[]> => {
 
     console.log('crabadasInTabernOrderByPrice', crabadasInTabernOrderByPrice.length);
 
@@ -1103,13 +1132,13 @@ export const getCrabadasToBorrow = async (hre: HardhatRuntimeEnvironment, minBat
         .filter( x => x.battle_point >= minBattlePointNeeded)
         .filter( x => reinforceAttack ? 
             true : (x.battle_point >= 220 && x.mine_point >= 79 && x.price.lte(MAX_REINFORCE_DEFENSE_PRICE))
+        ).filter( x => !reinforceAttack ? 
+            true : (x.battle_point >= 235 && x.price.lte(MAX_REINFORCE_ATTACK_PRICE))
         )
 
     console.log('possibleCrabadasToBorrowOrderByPrice', possibleCrabadasToBorrowOrderByPrice.length);
 
-    if (!reinforceAttack){
-        return possibleCrabadasToBorrowOrderByPrice
-    }
+    return possibleCrabadasToBorrowOrderByPrice
 
     const crabadasToBorrowOrderByBattlePointDescByPriceSteps: CrabadaInTabern[] = PRICE_RANGES
         .map( ({minPrice, maxPrice}) => {
@@ -1166,9 +1195,9 @@ export const setMaxAllowanceIfNotApproved = async (hre: HardhatRuntimeEnvironmen
 
 export const MAX_FEE_REINFORCE_DEFENSE = BigNumber.from(ONE_GWEI*150)
 
-const REINFORCE_WITH_OWN_CRABADA = true
+const REINFORCE_WITH_OWN_CRABADA = false
 
-export const doReinforce = async (hre: HardhatRuntimeEnvironment,
+export const doReinforce = async (hre: HardhatRuntimeEnvironment, crabadasInTabernOrderByPrice: CrabadaInTabern[],
     currentGameId: BigNumber, teamId: number, minRealBattlePointNeeded: number,
     signer: SignerWithAddress, player: string|undefined, testMode=true, reinforceAttack: boolean,
     remainingToReinforce: number): Promise<TransactionResponse|undefined> => {
@@ -1272,7 +1301,7 @@ export const doReinforce = async (hre: HardhatRuntimeEnvironment,
     }
 
     if (borrowOptions.length == 0){
-        borrowOptions = await getCrabadasToBorrow(hre, minRealBattlePointNeeded, reinforceAttack)
+        borrowOptions = await getCrabadasToBorrow(crabadasInTabernOrderByPrice, minRealBattlePointNeeded, reinforceAttack)
     }
     
     const reinforceMethodName = reinforceAttack ? 'reinforceAttack' : 'reinforceDefense'
@@ -1382,7 +1411,7 @@ const isPossibleToReinforce = async (
 
 }
 
-export const reinforce = async (hre: HardhatRuntimeEnvironment,
+export const reinforce = async (hre: HardhatRuntimeEnvironment, crabadasInTabernOrderByPrice: CrabadaInTabern[],
     teamId: number, signer: SignerWithAddress, player: string|undefined,
     log: (typeof console.log) = console.log, testMode=true): Promise<TransactionResponse|undefined> => {
 
@@ -1428,7 +1457,7 @@ export const reinforce = async (hre: HardhatRuntimeEnvironment,
 
     log('reinforcementMinBattlePoints', reinforcementMinBattlePoints)
 
-    return await doReinforce(hre, currentGameId, teamId, reinforcementMinBattlePoints, signer, player, testMode, reinforceAttack, remainingToReinforce)
+    return await doReinforce(hre, crabadasInTabernOrderByPrice, currentGameId, teamId, reinforcementMinBattlePoints, signer, player, testMode, reinforceAttack, remainingToReinforce)
 
 }
 

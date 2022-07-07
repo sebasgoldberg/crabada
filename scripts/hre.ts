@@ -256,13 +256,15 @@ export class CrabadaNetwork{
                 tusToken: '0x57bf0eCe401d3126d37B3c23d35b1c1EE3EaE733',
                 craToken: '0x26b77eeF7A38E3FD8C631FF8a268a5BB98CE1552',
                 crabada: '0xe56cb40A104cf2783EA912859B4Ca7dE77cdC961',
+                antiBot: ''
             })
         } else if (this.isSwimmerMainnetNetwork()){
             return ({
                 IdleGame: '0x9ab9e81Be39b73de3CCd9408862b1Fc6D2144d2B',
                 tusToken: '0x9c765eEE6Eff9CF1337A1846c0D93370785F6C92',
                 craToken: '0xC1a1F40D558a3E82C3981189f61EF21e17d6EB48',
-                crabada: '0x620FF3d705EDBc1bd03e17E6afcaC36a9779f78D', 
+                crabada: '0x620FF3d705EDBc1bd03e17E6afcaC36a9779f78D',
+                antiBot: '0x7C179e9A4EcA62d92277E5808b32fe7417152Fc8'
             })
         }
     
@@ -271,6 +273,7 @@ export class CrabadaNetwork{
             tusToken: '0xf693248F96Fe03422FEa95aC0aFbBBc4a8FdD172',
             craToken: '0xa32608e873f9ddef944b24798db69d80bbb4d1ed',
             crabada: '0x1b7966315ef0259de890f38f1bdb95acc03cacdd',
+            antiBot: ''
         })
     }
 

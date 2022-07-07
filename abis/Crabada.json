@@ -1,37 +1,6 @@
 [
     {
-        "inputs": [
-            {
-                "internalType": "string",
-                "name": "baseURI_",
-                "type": "string"
-            },
-            {
-                "internalType": "contract IERC20",
-                "name": "cra_",
-                "type": "address"
-            },
-            {
-                "internalType": "contract IERC20",
-                "name": "tus_",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "feeAddress_",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "craFee_",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "tusFee_",
-                "type": "uint256"
-            }
-        ],
+        "inputs": [],
         "stateMutability": "nonpayable",
         "type": "constructor"
     },
@@ -121,12 +90,118 @@
             },
             {
                 "indexed": false,
+                "internalType": "uint8",
+                "name": "classId",
+                "type": "uint8"
+            }
+        ],
+        "name": "ChangeClass",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "reserveId",
+                "type": "uint8"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "value",
+                "type": "uint8"
+            }
+        ],
+        "name": "ChangeReserveDNA",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "isEnable",
+                "type": "bool"
+            }
+        ],
+        "name": "ClassChangeable",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
                 "internalType": "uint256",
                 "name": "dna",
                 "type": "uint256"
             }
         ],
         "name": "Hatch",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "daddyId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "mommyId",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "dna",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint64",
+                "name": "birthday",
+                "type": "uint64"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "breedingCount",
+                "type": "uint8"
+            }
+        ],
+        "name": "NewCrab",
         "type": "event"
     },
     {
@@ -153,18 +228,83 @@
         "inputs": [
             {
                 "indexed": false,
-                "internalType": "uint256",
-                "name": "craFee",
-                "type": "uint256"
-            },
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            }
+        ],
+        "name": "Paused",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "canBreed",
+                "type": "bool"
+            }
+        ],
+        "name": "SetBreedable",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "tusFee",
+                "name": "limit",
                 "type": "uint256"
             }
         ],
-        "name": "SetBreedingFee",
+        "name": "SetBreedingLimit",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "min",
+                "type": "uint8"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "max",
+                "type": "uint8"
+            }
+        ],
+        "name": "SetClassRange",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "calc",
+                "type": "address"
+            }
+        ],
+        "name": "SetFeeCalculator",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "core",
+                "type": "address"
+            }
+        ],
+        "name": "SetGenCore",
         "type": "event"
     },
     {
@@ -178,6 +318,56 @@
             }
         ],
         "name": "SetHatchDuration",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "opt",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "isEnable",
+                "type": "bool"
+            }
+        ],
+        "name": "SetOperator",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "position",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "min",
+                "type": "uint8"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "max",
+                "type": "uint8"
+            },
+            {
+                "indexed": false,
+                "internalType": "bool",
+                "name": "isEnable",
+                "type": "bool"
+            }
+        ],
+        "name": "SetReserveConfig",
         "type": "event"
     },
     {
@@ -203,6 +393,19 @@
             }
         ],
         "name": "Transfer",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            }
+        ],
+        "name": "Unpaused",
         "type": "event"
     },
     {
@@ -244,6 +447,19 @@
     },
     {
         "inputs": [],
+        "name": "breedable",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "breedingLimit",
         "outputs": [
             {
@@ -257,12 +473,12 @@
     },
     {
         "inputs": [],
-        "name": "cra",
+        "name": "classChangeAble",
         "outputs": [
             {
-                "internalType": "contract IERC20",
+                "internalType": "bool",
                 "name": "",
-                "type": "address"
+                "type": "bool"
             }
         ],
         "stateMutability": "view",
@@ -270,50 +486,11 @@
     },
     {
         "inputs": [],
-        "name": "craFee",
+        "name": "classRangeMax",
         "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "crabadaInfo",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "daddyId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "mommyId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "dna",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint64",
-                "name": "birthday",
-                "type": "uint64"
-            },
             {
                 "internalType": "uint8",
-                "name": "breedingCount",
+                "name": "",
                 "type": "uint8"
             }
         ],
@@ -322,10 +499,23 @@
     },
     {
         "inputs": [],
-        "name": "feeAddress",
+        "name": "classRangeMin",
         "outputs": [
             {
-                "internalType": "address",
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "feeCalculator",
+        "outputs": [
+            {
+                "internalType": "contract IFeeCalculator",
                 "name": "",
                 "type": "address"
             }
@@ -403,13 +593,19 @@
         "type": "function"
     },
     {
-        "inputs": [],
-        "name": "name",
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "operators",
         "outputs": [
             {
-                "internalType": "string",
+                "internalType": "bool",
                 "name": "",
-                "type": "string"
+                "type": "bool"
             }
         ],
         "stateMutability": "view",
@@ -449,9 +645,51 @@
     },
     {
         "inputs": [],
+        "name": "paused",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "renounceOwnership",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "reserveDNAConfigs",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "min",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint8",
+                "name": "max",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint8",
+                "name": "enable",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -526,6 +764,24 @@
     {
         "inputs": [
             {
+                "internalType": "address",
+                "name": "opt",
+                "type": "address"
+            },
+            {
+                "internalType": "bool",
+                "name": "isEnable",
+                "type": "bool"
+            }
+        ],
+        "name": "setOperator",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "bytes4",
                 "name": "interfaceId",
                 "type": "bytes4"
@@ -537,19 +793,6 @@
                 "internalType": "bool",
                 "name": "",
                 "type": "bool"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "symbol",
-        "outputs": [
-            {
-                "internalType": "string",
-                "name": "",
-                "type": "string"
             }
         ],
         "stateMutability": "view",
@@ -611,29 +854,26 @@
         "type": "function"
     },
     {
-        "inputs": [],
-        "name": "tus",
-        "outputs": [
+        "inputs": [
             {
-                "internalType": "contract IERC20",
-                "name": "",
+                "internalType": "string",
+                "name": "baseURI_",
+                "type": "string"
+            },
+            {
+                "internalType": "contract IFeeCalculator",
+                "name": "feeCalculator_",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "owner",
                 "type": "address"
             }
         ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "tusFee",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
+        "name": "initialize",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -657,17 +897,66 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "daddyId",
-                "type": "uint256"
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
             },
             {
                 "internalType": "uint256",
-                "name": "mommyId",
+                "name": "id",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes",
+                "name": "metaData",
+                "type": "bytes"
+            }
+        ],
+        "name": "mint",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "newLatestId",
                 "type": "uint256"
             }
         ],
-        "name": "breed",
+        "name": "setLatestCrabId",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "getLatestCrabId",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "id",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "account",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "listDNA",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "mintBatch",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -680,9 +969,249 @@
                 "type": "uint256"
             }
         ],
-        "name": "hatchOut",
+        "name": "burn",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256[]",
+                "name": "ids",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "burnBatch",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "daddyId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "mommyId",
+                "type": "uint256"
+            }
+        ],
+        "name": "breed",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "hatchOut",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "dna",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "contract IGenCore",
+                "name": "core",
+                "type": "address"
+            }
+        ],
+        "name": "setGenCore",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "contract IFeeCalculator",
+                "name": "calc",
+                "type": "address"
+            }
+        ],
+        "name": "setFeeCalculator",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "inSeconds",
+                "type": "uint256"
+            }
+        ],
+        "name": "setHatchDuration",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "limit",
+                "type": "uint256"
+            }
+        ],
+        "name": "setBreedingLimit",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bool",
+                "name": "canBreed",
+                "type": "bool"
+            }
+        ],
+        "name": "setBreedable",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint8",
+                "name": "min",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint8",
+                "name": "max",
+                "type": "uint8"
+            }
+        ],
+        "name": "setClassRange",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bool",
+                "name": "isEnable",
+                "type": "bool"
+            }
+        ],
+        "name": "setClassChangeable",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "position",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint8",
+                "name": "min",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint8",
+                "name": "max",
+                "type": "uint8"
+            },
+            {
+                "internalType": "bool",
+                "name": "isEnable",
+                "type": "bool"
+            }
+        ],
+        "name": "setReserveConfigs",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint8",
+                "name": "classId",
+                "type": "uint8"
+            }
+        ],
+        "name": "changeClass",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint8",
+                "name": "reserveId",
+                "type": "uint8"
+            },
+            {
+                "internalType": "uint8",
+                "name": "value",
+                "type": "uint8"
+            }
+        ],
+        "name": "changeReserveDNA",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getDNA",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "dna",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -716,49 +1245,65 @@
                 "type": "uint256"
             }
         ],
-        "stateMutability": "nonpayable",
+        "stateMutability": "view",
         "type": "function"
     },
     {
         "inputs": [
             {
-                "internalType": "contract IGenCore",
-                "name": "_genCore",
-                "type": "address"
+                "internalType": "uint256",
+                "name": "tokenId",
+                "type": "uint256"
             }
         ],
-        "name": "setGenCore",
+        "name": "getCrabData",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "daddyId",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "mommyId",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "dna",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint64",
+                        "name": "birthday",
+                        "type": "uint64"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "breedingCount",
+                        "type": "uint8"
+                    }
+                ],
+                "internalType": "struct CrabadaStorage.CrabadaInfo",
+                "name": "crab",
+                "type": "tuple"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "pause",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     },
     {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "_craFee",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_tusFee",
-                "type": "uint256"
-            }
-        ],
-        "name": "setBreedingFee",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "inSeconds",
-                "type": "uint256"
-            }
-        ],
-        "name": "setHatchDuration",
+        "inputs": [],
+        "name": "unpause",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -767,120 +1312,126 @@
         "inputs": [
             {
                 "internalType": "string",
-                "name": "baseURI_",
+                "name": "uri",
                 "type": "string"
             }
         ],
-        "name": "changeBaseURI",
+        "name": "setBaseURI",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     },
     {
-        "inputs": [
+        "inputs": [],
+        "name": "name",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "symbol",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "totalSupply",
+        "outputs": [
             {
                 "internalType": "uint256",
-                "name": "tokenId",
+                "name": "",
                 "type": "uint256"
             }
         ],
-        "name": "getCrabadaAttributes",
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "decimals",
         "outputs": [
             {
-                "internalType": "uint8",
-                "name": "attr0",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "attr1",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "attr2",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "attr3",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "attr4",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "attr5",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "attr6",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "attr7",
-                "type": "uint8"
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
             }
         ],
-        "stateMutability": "nonpayable",
+        "stateMutability": "view",
         "type": "function"
     },
     {
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "tokenId",
+                "name": "id",
                 "type": "uint256"
             }
         ],
-        "name": "getCrabadaProperties",
+        "name": "crabadaInfo",
         "outputs": [
             {
-                "internalType": "uint8",
-                "name": "crabaType",
-                "type": "uint8"
+                "internalType": "uint256",
+                "name": "daddyId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "mommyId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "dna",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint64",
+                "name": "birthday",
+                "type": "uint64"
             },
             {
                 "internalType": "uint8",
-                "name": "crabaClass",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "rare0",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "rare1",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "rare2",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "rare3",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "rare4",
-                "type": "uint8"
-            },
-            {
-                "internalType": "uint8",
-                "name": "rare5",
+                "name": "breedingCount",
                 "type": "uint8"
             }
         ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "from",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "to",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "ids",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "transferFromBatch",
+        "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
     }

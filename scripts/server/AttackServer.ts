@@ -58,6 +58,45 @@ interface CaptchaVerifyResult {
     }
 }
 
+export const teamsSecondsToUnlock = async (hre: HardhatRuntimeEnvironment): Promise<number[]> => {
+    const timestamp = await currentBlockTimeStamp(hre)
+
+    const secondsToUnlock: number[] = []
+
+    for (const {address} of hre.crabada.network.LOOT_CAPTCHA_CONFIG.players){
+        const teams = await hre.crabada.api.getCompletedTeams(address)
+        for (const team of teams){
+            const game_end_time = team.game_type == "stealing" ? team.game_start_time+3600 : team.game_end_time
+            secondsToUnlock.push(game_end_time-timestamp)
+        }
+    }
+
+    return secondsToUnlock
+}
+
+export const needsToContinueRunning = async(hre: HardhatRuntimeEnvironment): Promise<boolean> => {
+
+    return (await teamsSecondsToUnlock(hre)).some(x => x < 900)
+
+}
+
+export const waitUntilNeedsToContinueRunning = async(hre: HardhatRuntimeEnvironment, log: typeof console.log = console.log): Promise<void> => {
+    return new Promise((resolve) => {
+
+        const waitUntilNeedsToContinueRunningInterval = setInterval(async () => {
+
+            if (await needsToContinueRunning(hre)){
+                clearInterval(waitUntilNeedsToContinueRunningInterval)
+                resolve(undefined)
+            } else {
+                log('Waiting until needs to continue running')
+            }
+
+        }, 30_000)
+
+    })
+}
+
 export class AttackServer {
 
     app = express();
@@ -68,19 +107,7 @@ export class AttackServer {
     hre: HardhatRuntimeEnvironment
 
     async teamsSecondsToUnlock(): Promise<number[]>{
-        const timestamp = await currentBlockTimeStamp(this.hre)
-
-        const secondsToUnlock: number[] = []
-
-        for (const {address} of this.hre.crabada.network.LOOT_CAPTCHA_CONFIG.players){
-            const teams = await this.hre.crabada.api.getCompletedTeams(address)
-            for (const team of teams){
-                const game_end_time = team.game_type == "stealing" ? team.game_start_time+3600 : team.game_end_time
-                secondsToUnlock.push(game_end_time-timestamp)
-            }
-        }
-
-        return secondsToUnlock
+        return teamsSecondsToUnlock(this.hre)
     }
 
     hasPendingCaptchaResponses(){
@@ -110,25 +137,12 @@ export class AttackServer {
 
     async needsToContinueRunning(): Promise<boolean>{
 
-        return (await this.teamsSecondsToUnlock()).some(x => x < 900)
+        return needsToContinueRunning(this.hre)
 
     }
 
     async waitUntilNeedsToContinueRunning(log: typeof console.log = console.log): Promise<void>{
-        return new Promise((resolve) => {
-
-            const waitUntilNeedsToContinueRunningInterval = setInterval(async () => {
-
-                if (await this.needsToContinueRunning()){
-                    clearInterval(waitUntilNeedsToContinueRunningInterval)
-                    resolve(undefined)
-                } else {
-                    log('Waiting until needs to continue running')
-                }
-
-            }, 30_000)
-
-        })
+        await waitUntilNeedsToContinueRunning(this.hre, log)
     }
 
     async getBalance(requester: string): Promise<number>{
