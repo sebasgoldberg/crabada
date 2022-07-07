@@ -176,10 +176,10 @@ task(
     "Mine step: If mining, try to close game. Then, if not mining, create a game.",
     async ({ wait }: any, hre: HardhatRuntimeEnvironment) => {
         
-        if (isLootingPeriod()){
-            console.log('Looting period.');
-            return
-        }
+        // if (isLootingPeriod()){
+        //     console.log('Looting period.');
+        //     return
+        // }
 
         while (true){
 
@@ -1911,9 +1911,9 @@ export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.lo
 
     const signer = await getSigner(hre)
 
-    const lootPendingAddresses = (MINE_MODE ?
-        hre.crabada.network.MINE_CONFIG : hre.crabada.network.LOOT_CAPTCHA_CONFIG.players)
-            .map(({address, teams: {length: teamsQuantity}}) => ({ address, teamsQuantity }))
+    // const lootPendingAddresses = (MINE_MODE ?
+    //     hre.crabada.network.MINE_CONFIG : hre.crabada.network.LOOT_CAPTCHA_CONFIG.players)
+    //         .map(({address, teams: {length: teamsQuantity}}) => ({ address, teamsQuantity }))
 
     const override = hre.crabada.network.getOverride()
 
@@ -1936,10 +1936,10 @@ export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.lo
 
     }
 
-    for (const {address, teamsQuantity} of lootPendingAddresses){
-        const target = MINER_TEAM_TARGET.mul(teamsQuantity)
-        await _refillAvax(signer, address, target)
-    }
+    // for (const {address, teamsQuantity} of lootPendingAddresses){
+    //     const target = MINER_TEAM_TARGET.mul(teamsQuantity)
+    //     await _refillAvax(signer, address, target)
+    // }
     
     ATTACK_MODE && await _refillAvax(signer, SETTLER_ACCOUNT, SETTLER_TARGET_BALANCE)
 
@@ -1948,10 +1948,7 @@ export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.lo
 task(
     "refillavax",
     "Refill accounts with avax.",
-    async ({ lootpending, settler, reinforce }, hre: HardhatRuntimeEnvironment) => {
-
-        // Disabled refillavax
-        return
+    async ({ }, hre: HardhatRuntimeEnvironment) => {
 
         await refillavax(hre)
 
@@ -2028,6 +2025,7 @@ interface IDashboardAvaxAccount {
 }
 
 interface IDashboardAvax {
+    total: string,
     avaxConsumed: string,
     looters?: IDashboardAvaxAccount[],
     settler?: IDashboardAvaxAccount,
@@ -2213,6 +2211,11 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment, mode: 
         //const reinforcer = await reinforcerPromise
 
         const avax: IDashboardAvax = {
+            total: formatEther(
+                looters
+                    .map( ({ balance }) => parseEther(balance))
+                    .reduce( (prev, current) => prev.add(current), ethers.constants.Zero )
+            ),
             avaxConsumed: formatEther(avaxConsumed
                 // .sub(looters.reduce((prev: BigNumber, { balance }) => prev.add(parseEther(balance)), ethers.constants.Zero))
                 .sub(parseEther(settler.balance))
@@ -2302,7 +2305,10 @@ task(
 
         const dashboard = await getDashboardContent(hre, mode, minersrevenge)
 
-        console.log('LOOT_PENDING_AVAX_ACCOUNTS');
+        console.log('TOTAL');
+        console.log('-', dashboard.avax.total);
+
+        console.log('ACCOUNTS');
 
         for (const { address, balance } of dashboard.avax.looters){
             console.log('-', address, balance);
