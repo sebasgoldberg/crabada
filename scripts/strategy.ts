@@ -58,7 +58,7 @@ export const getTeamsThatPlayToLooseByTeamIdUsingDb = async (hre: HardhatRuntime
 
     mines.forEach( mine => {
 
-        const teamAnalisys: ITeamDefenseAnalisys = teamsAnalisys[mine.team_id] || {
+        const ta: ITeamDefenseAnalisys = teamsAnalisys[mine.team_id] || {
             defended: 0,
             notDefended: 0,
             notAttacked: 0
@@ -71,17 +71,17 @@ export const getTeamsThatPlayToLooseByTeamIdUsingDb = async (hre: HardhatRuntime
             const reinforceDefenseCount = actions.filter(action => action == 'reinforce-defense').length
 
             if (reinforceDefenseCount>0)
-                teamAnalisys.defended++
+                ta.defended++
             else
-                teamAnalisys.notDefended++
+                ta.notDefended++
 
         } else {
 
-            teamAnalisys.notAttacked++
+            ta.notAttacked++
 
         }
 
-        teamsAnalisys[mine.team_id] = teamAnalisys
+        teamsAnalisys[mine.team_id] = ta
     
     })
 
@@ -90,8 +90,8 @@ export const getTeamsThatPlayToLooseByTeamIdUsingDb = async (hre: HardhatRuntime
     const result: ITeamsThatPlayToLooseByTeamId = {}
 
     Object.keys(teamsAnalisys).forEach( teamId => {
-        const teamAnalisys = teamsAnalisys[teamId]
-        if ( teamAnalisys.defended == 0 && teamAnalisys.notDefended > 0 ){
+        const ta = teamsAnalisys[teamId]
+        if ( ta.defended == 0 && ta.notDefended > 0 ){
             result[teamId] = true
         }
     })

@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { Context, Telegraf } from "telegraf";
-import { ATTACK_MODE, getDashboard, MINE_MODE, refillavax, withdrawRewards } from "./crabada";
+import { ATTACK_MODE, getDashboardContent, MINE_MODE, refillavax, withdrawRewards } from "./crabada";
 
 task(
     "telegram",
@@ -47,7 +47,7 @@ task(
                 avax,
                 // rewards,
                 players
-            } = await getDashboard(hre, true)
+            } = await getDashboardContent(hre, undefined, false)
 
             ATTACK_MODE && ctx.reply(`
 AVAX consumed 
@@ -99,7 +99,7 @@ ${ revenge.reduce((prev, curr)=>prev+curr, 0)/revenge.length }
         
             const {
                 players
-            } = await getDashboard(hre, true)
+            } = await getDashboardContent(hre, undefined, false)
 
             players.forEach( player => {
 

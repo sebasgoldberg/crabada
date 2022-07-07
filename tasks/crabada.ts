@@ -2175,7 +2175,7 @@ export const getTeamDashboard = async (hre: HardhatRuntimeEnvironment, team: num
 
 }
 
-export const getDashboardContent = async (hre: HardhatRuntimeEnvironment, includeMinersRevenge: boolean=false): Promise<IDashboardContent> => {
+export const getDashboardContent = async (hre: HardhatRuntimeEnvironment, mode: PlayMode|undefined, includeMinersRevenge: boolean=false): Promise<IDashboardContent> => {
 
     const getDashboardAvax = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardAvax> => {
             
@@ -2230,16 +2230,17 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment, includ
 
     const getDashboardPlayers =async (hre: HardhatRuntimeEnvironment): Promise<IDashboardPlayer[]> => {
 
-        return Promise.all(
+        return await Promise.all(
             hre.crabada.network.LOOT_CAPTCHA_CONFIG.players.map( async (player): Promise<IDashboardPlayer> => {
 
                 // const playerTusBalancePromise: Promise<BigNumber> = tusToken.balanceOf(player.address)
                     
                 // const playerCraBalancePromise = craToken.balanceOf(player.address)
 
-                const teamsPromise = Promise.all(
+                const teams = (await Promise.all(
                     player.teams.map( team => getTeamDashboard(hre, team, includeMinersRevenge))
-                )
+                ))
+                    .filter( teamDashboard => mode ? teamDashboard.info.mode == mode : true )
     
                 return {
                     address: player.address,
@@ -2247,7 +2248,7 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment, includ
                     //     TUS: formatEther((await playerTusBalancePromise).sub(PLAYER_TUS_RESERVE)),
                     //     CRA: formatEther(await playerCraBalancePromise)
                     // },
-                    teams: await teamsPromise
+                    teams
                 }
                 
             })
@@ -2294,14 +2295,12 @@ const calcMinersRevenge = (defenseMP: number, diffBP: number): number => {
         )  
 }
 
-export const getDashboard = getDashboardContent
-
 task(
     "dashboard",
     "Display dashboard with team status.",
-    async ({ }, hre: HardhatRuntimeEnvironment) => {
+    async ({ minersrevenge, mode }: { minersrevenge:boolean, mode: PlayMode|undefined }, hre: HardhatRuntimeEnvironment) => {
 
-        const dashboard = await getDashboardContent(hre)
+        const dashboard = await getDashboardContent(hre, mode, minersrevenge)
 
         console.log('LOOT_PENDING_AVAX_ACCOUNTS');
 
@@ -2359,7 +2358,8 @@ task(
         // console.log('CRA Balance:', dashboard.rewards.CRA)
 
     })
-
+.addOptionalParam('minersrevenge', "Calculate Miner's Revenge.", false, types.boolean)
+.addOptionalParam('mode', `Play mode. Valid values: ${"mine" as PlayMode}, ${"loot" as PlayMode}`, undefined, types.string)
 
 
 task(
