@@ -119,7 +119,7 @@ task(
         
             for (const t of targetsOrderByGameIdAscending) {
         
-                if (ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE && teamsThatPlayToLooseByTeamId[Number(t.teamId)])
+                if (ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE && !teamsThatPlayToLooseByTeamId[Number(t.teamId)])
                     continue
         
                 for (const p of unlockedPlayerTeamPairsWithEnoughBattlePointSorted) {
