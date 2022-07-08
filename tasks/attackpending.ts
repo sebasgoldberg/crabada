@@ -18,9 +18,7 @@ task(
 
         while (true){
 
-            await attackExecutor.attackPendingTransactions()
-
-            notify.watchdog()
+            await attackExecutor.attackPendingTransactions(() => { notify.watchdog() })
 
             await delay(2_000)
 
