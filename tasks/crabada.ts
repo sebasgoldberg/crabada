@@ -181,7 +181,7 @@ task(
         //     return
         // }
 
-        while (true){
+        // while (true){
 
             for (const mineGroup of hre.crabada.network.MINE_GROUPS){
 
@@ -213,11 +213,11 @@ task(
     
             }
 
-            await delay(1000)
+        //     await delay(1000)
 
-            notify.watchdog()
+        //     notify.watchdog()
 
-        }
+        // }
 
     })
     .addOptionalParam("wait", "Number of confirmation before continue execution.", 10, types.int)

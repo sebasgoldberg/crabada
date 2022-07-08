@@ -222,10 +222,11 @@ export class AttackExecutor{
 
     }
 
-    async attackPendingTransactions(){
+    async attackPendingTransactions(afterAttackFunction: () => void){
         const pendingTransactions = await dbGetPendingAttackTransactionData()
         for (const pending of pendingTransactions){
             await this.attackTransaction(pending)
+            afterAttackFunction()
         }
     }
 
