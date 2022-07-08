@@ -74,6 +74,11 @@ export class CrabadaNetwork{
             address: '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8',
             teams: [ 22574, 22575 ],
         },
+        {
+            signerIndex: 6,
+            address: '0x6d5199506d660B1E6980C3e2d11218E24fe149B7',
+            teams: [ 36028, 36029 ],
+        },
     ]
 
     private MAINNET_MINE_CONFIG: Player[] = [
@@ -119,11 +124,11 @@ export class CrabadaNetwork{
     SWIMMER_MINE_GROUPS: MineGroup[] = [
         {
             teamsOrder: [ 12929, 12942, 12949, 12954, 13001, 13008, 13012, 13015, 22574, 22575, ],
-            crabadaReinforcers: [ 87155, 87156, 121309, ],
+            crabadaReinforcers: [  ],
         },
         {
-            teamsOrder: [ 13291, 13294, 13299, 13303, 22568, 22569, 22570, 22571, 22572, 22573,  ],
-            crabadaReinforcers: [ 50097, 49769, 121603, ],
+            teamsOrder: [ 13291, 13294, 13299, 13303, 22568, 22569, 22570, 22571, 22572, 22573, 36028, 36029 ],
+            crabadaReinforcers: [  ],
         },
     ]
 

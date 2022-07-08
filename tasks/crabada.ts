@@ -1690,6 +1690,26 @@ task(
     })
     .addOptionalParam("operationaddress", "Operation account address.", OPERATION_ADDRESS, types.string)
 
+task(
+    "approvecrabadacontracts",
+    "Approve Crabadas's contracts.",
+    async ({ }, hre: HardhatRuntimeEnvironment) => {
+
+        const { idleGame, crabada } = getCrabadaContracts(hre)
+        const signer = await getSigner(hre)
+
+        if (await crabada.isApprovedForAll(signer.address, idleGame.address)){
+            console.log('Already approved!');
+            return
+        }
+
+        const override = hre.crabada.network.getOverride()
+        await crabada.connect(signer).callStatic.setApprovalForAll(idleGame.address, true, override)
+        await logTransactionAndWait(crabada.connect(signer).setApprovalForAll(idleGame.address, true, override), 1)
+
+    })
+
+
 export const sendEther = async ({ signer, to, value, override}:
     { signer: SignerWithAddress, to: string, value: BigNumber, override: Object}, log=console.log) => {
 
@@ -2108,29 +2128,34 @@ export const getDashboardContent = async (hre: HardhatRuntimeEnvironment, mode: 
 
     const getDashboardPlayers =async (hre: HardhatRuntimeEnvironment): Promise<IDashboardPlayer[]> => {
 
-        return await Promise.all(
-            hre.crabada.network.LOOT_CAPTCHA_CONFIG.players.map( async (player): Promise<IDashboardPlayer> => {
+        return (await Promise.all(
+            hre.crabada.network.LOOT_CAPTCHA_CONFIG.players.map( async (player): Promise<IDashboardPlayer|undefined> => {
 
                 // const playerTusBalancePromise: Promise<BigNumber> = tusToken.balanceOf(player.address)
                     
                 // const playerCraBalancePromise = craToken.balanceOf(player.address)
 
-                const teams = (await Promise.all(
-                    player.teams.map( team => getTeamDashboard(hre, team, includeMinersRevenge))
-                ))
-                    .filter( teamDashboard => mode ? teamDashboard.info.mode == mode : true )
-    
-                return {
-                    address: player.address,
-                    // rewards: {
-                    //     TUS: formatEther((await playerTusBalancePromise).sub(PLAYER_TUS_RESERVE)),
-                    //     CRA: formatEther(await playerCraBalancePromise)
-                    // },
-                    teams
+                try {
+                    const teams = (await Promise.all(
+                        player.teams.map( team => getTeamDashboard(hre, team, includeMinersRevenge))
+                    ))
+                        .filter( teamDashboard => mode ? teamDashboard.info.mode == mode : true )
+        
+                    return {
+                        address: player.address,
+                        // rewards: {
+                        //     TUS: formatEther((await playerTusBalancePromise).sub(PLAYER_TUS_RESERVE)),
+                        //     CRA: formatEther(await playerCraBalancePromise)
+                        // },
+                        teams
+                    }
+                } catch (error) {
+                    return undefined
                 }
                 
             })
-        )
+        ))
+        .filter( x => x != undefined )
 
     }
 
