@@ -7,9 +7,10 @@ StartLimitIntervalSec=0
 Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<private key 1>,<private key 2>,..,<private key n>"
 Environment="HARDHAT_NETWORK=<network>"
 Type=simple
-WatchdogSec=150
+WatchdogSec=60
+NotifyAccess=all
 Restart=always
-RestartSec=15
+RestartSec=1
 User=cerebro
 ExecStart=/home/cerebro/crabada/services/crabada.reinforce.sh
 WorkingDirectory=/home/cerebro/crabada

@@ -618,49 +618,6 @@ task(
     .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
     .addOptionalParam("testmode", "Test mode", true, types.boolean)
 
-const REINFORCE_CONFIG: AccountConfig[] = [
-    player1,
-    player2,
-    player3,
-    player4,
-    player5,
-    player6
-]
-
-task(
-    "reinforce",
-    "Reinforce process.",
-    async ({ testmode }: any, hre: HardhatRuntimeEnvironment) => {
-
-        const crabadasInTabernOrderByPrice: CrabadaInTabern[] = await hre.crabada.api.getCrabadasInTabernOrderByPrice()
-
-        for (const {teams, signerIndex} of hre.crabada.network.LOOT_CAPTCHA_CONFIG.players){
-
-            const signer = await getSigner(hre, undefined, signerIndex)
-
-            console.log('Reinforce for signer', signer.address);
-
-            for (const looterTeamId of teams){
-    
-                console.log('Reinforce for team id', looterTeamId);
-
-                try {
-
-                    const tr = await reinforce(hre, crabadasInTabernOrderByPrice, looterTeamId, signer, undefined, console.log, testmode);
-
-                } catch (error) {
-                    
-                    console.error('ERROR', String(error));
-                    
-                }
-
-            }
-
-        }
-
-    })
-    .addOptionalParam("testmode", "Test mode", true, types.boolean)
-
 
 interface LootPendingConfig {
     players: {

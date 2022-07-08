@@ -47,6 +47,7 @@ import "./tasks/attackpending"
 import "./tasks/nocaptchaloot"
 import "./tasks/closeandsettle"
 import "./tasks/minestep"
+import "./tasks/reinforce"
 
 import "./tasks/battle-game/sendotp"
 import "./tasks/battle-game/login"
