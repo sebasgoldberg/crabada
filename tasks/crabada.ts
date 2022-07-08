@@ -902,41 +902,12 @@ task(
         
         let settleInProgress = false
 
-        const settleGames = async(log: (typeof console.log) = ()=>{})=>{
-
-            if (settleInProgress)
-                return
-
-            settleInProgress = true
-
-            try {
-
-                for (const p of playerTeamPairs.filter(p=> (!p.locked && !p.settled))){
-                    const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
-                    await settleGame(hre, idleGame.connect(settleSigner), currentGameId, 1, log)
-                }
-                    
-            } catch (error) {
-
-                // To be possible to deactivate settleInProgress
-                
-            }
-
-            settleInProgress = false
-
-        }
-
-        !testmode && (await settleGames(console.log))
-
         const now = new Date()
 
         if (now.getUTCDate()>=7 && now.getUTCHours()>=7){
             console.log('Anti-Bot patch is LIVE!');
             return
         }
-
-        const settleGameInterval = !testmode && setInterval(() => settleGames(()=>{}), 2000)
-
 
         // Verify if all teams are locked.
 
@@ -1292,7 +1263,6 @@ task(
         // clearInterval(startGameEventsInterval)
         idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
         clearInterval(updateLockStatusInterval)
-        settleGameInterval && clearInterval(settleGameInterval)
 
     })
     .addOptionalParam("blockstoanalyze", "Blocks to be analyzed.", 43200 /*24 hours*/ , types.int)

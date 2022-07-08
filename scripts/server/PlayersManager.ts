@@ -2,7 +2,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
 import { BigNumber } from "ethers"
 import { HardhatRuntimeEnvironment } from "hardhat/types"
 import { PlayerTeamPair } from "../../tasks/captcha"
-import { closeGame, currentBlockTimeStamp, getCrabadaContracts, isTeamLocked, settleGame } from "../crabada"
+import { currentBlockTimeStamp, getCrabadaContracts, isTeamLocked } from "../crabada"
 import { Player } from "../hre"
 import { TeamBattlePoints } from "../teambp"
 
@@ -103,44 +103,6 @@ export class PlayersManager{
         // ))
     }
 
-    settleGamesAndSetInterval(signer: SignerWithAddress): NodeJS.Timer|false{
-
-        const { idleGame } = getCrabadaContracts(this.hre)
-    
-        let settleInProgress = false
-    
-        const settleGames = async(log: (typeof console.log) = ()=>{})=>{
-    
-            if (settleInProgress)
-                return
-    
-            settleInProgress = true
-    
-            try {
-    
-                for (const p of this.playerTeamPairs.filter(p=> (!p.locked && !p.settled))){
-                    const { currentGameId } = await idleGame.getTeamInfo(BigNumber.from(p.teamId))
-                    await settleGame(this.hre, idleGame.connect(signer), currentGameId, 1, log)
-                    await closeGame(idleGame.connect(signer), currentGameId, this.hre.crabada.network.getAttackOverride(), 1, log)
-                }
-                    
-            } catch (error) {
-    
-                // To be possible to deactivate settleInProgress
-                
-            }
-    
-            settleInProgress = false
-    
-        }
-    
-        !this.testmode && settleGames(console.log)
-    
-        const settleGameInterval = !this.testmode && setInterval(() => settleGames(()=>{}), 10_000)
-    
-        return settleGameInterval
-    }
-    
     getSettledPlayers(): PlayerTeamPair[]{
         return this.playerTeamPairs
             .filter( p => (!p.locked && p.settled) || this.testmode )

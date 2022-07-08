@@ -206,15 +206,15 @@ export const closeGame = async (idleGameConnected: Contract, gameId: number, ove
 
 }
 
-export const locked = async (teamId: number, lockTo: BigNumber, timestamp: number, log: (typeof console.log) = console.log) => {
+export const locked = async (teamId: number|BigNumber|string, lockTo: BigNumber, timestamp: number, log: (typeof console.log) = console.log) => {
     const extraSeconds = 1 // 1 extra seconds of lock, in case timestamp has an error.
     const difference = (lockTo as BigNumber).sub(timestamp).add(extraSeconds)
     if (difference.lt(0)){
-        log(`TEAM ${teamId} UNLOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
+        log(`TEAM ${teamId.toString()} UNLOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
         return false
     }
     else{
-        log(`TEAM ${teamId} LOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
+        log(`TEAM ${teamId.toString()} LOCKED: (lockTo: ${(lockTo as BigNumber).toNumber()}, timestamp: ${timestamp}, difference ${difference.toNumber()})`)
         return true
     }
 }
@@ -290,36 +290,6 @@ export const mineStep = async (
             return
         }
     }
-
-    await closeGame(idleGame.connect(minerSigner), minerCurrentGameId, override);
-
-    const { attackTeamId } = await idleGame.getGameBattleInfo(minerCurrentGameId)
-
-    if ((attackTeamId as BigNumber).eq(minerTeamId)){
-        await settleGame(hre, idleGame.connect(minerSigner), minerCurrentGameId, wait)
-    }
-
-    attackerTeamId && await closeGame(idleGame.connect(minerSigner), attackerCurrentGameId, override);
-
-    // SETTLE GAME
-
-    attackerTeamId && await settleGame(hre, idleGame.connect(minerSigner), attackerCurrentGameId, wait)
-
-    const beforeStartGame = async () => {
-
-        if (minerTeamId == 16765){
-            console.log('await idleGame.connect(minerSigner).callStatic.removeCrabadaFromTeam(minerTeamId, 0, override);');
-            await idleGame.connect(minerSigner).callStatic.removeCrabadaFromTeam(minerTeamId, 0, override);
-            logTransactionAndWait(idleGame.connect(minerSigner).removeCrabadaFromTeam(minerTeamId, 0, override), 2) ;
-
-            console.log('await idleGame.connect(minerSigner).callStatic.addCrabadaToTeam(minerTeamId, 0, 54859);');
-            await idleGame.connect(minerSigner).callStatic.addCrabadaToTeam(minerTeamId, 0, 54859);
-            logTransactionAndWait(idleGame.connect(minerSigner).addCrabadaToTeam(minerTeamId, 0, 54859, override), 2);
-        }
-
-    }
-
-    // await beforeStartGame()
 
     // START GAME
 
@@ -1486,8 +1456,6 @@ export const loot = async (
         if (await locked(looterteamid, looterLockTo, timestamp, log))
             return
 
-        await settleGame(hre, idleGame.connect(signer), looterCurrentGameId, 10, log)
-
     }
 
     const START_GAME_FILTER = {
@@ -1505,19 +1473,11 @@ export const loot = async (
     
     return await (new Promise((resolve) => {
 
-        const clearIntervalsAndExit = (attackStartedGameInterval: NodeJS.Timer, settleGameInterval: NodeJS.Timer, exitInterval: NodeJS.Timer) => {
+        const clearIntervalsAndExit = (attackStartedGameInterval: NodeJS.Timer, exitInterval: NodeJS.Timer) => {
             clearInterval(attackStartedGameInterval)
-            clearInterval(settleGameInterval)
             clearInterval(exitInterval)
             resolve(undefined)
         }
-
-        // In case a settleGame was needed, but an error happens when transaction was performed,
-        // to avoid attack transactions to be reverted with 'GAME:TEAM IS BUSY', we set an
-        // interval to call settleGame every minute.
-        const settleGameInterval = setInterval(async()=>{
-            await settleGame(hre, idleGame.connect(signer), looterCurrentGameId, 1, log)
-        }, 60*1000)
 
         const attackStartedGameInterval = setInterval(async () => {
 
@@ -1554,13 +1514,13 @@ export const loot = async (
 
         const exitInterval = setInterval(async () =>{
             if (!testMode && await isTeamLocked(hre, idleGame, looterteamid, ()=>{})){
-                clearIntervalsAndExit(attackStartedGameInterval, settleGameInterval, exitInterval)
+                clearIntervalsAndExit(attackStartedGameInterval, exitInterval)
             }
         }, 3*1000)
 
         if (testMode){
             setTimeout(async () =>{
-                clearIntervalsAndExit(attackStartedGameInterval, settleGameInterval, exitInterval)
+                clearIntervalsAndExit(attackStartedGameInterval, exitInterval)
             }, 30*1000)
         }
 
@@ -1617,7 +1577,7 @@ export const loot = async (
             log('End Attack');
 
             if (!testMode && await isTeamLocked(hre, idleGame, looterteamid, ()=>{})){
-                clearIntervalsAndExit(attackStartedGameInterval, settleGameInterval, exitInterval)
+                clearIntervalsAndExit(attackStartedGameInterval, exitInterval)
                 return
             }
 

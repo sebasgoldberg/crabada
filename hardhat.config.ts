@@ -45,6 +45,7 @@ import "./tasks/savemines"
 import "./tasks/attackdifference"
 import "./tasks/attackpending"
 import "./tasks/nocaptchaloot"
+import "./tasks/closeandsettle"
 
 import "./tasks/battle-game/sendotp"
 import "./tasks/battle-game/login"

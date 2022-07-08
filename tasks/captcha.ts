@@ -1,9 +1,9 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { assert } from "console";
-import { BigNumber, Contract, ethers } from "ethers";
+import { BigNumber, ethers } from "ethers";
 import { task, types } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { closeGame, currentBlockTimeStamp, getCrabadaContracts, getTeamsThatPlayToLooseByTeamId, isTeamLocked, settleGame, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
+import { getCrabadaContracts, getTeamsThatPlayToLooseByTeamId, TeamInfoByTeam, updateTeamsThatWereChaged } from "../scripts/crabada";
 import { ClassNameByCrabada, LOOTERS_FACTION, TeamBattlePoints, TeamFaction } from "../scripts/teambp";
 import { getClassNameByCrabada, getSigner, isLootingPeriod } from "./crabada";
 
@@ -316,8 +316,6 @@ export const lootLoop = async (
 
     // Sets interval to settleGame for unlocked teams.
     
-    const settleGameInterval = playersManager.settleGamesAndSetInterval(settleSigner)
-
     const updateLockStatusInterval = setInterval(() => playersManager.updateLockStatus(()=>{}), 5_000);
 
 
@@ -488,7 +486,6 @@ export const lootLoop = async (
     // clearInterval(listenCanLootGamesFromApiInterval)
     updateTeamBattlePointListener && idleGame.off(idleGame.filters.AddCrabada(), updateTeamBattlePointListener)
     clearInterval(updateLockStatusInterval)
-    settleGameInterval && clearInterval(settleGameInterval)
 
 }
 
