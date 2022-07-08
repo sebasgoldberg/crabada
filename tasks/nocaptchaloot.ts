@@ -13,7 +13,7 @@ import { getTeamsThatPlayToLooseByTeamIdUsingDb } from "../scripts/strategy";
 import axios from "axios";
 import { AttackManager } from "../scripts/server/AttackExecutor";
 
-const ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = true
+const ONLY_ATTACK_TEAMS_THAT_PLAY_TO_LOOSE = false
 
 const registerAttack = async (hre: HardhatRuntimeEnvironment, authServer: AuthServer, user_address, team_id, game_id) => {
 
