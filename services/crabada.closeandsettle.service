@@ -8,6 +8,7 @@ Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<private key settler>"
 Environment="HARDHAT_NETWORK=<network>"
 Type=simple
 WatchdogSec=30
+NotifyAccess=all
 Restart=always
 RestartSec=1
 User=cerebro

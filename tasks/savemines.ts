@@ -1,5 +1,5 @@
 import { task, types } from "hardhat/config";
-
+import * as notify from 'sd-notify';
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { currentServerTimeStamp } from "../scripts/crabada";
 import { collections, connectToDatabase, disconnectFromDatabase } from "../scripts/srv/database";
@@ -45,6 +45,77 @@ const dbSaveMines = async (mines: IApiMine[]): Promise<void> => {
     })))
 }
 
+const saveMines = async (hre: HardhatRuntimeEnvironment, from: number, forcesynch: boolean, callAfterProcessPage: () => void) => {
+
+    const limit = 100
+
+    const status = await dbGetStatus()
+
+    const synchprocess = forcesynch || status ? !status.saveminesSynched : true
+
+    let page = (status && status.saveminesLasPage) ? status.saveminesLasPage-1 : 0
+
+    const maxIterations = 50
+    let iterations = 0
+
+    const gameIdsFromPreviousPage: number[] = []
+
+    while (true){
+
+        // await delay(500, ()=>{})
+
+        page++
+        iterations++
+
+        await dbUpdateStatus({saveminesLasPage: page})
+
+        console.log('Reading page', page);
+        const mines: IApiMine[] = await hre.crabada.api.getClosedMines(page, limit)
+
+        let mineAlreadyExists = false
+        if (!synchprocess){
+            mineAlreadyExists = await isMineAlreadyExists(
+                // To verify this, are excluded the mines of the previous page.
+                mines.filter( m => !gameIdsFromPreviousPage.includes(m.game_id))
+            )
+        }
+
+        mines.forEach( m => gameIdsFromPreviousPage.push(m.game_id) )
+
+        await dbSaveMines(mines)
+
+        if (!synchprocess && mineAlreadyExists){
+            // If we arrive to a page where mines already exist, we begin again.
+            console.log('Arrived to a page where mines already exist, we begin again.');
+            await dbUpdateStatus({ saveminesLasPage: 1 })
+            break
+        }
+
+        const minesFromTimestamp = mines
+            .filter( mine => mine.start_time >= from)
+
+        // In case we arrive to the oldest possible mine...
+        if (minesFromTimestamp.length == 0){
+            // ...we begin again, but already synched
+            console.log('We begin again, but already synched.');
+            
+            await dbUpdateStatus({ saveminesLasPage: 1, saveminesSynched: true })
+            break
+        }
+
+        if (iterations > maxIterations){
+            break
+        }
+
+        callAfterProcessPage()
+
+        await delay(1_000)
+    }
+
+    callAfterProcessPage()
+
+}
+
 task(
     "savemines",
     "Read mines from API and save them to the database.",
@@ -53,65 +124,16 @@ task(
 
         await connectToDatabase()
 
-        const limit = 100
-
-        const status = await dbGetStatus()
-
-        const synchprocess = forcesynch || status ? !status.saveminesSynched : true
-
-        let page = (status && status.saveminesLasPage) ? status.saveminesLasPage-1 : 0
-
-        const maxIterations = 50
-        let iterations = 0
-
-        const gameIdsFromPreviousPage: number[] = []
-
         while (true){
 
-            // await delay(500, ()=>{})
+            notify.watchdog()
 
-            page++
-            iterations++
+            saveMines(hre, from, forcesynch, () => { notify.watchdog() })
 
-            await dbUpdateStatus({saveminesLasPage: page})
+            // forcesynch it is used only once
+            forcesynch = false
 
-            console.log('Reading page', page);
-            const mines: IApiMine[] = await hre.crabada.api.getClosedMines(page, limit)
-
-            let mineAlreadyExists = false
-            if (!synchprocess){
-                mineAlreadyExists = await isMineAlreadyExists(
-                    // To verify this, are excluded the mines of the previous page.
-                    mines.filter( m => !gameIdsFromPreviousPage.includes(m.game_id))
-                )
-            }
-
-            mines.forEach( m => gameIdsFromPreviousPage.push(m.game_id) )
-
-            await dbSaveMines(mines)
-
-            if (!synchprocess && mineAlreadyExists){
-                // If we arrive to a page where mines already exist, we begin again.
-                console.log('Arrived to a page where mines already exist, we begin again.');
-                await dbUpdateStatus({ saveminesLasPage: 1 })
-                break
-            }
-
-            const minesFromTimestamp = mines
-                .filter( mine => mine.start_time >= from)
-
-            // In case we arrive to the oldest possible mine...
-            if (minesFromTimestamp.length == 0){
-                // ...we begin again, but already synched
-                console.log('We begin again, but already synched.');
-                
-                await dbUpdateStatus({ saveminesLasPage: 1, saveminesSynched: true })
-                break
-            }
-
-            if (iterations > maxIterations){
-                break
-            }
+            await delay(10_000)
 
         }
 

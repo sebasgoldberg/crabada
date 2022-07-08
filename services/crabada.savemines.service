@@ -6,7 +6,7 @@ StartLimitIntervalSec=0
 [Service]
 Environment="HARDHAT_NETWORK=<network>"
 Type=simple
-WatchdogSec=180
+WatchdogSec=30
 NotifyAccess=all
 Restart=always
 RestartSec=1
