@@ -26,9 +26,17 @@ task(
         
                     console.log('Reinforce for team id', looterTeamId);
 
-                    notify.watchdog()
+                    try {
 
-                    const tr = await reinforce(hre, crabadasInTabernOrderByPrice, looterTeamId, signer, undefined, console.log, testmode);
+                        notify.watchdog()
+
+                        const tr = await reinforce(hre, crabadasInTabernOrderByPrice, looterTeamId, signer, undefined, console.log, testmode);
+
+                    } catch (error) {
+                        
+                        console.error('ERROR', String(error));
+                        
+                    }
 
                 }
 
