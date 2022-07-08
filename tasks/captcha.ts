@@ -451,7 +451,7 @@ export const lootLoop = async (
 
     }
 
-    const canLootGamesFromApiGenerator = getCanLootGamesFromApiGenerator(hre)
+    const canLootGamesFromApiGenerator = getCanLootGamesFromApiGenerator(hre, 215)
 
     for await (const mine of canLootGamesFromApiGenerator){
 

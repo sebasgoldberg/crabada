@@ -439,7 +439,7 @@ export type HasToReadNextPageFunction = () => boolean
 const READ_ONLY_FIRST_PAGE = false
 
 export const getCanLootGamesFromApiGenerator = async function* (
-    hre: HardhatRuntimeEnvironment): AsyncGenerator<CanLootGameFromApi, void, void>{
+    hre: HardhatRuntimeEnvironment, maxMinerMinePoints: number): AsyncGenerator<CanLootGameFromApi, void, void>{
 
     let actualPage = 0
     const minesPerPage = 15
@@ -464,6 +464,9 @@ export const getCanLootGamesFromApiGenerator = async function* (
     
             for (const mine of mines){
                 
+                if (mine.defense_mine_point > maxMinerMinePoints)
+                    continue
+
                 mineExistsInCurrentIterationByGameId[mine.game_id] = true
                 
                 if (mineExistsInLastIterationByGameId[mine.game_id]){
