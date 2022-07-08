@@ -128,7 +128,7 @@ task(
 
             notify.watchdog()
 
-            saveMines(hre, from, forcesynch, () => { notify.watchdog() })
+            await saveMines(hre, from, forcesynch, () => { notify.watchdog() })
 
             // forcesynch it is used only once
             forcesynch = false
