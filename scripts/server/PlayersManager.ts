@@ -34,6 +34,7 @@ export class PlayersManager{
                         locked: true,
                         battlePoint: await TeamBattlePoints.createFromTeamIdUsingContractForClassNames(this.hre, teamId),
                         settled: currentGameId.isZero(),
+                        hasEnoughLootingPoints: false
                     })
                 })
             )
@@ -54,6 +55,7 @@ export class PlayersManager{
     
         const settledByTeamId = {}
         const lockedByTeamId = {}
+        const hasEnoughLootingPointsByTeamId = {}
     
         const timestamp = await currentBlockTimeStamp(this.hre)
     
@@ -63,12 +65,14 @@ export class PlayersManager{
                 const game_end_time = team.game_type == "stealing" ? team.game_start_time+3600 : team.game_end_time
                 lockedByTeamId[String(team.team_id)] = (game_end_time-timestamp >= 0)
                 settledByTeamId[String(team.team_id)] = team.game_id ? false : true
+                hasEnoughLootingPointsByTeamId[String(team.team_id)] = team.looting_point > 0
             }
         }
     
         this.playerTeamPairs.map( (playerTeamPair) => {
             playerTeamPair.locked = !this.testmode && lockedByTeamId[String(playerTeamPair.teamId)]
             playerTeamPair.settled = this.testmode || settledByTeamId[String(playerTeamPair.teamId)]
+            playerTeamPair.hasEnoughLootingPoints = this.testmode || hasEnoughLootingPointsByTeamId[String(playerTeamPair.teamId)]
         })
     
         return
@@ -105,7 +109,7 @@ export class PlayersManager{
 
     getSettledPlayers(): PlayerTeamPair[]{
         return this.playerTeamPairs
-            .filter( p => (!p.locked && p.settled) || this.testmode )
+            .filter( p => (!p.locked && p.settled && p.hasEnoughLootingPoints ) || this.testmode )
     }
     
 }

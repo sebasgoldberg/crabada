@@ -52,6 +52,7 @@ interface ITeamsFromAddress{
     crabada_id_1: number,
     crabada_id_2: number,
     crabada_id_3: number,
+    looting_point: number,
 }
 
 export class CrabadaAPI{

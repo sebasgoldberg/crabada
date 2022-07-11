@@ -220,10 +220,11 @@ export const locked = async (teamId: number|BigNumber|string, lockTo: BigNumber,
 }
 
 export const MINE_ONLY_TO_LOOT = true
+const MINE_ONLY = !MINE_ONLY_TO_LOOT
 
-const hasEnoughLootingPoints = async (hre: HardhatRuntimeEnvironment, teamId: number|BigNumber): Promise<boolean> => {
+export const hasEnoughLootingPoints = async (hre: HardhatRuntimeEnvironment, teamId: number|BigNumber): Promise<boolean> => {
 
-    if (!MINE_ONLY_TO_LOOT)
+    if (MINE_ONLY)
         return false
 
     const { antiBot } = getCrabadaContracts(hre)

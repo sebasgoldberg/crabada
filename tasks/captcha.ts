@@ -29,6 +29,7 @@ export interface PlayerTeamPair {
     locked: boolean,
     battlePoint: TeamBattlePoints,
     settled: boolean,
+    hasEnoughLootingPoints: boolean
 }
 
 const areAllPlayerTeamPairsLocked = (playerTeamPairs: PlayerTeamPair[]): boolean => {
@@ -187,7 +188,7 @@ const attackTeams = async (
     lootersFaction: TeamFaction, testmode: boolean, lootFunction: LootFunction) => {
 
     // 1) Apply only for looter teams are unlocked
-    const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => (!p.locked && p.settled) || testmode )
+    const unlockedPlayerTeamPairs = playerTeamPairs.filter( p => (!p.locked && p.settled && p.hasEnoughLootingPoints ) || testmode )
 
     if (unlockedPlayerTeamPairs.length == 0){
         console.log('Attack Interval', 'No unlocked and settled looter teams');
