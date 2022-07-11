@@ -1747,8 +1747,14 @@ export const withdrawRewards = async (hre: HardhatRuntimeEnvironment, log=consol
 
                 if (value.gt(0)){
                     log('erc20.transferFrom(from, rewardsto, value)', from, rewardsTo, formatEther(value));
-                    await erc20.connect(operation).callStatic.transferFrom(from, rewardsTo, value, override)
-                    await logTransactionAndWait(erc20.connect(operation).transferFrom(from, rewardsTo, value, override), 1, log)
+
+                    try {
+                        await erc20.connect(operation).callStatic.transferFrom(from, rewardsTo, value, override)
+                        await logTransactionAndWait(erc20.connect(operation).transferFrom(from, rewardsTo, value, override), 1, log)                            
+                    } catch (error) {
+                        console.error('ERROR', String(error));
+                        
+                    }
                 }
 
         }
@@ -1756,24 +1762,20 @@ export const withdrawRewards = async (hre: HardhatRuntimeEnvironment, log=consol
         const tusBalance: BigNumber = await hre.ethers.provider.getBalance(from);
         const tusToTransfer = tusBalance.sub(MIN_TUS_BY_TEAM.mul(teamsQuantity))
 
-        await sendEther({
-            signer: getSignerForAddress(signers, from),
-            to: operation.address,
-            value: tusToTransfer,
-            override
-        })
+        if (tusToTransfer.gt(0)){
+            try {
+                await sendEther({
+                    signer: getSignerForAddress(signers, from),
+                    to: operation.address,
+                    value: tusToTransfer,
+                    override
+                })
+            } catch (error) {
+                console.error('ERROR', String(error));
+            }    
+        }
 
     }
-
-    const tusBalance: BigNumber = await hre.ethers.provider.getBalance(SETTLER_ACCOUNT);
-    const tusToTransfer = SETTLER_TARGET_BALANCE.sub(tusBalance)
-
-    await sendEther({
-        signer: operation,
-        to: SETTLER_ACCOUNT,
-        value: tusToTransfer,
-        override: override
-    })
 
 }
 
@@ -1797,7 +1799,7 @@ export const LOOT_PENDING_AVAX_ACCOUNTS = [
 export const SETTLER_ACCOUNT = "0xF2108Afb0d7eE93bB418f95F4643Bc4d9C8Eb5e4"
 export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
-const SETTLER_TARGET_BALANCE = parseEther('1100')
+const SETTLER_TARGET_BALANCE = parseEther('3000')
 
 export const ATTACK_MODE = isLootingPeriod()
 export const MINE_MODE = !ATTACK_MODE
@@ -1812,9 +1814,12 @@ export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.lo
 
     const override = hre.crabada.network.getOverride()
 
-    const _refillAvax = async (signer: SignerWithAddress, destination: string, targetAmmount: BigNumber) => {
+    const _refillAvax = async (signer: SignerWithAddress, destination: string, targetAmmount: BigNumber, balanceLowerLimitToExecuteRefill: BigNumber=undefined) => {
         
         const destinationBalance: BigNumber = await hre.ethers.provider.getBalance(destination);
+
+        if (balanceLowerLimitToExecuteRefill && destinationBalance.gt(balanceLowerLimitToExecuteRefill))
+            return
 
         const amountToTransfer = targetAmmount.sub(destinationBalance)
 
@@ -1836,7 +1841,7 @@ export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.lo
     //     await _refillAvax(signer, address, target)
     // }
     
-    ATTACK_MODE && await _refillAvax(signer, SETTLER_ACCOUNT, SETTLER_TARGET_BALANCE)
+    await _refillAvax(signer, SETTLER_ACCOUNT, SETTLER_TARGET_BALANCE, SETTLER_TARGET_BALANCE.div(2))
 
 }
 

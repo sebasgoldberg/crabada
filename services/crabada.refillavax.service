@@ -1,0 +1,19 @@
+[Unit]
+Description=Crabada service to refill AVAX to operational accounts.
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Environment="MAINNET_AVAX_MAIN_ACCOUNT_PK=<private key operation account>"
+Environment="HARDHAT_NETWORK=<network>"
+Type=simple
+WatchdogSec=120
+Restart=always
+RestartSec=3600
+User=cerebro
+ExecStart=/home/cerebro/crabada/services/crabada.refillavax.sh
+WorkingDirectory=/home/cerebro/crabada
+
+
+[Install]
+WantedBy=multi-user.target
