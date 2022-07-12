@@ -452,7 +452,9 @@ export const lootLoop = async (
 
     }
 
-    const canLootGamesFromApiGenerator = getCanLootGamesFromApiGenerator(hre, 215)
+    const MAX_TARGET_MINE_POINTS = 205
+
+    const canLootGamesFromApiGenerator = getCanLootGamesFromApiGenerator(hre, MAX_TARGET_MINE_POINTS)
 
     for await (const mine of canLootGamesFromApiGenerator){
 
