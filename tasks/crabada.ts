@@ -1801,7 +1801,7 @@ export const REINFORCE_ACCOUNT = "0xBb6d9e4ac8f568E51948BA7d3aEB5a2C417EeB9f"
 
 const SETTLER_TARGET_BALANCE = parseEther('3000')
 
-export const ATTACK_MODE = isLootingPeriod()
+export const ATTACK_MODE = true
 export const MINE_MODE = !ATTACK_MODE
 
 export const  refillavax = async (hre: HardhatRuntimeEnvironment, log=console.log ) => {
@@ -2073,7 +2073,7 @@ export const getTeamDashboard = async (hre: HardhatRuntimeEnvironment, team: num
 
 }
 
-export const getDashboardContent = async (hre: HardhatRuntimeEnvironment, mode: PlayMode|undefined, includeMinersRevenge: boolean=false): Promise<IDashboardContent> => {
+export const getDashboardContent = async (hre: HardhatRuntimeEnvironment, mode: PlayMode|undefined, includeMinersRevenge: boolean=true): Promise<IDashboardContent> => {
 
     const getDashboardAvax = async (hre: HardhatRuntimeEnvironment): Promise<IDashboardAvax> => {
             
@@ -2269,7 +2269,7 @@ task(
         // console.log('CRA Balance:', dashboard.rewards.CRA)
 
     })
-.addOptionalParam('minersrevenge', "Calculate Miner's Revenge.", false, types.boolean)
+.addOptionalParam('minersrevenge', "Calculate Miner's Revenge.", true, types.boolean)
 .addOptionalParam('mode', `Play mode. Valid values: ${"mine" as PlayMode}, ${"loot" as PlayMode}`, undefined, types.string)
 
 
