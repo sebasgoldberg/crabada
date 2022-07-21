@@ -166,8 +166,9 @@ export default {
     },
 
     swimmer: {
-      // url: 'https://subnets.avax.network/swimmer/mainnet/rpc',
-      url: 'https://avax-cra-rpc.gateway.pokt.network/',
+      // // url: 'https://subnets.avax.network/swimmer/mainnet/rpc',
+      // url: 'https://avax-cra-rpc.gateway.pokt.network/',
+      url: 'http://swimmernode:9650/ext/bc/2K33xS9AyP9oCDiHYKVrHe7F54h2La5D8erpTChaAhdzeSu2RX/rpc',
       gasPrice: 10_000_000_000_000,
       chainId: 73772,
       accounts: USE_MAINNET_ACCOUNT ? [ ...MAINNET_AVAX_MAIN_ACCOUNTS_PKS, ...CRABADA_ATTACKER_PKS ] : LOCAL_ACCOUNTS,
