@@ -187,10 +187,10 @@ export const settleGame = async (hre: HardhatRuntimeEnvironment, idleGame: Contr
 
 }
 
-export const closeGame = async (idleGameConnected: Contract, gameId: number, override, wait: number=2, log=console.log) =>{
+export const closeGame = async (idleGameConnected: Contract, gameId: number|BigNumber, override, wait: number=2, log=console.log) =>{
 
     try {
-        log(`callStatic.closeGame(gameId: ${gameId})`);        
+        log(`callStatic.closeGame(gameId: ${gameId.toString()})`);        
         await idleGameConnected.callStatic.closeGame(gameId, override)
     } catch (error) {
         log(`ERROR: ${error.toString()}`)
@@ -198,7 +198,7 @@ export const closeGame = async (idleGameConnected: Contract, gameId: number, ove
         return
     }
 
-    log(`closeGame(gameId: ${gameId})`);
+    log(`closeGame(gameId: ${gameId.toString()})`);
     const transactionResponse: TransactionResponse = await idleGameConnected.closeGame(gameId, override)
     log(`transaction: ${transactionResponse.hash}`);        
 

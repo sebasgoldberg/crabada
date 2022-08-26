@@ -12,7 +12,10 @@ const closeOrSettleTeam = async (hre: HardhatRuntimeEnvironment, signer: SignerW
 
     const { idleGame } = getCrabadaContracts(hre)
 
-    const { lockTo, currentGameId } = await idleGame.getTeamInfo(teamId)
+    const { lockTo, currentGameId }: { lockTo: BigNumber, currentGameId: BigNumber } = await idleGame.getTeamInfo(teamId)
+
+    if (currentGameId.isZero())
+        return
 
     const timestamp = await currentBlockTimeStamp(hre)
 
