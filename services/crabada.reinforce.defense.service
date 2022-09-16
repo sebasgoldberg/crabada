@@ -10,9 +10,9 @@ Type=simple
 WatchdogSec=150
 Restart=always
 RestartSec=15
-User=cerebro
-ExecStart=/home/cerebro/crabada/services/crabada.reinforce.defense.sh
-WorkingDirectory=/home/cerebro/crabada
+User=a_user
+ExecStart=/home/a_user/crabada/services/crabada.reinforce.defense.sh
+WorkingDirectory=/home/a_user/crabada
 
 
 [Install]

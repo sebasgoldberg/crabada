@@ -141,7 +141,7 @@ export const bgLogin = async (hre: HardhatRuntimeEnvironment, otp: string): Prom
         // hash: 'A87B176A265B75257671C7735496E7EC',
         'x-unity-version': '2020.3.31f1'
       },
-      data: {email_address: 'thunder.cerebro@gmail.com', code: otp}
+      data: {email_address: 'email@domain.com', code: otp}
     };
     
     try {

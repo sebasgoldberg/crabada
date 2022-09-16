@@ -8,9 +8,9 @@ Type=simple
 WatchdogSec=180
 Restart=always
 RestartSec=60
-User=cerebro
-ExecStart=/home/cerebro/crabada/services/battle-game/crabada.bgmine.sh
-WorkingDirectory=/home/cerebro/crabada
+User=a_user
+ExecStart=/home/a_user/crabada/services/battle-game/crabada.bgmine.sh
+WorkingDirectory=/home/a_user/crabada
 
 
 [Install]

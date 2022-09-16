@@ -11,9 +11,9 @@ WatchdogSec=30
 NotifyAccess=all
 Restart=always
 RestartSec=1
-User=cerebro
-ExecStart=/home/cerebro/crabada/services/crabada.closeandsettle.sh
-WorkingDirectory=/home/cerebro/crabada
+User=a_user
+ExecStart=/home/a_user/crabada/services/crabada.closeandsettle.sh
+WorkingDirectory=/home/a_user/crabada
 
 [Install]
 WantedBy=multi-user.target

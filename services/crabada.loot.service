@@ -11,9 +11,9 @@ Type=simple
 WatchdogSec=1800
 Restart=always
 RestartSec=15
-User=cerebro
-ExecStart=/home/cerebro/crabada/services/crabada.loot.sh
-WorkingDirectory=/home/cerebro/crabada
+User=a_user
+ExecStart=/home/a_user/crabada/services/crabada.loot.sh
+WorkingDirectory=/home/a_user/crabada
 
 
 [Install]

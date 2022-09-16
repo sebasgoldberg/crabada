@@ -10,9 +10,9 @@ Type=simple
 WatchdogSec=30
 Restart=always
 RestartSec=0
-User=cerebro
-ExecStart=/home/cerebro/crabada/services/crabada.attackpending.sh
-WorkingDirectory=/home/cerebro/crabada
+User=a_user
+ExecStart=/home/a_user/crabada/services/crabada.attackpending.sh
+WorkingDirectory=/home/a_user/crabada
 
 [Install]
 WantedBy=multi-user.target

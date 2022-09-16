@@ -10,9 +10,9 @@ Type=simple
 WatchdogSec=120
 Restart=always
 RestartSec=3600
-User=cerebro
-ExecStart=/home/cerebro/crabada/services/crabada.refillavax.sh
-WorkingDirectory=/home/cerebro/crabada
+User=a_user
+ExecStart=/home/a_user/crabada/services/crabada.refillavax.sh
+WorkingDirectory=/home/a_user/crabada
 
 
 [Install]

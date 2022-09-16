@@ -1,5 +1,5 @@
 #!/bin/bash
-. /home/cerebro/.nvm/nvm.sh
+. ~/.nvm/nvm.sh
 
 if [ -z "$HARDHAT_NETWORK" ]
 then 

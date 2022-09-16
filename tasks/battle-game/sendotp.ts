@@ -15,7 +15,7 @@ export const bgSendOTP = async (hre: HardhatRuntimeEnvironment, email: string) =
     const options = {
       method: 'get' as Method,
       url: 'https://battle-system-api.crabada.com/crabada-user/public/sub-user/get-login-code',
-      params: { email_address: 'thunder.cerebro@gmail.com' },
+      params: { email_address: 'email@domain.com' },
       headers: {
         host: 'battle-system-api.crabada.com',
         'user-agent': 'UnityPlayer/2020.3.31f1 (UnityWebRequest/1.0, libcurl/7.80.0-DEV)',
@@ -45,4 +45,4 @@ task(
         const data: IBGSendOTPResponse = await bgSendOTP(hre, email)
 
     })
-    .addOptionalParam('email', 'e-mail address where is going to be send the OTP.', 'thunder.cerebro@gmail.com', types.string)
+    .addOptionalParam('email', 'e-mail address where is going to be send the OTP.', 'email@domain.com', types.string)

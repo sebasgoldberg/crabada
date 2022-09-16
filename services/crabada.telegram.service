@@ -9,9 +9,9 @@ Environment="HARDHAT_NETWORK=<network>"
 Environment="BOT_TOKEN=<Telegram bot token>"
 Type=simple
 Restart=always
-User=cerebro
-ExecStart=/home/cerebro/crabada/services/crabada.telegram.sh
-WorkingDirectory=/home/cerebro/crabada
+User=a_user
+ExecStart=/home/a_user/crabada/services/crabada.telegram.sh
+WorkingDirectory=/home/a_user/crabada
 
 
 [Install]

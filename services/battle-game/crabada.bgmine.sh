@@ -1,4 +1,4 @@
 #!/bin/bash
-. /home/cerebro/.nvm/nvm.sh
+. ~/.nvm/nvm.sh
 
 npx hardhat bgmine
