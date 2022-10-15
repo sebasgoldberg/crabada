@@ -2,6 +2,7 @@ import axios, { AxiosResponse } from "axios";
 import { BigNumber } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { delay } from "../tasks/crabada";
+import { env } from "./env";
 import { CrabadaNetwork } from "./hre";
 import { IApiMine } from "./strategy";
 import { ClassNameByCrabada, CrabadaClassName, TeamFaction } from "./teambp";
@@ -80,7 +81,7 @@ export class CrabadaAPI{
             'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
             accept: 'application/json, text/plain, */*',
             // TODO authorization should use the bearer token for each player.
-            authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDcyNTQ3MDMsImV4cCI6MTY0OTg0NjcwMywiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.GFRl3lK53u45oG-lDx58paC6rtZFyPGgcQhCCDgi6sA',
+            authorization: `Bearer ${env.CONSTANT_TOKEN}`,
             'sec-ch-ua-mobile': '?0',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
             'sec-ch-ua-platform': '"Windows"',
@@ -121,7 +122,7 @@ export class CrabadaAPI{
             'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
             accept: 'application/json, text/plain, */*',
             // TODO authorization should use the bearer token for each player.
-            authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDcyNTQ3MDMsImV4cCI6MTY0OTg0NjcwMywiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.GFRl3lK53u45oG-lDx58paC6rtZFyPGgcQhCCDgi6sA',
+            authorization: `Bearer ${env.CONSTANT_TOKEN}`,
             'sec-ch-ua-mobile': '?0',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
             'sec-ch-ua-platform': '"Windows"',
@@ -159,7 +160,7 @@ export class CrabadaAPI{
             'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
             accept: 'application/json, text/plain, */*',
             // TODO authorization should use the bearer token for each player.
-            authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDcyNTQ3MDMsImV4cCI6MTY0OTg0NjcwMywiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.GFRl3lK53u45oG-lDx58paC6rtZFyPGgcQhCCDgi6sA',
+            authorization: `Bearer ${env.CONSTANT_TOKEN}`,
             'sec-ch-ua-mobile': '?0',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
             'sec-ch-ua-platform': '"Windows"',
@@ -199,7 +200,7 @@ export class CrabadaAPI{
             'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="99", "Google Chrome";v="99"',
             accept: 'application/json, text/plain, */*',
             // TODO authorization should use the bearer token for each player.
-            authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InVzZXJfYWRkcmVzcyI6IjB4ZTkwYTIyMDY0ZjQxNTg5NmYxZjcyZTA0MTg3NGRhNDE5MzkwY2M2ZCIsImVtYWlsX2FkZHJlc3MiOm51bGwsImZ1bGxfbmFtZSI6IkNyYWJhZGlhbiAyNGI2MGYzYTUwYSIsInVzZXJuYW1lIjpudWxsLCJmaXJzdF9uYW1lIjpudWxsLCJsYXN0X25hbWUiOm51bGx9LCJpYXQiOjE2NDcyNTQ3MDMsImV4cCI6MTY0OTg0NjcwMywiaXNzIjoiMjM5NTA5NTM4MWFhMjBhZWRkYjFlNWQ2MWQzOGNkZWUifQ.GFRl3lK53u45oG-lDx58paC6rtZFyPGgcQhCCDgi6sA',
+            authorization: `Bearer ${env.CONSTANT_TOKEN}`,
             'sec-ch-ua-mobile': '?0',
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36',
             'sec-ch-ua-platform': '"Windows"',

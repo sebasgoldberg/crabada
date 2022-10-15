@@ -8,4 +8,5 @@ export const env = {
     SWIMMER_TEST_MINE_GROUPS: JSON.parse(process.env.SWIMMER_TEST_MINE_GROUPS),
     SWIMMER_MINE_GROUPS: JSON.parse(process.env.SWIMMER_MINE_GROUPS),
     MAINNET_MINE_GROUPS: JSON.parse(process.env.MAINNET_MINE_GROUPS),
+    CONSTANT_TOKEN: process.env.CONSTANT_TOKEN
 }
