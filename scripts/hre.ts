@@ -26,6 +26,7 @@ interface LootCaptchaConfig {
     attackOnlyTeamsThatPlayToLoose: boolean
 }
 
+import {env} from "./env"
 
 export class CrabadaNetwork{
 
@@ -35,131 +36,17 @@ export class CrabadaNetwork{
         [teamId: number]: MineConfig
     } = {}
 
-    private SWIMMER_TEST_MINE_CONFIG = [
-        {
-            signerIndex: 0,
-            address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-            teams: [ 1363, 1364, 1365 ],
-        },
-    ]
+    private SWIMMER_TEST_MINE_CONFIG = env.SWIMMER_TEST_MINE_CONFIG
 
-    private SWIMMER_MINE_CONFIG = [
-        {
-            signerIndex: 0,
-            address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-            teams: [ 12929, 12942, 12949, 12954 ],
-        },
-        {
-            signerIndex: 1,
-            address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-            teams: [ 13001, 13008, 13012, 13015 ],
-        },
-        {
-            signerIndex: 2,
-            address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
-            teams: [ 13291, 13294, 13299, 13303 ],
-        },
-        {
-            signerIndex: 3,
-            address: '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4',
-            teams: [  22568, 22569, 22570 ],
-        },
-        {
-            signerIndex: 4,
-            address: '0x83Ff016a2e574b2c35d17Fe4302188b192b64344',
-            teams: [ 22571, 22572, 22573 ],
-        },
-        {
-            signerIndex: 5,
-            address: '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8',
-            teams: [ 22574, 22575 ],
-        },
-        {
-            signerIndex: 6,
-            address: '0x6d5199506d660B1E6980C3e2d11218E24fe149B7',
-            teams: [ 36028, 36029 ],
-        },
-    ]
+    private SWIMMER_MINE_CONFIG = env.SWIMMER_TEST_MINE_CONFIG
 
-    private MAINNET_MINE_CONFIG: Player[] = [
-        {
-            signerIndex: 0,
-            address: '0xB2f4C513164cD12a1e121Dc4141920B805d024B8',
-            teams: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
-        },
-        {
-            signerIndex: 1,
-            address: '0xE90A22064F415896F1F72e041874Da419390CC6D',
-            teams: [ 5357, 5355, 6152 ],
-        },
-        // {
-        //     signerIndex: 2,
-        //     address: '0xc7C966754DBE52a29DFD1CCcCBfD2ffBe06B23b2',
-        //     teams: [ ],
-        // },
-        {
-            signerIndex: 3,
-            address: '0x9568bD1eeAeCCF23f0a147478cEF87434aF0B5d4',
-            teams: [ 16767, 16768, 16769 ],
-        },
-        {
-            signerIndex: 4,
-            address: '0x83Ff016a2e574b2c35d17Fe4302188b192b64344',
-            teams: [ 16761, 16762, 16763 ],
-        },
-        {
-            signerIndex: 5,
-            address: '0x6315F93dEF48c21FFadD5CbE078Cdb19BAA661F8',
-            teams: [ 16764, 16765, 16766 ],
-        },
-    ]
+    private MAINNET_MINE_CONFIG: Player[] = env.MAINNET_MINE_CONFIG
 
-    SWIMMER_TEST_MINE_GROUPS: MineGroup[] = [
-        {
-            teamsOrder: [ 1363, 1364, 1365 ],
-            crabadaReinforcers: [ ],
-        },
-    ]
+    SWIMMER_TEST_MINE_GROUPS: MineGroup[] = env.SWIMMER_TEST_MINE_GROUPS
 
-    SWIMMER_MINE_GROUPS: MineGroup[] = [
-        {
-            teamsOrder: [ 12929, 12942, 12949, 12954, 13001, 13008, 13012, 13015, 22574, 22575, ],
-            crabadaReinforcers: [  ],
-        },
-        {
-            teamsOrder: [ 13291, 13294, 13299, 13303, 22568, 22569, 22570, 22571, 22572, 22573, 36028, 36029 ],
-            crabadaReinforcers: [  ],
-        },
-    ]
+    SWIMMER_MINE_GROUPS: MineGroup[] = env.SWIMMER_MINE_GROUPS
 
-    MAINNET_MINE_GROUPS: MineGroup[] = [
-        { 
-            teamsOrder: [ 3286, 3759, 5032, 19963, 19964, 19965, 19966, 19967 ],
-            crabadaReinforcers: [ 49113, 49891 ],
-        },
-        {
-            teamsOrder: [ 16767, 16768, 16769, 16761, 16762, 16763, 16764, 16765 ],
-            crabadaReinforcers: [ 49769, 50097 ],
-        },
-        {
-            teamsOrder: [ 5357, ],
-            crabadaReinforcers: []
-        },
-
-        {
-            teamsOrder: [ 5355, ],
-            crabadaReinforcers: []
-        },
-
-        {
-            teamsOrder: [ 6152, ],
-            crabadaReinforcers: []
-        },
-        {
-            teamsOrder: [ 16766, ],
-            crabadaReinforcers: []
-        },
-    ]
+    MAINNET_MINE_GROUPS: MineGroup[] = env.MAINNET_MINE_GROUPS
 
     MINE_CONFIG: MineConfig[]
     MINE_GROUPS: MineGroup[]

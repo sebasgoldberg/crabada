@@ -40,7 +40,7 @@ task(
 
     })
     .addOptionalParam("teamid", "The team ID to use to setup player for testing.", 3156, types.int)
-    .addOptionalParam("testaccount", "Account used for testing", '0xB2f4C513164cD12a1e121Dc4141920B805d024B8', types.string)
+    .addOptionalParam("testaccount", "Account used for testing", undefined, types.string)
 
 task(
     "playerdeploy",

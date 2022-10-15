@@ -4,6 +4,7 @@ import { BigNumber } from "ethers"
 import "@nomiclabs/hardhat-waffle"
 
 
+
 const NODE_ID: number = process.env['BLOCKCHAIN_NODE_ID'] ? Number(process.env['BLOCKCHAIN_NODE_ID']) : 0
 
 export const MAINNET_AVAX_MAIN_ACCOUNTS_PKS = process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK'] ? process.env['MAINNET_AVAX_MAIN_ACCOUNT_PK'].split(',') : []
